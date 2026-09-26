@@ -1187,8 +1187,6 @@
 
     <div id="orderPage">
 
-        <div id="licenseBanner" class="card hidden" style="background:#ffe5e5;color:#9f1d1d;font-weight:bold;text-align:center;border:1px solid #ffc7c7"></div>
-
         <!-- BAŞLIK -->
 
         <div class="card">
@@ -1259,11 +1257,13 @@
 
         </div>
 
+        <div id="licenseBanner" class="card hidden" style="background:#ffe5e5;color:#9f1d1d;font-weight:bold;text-align:center;border:1px solid #ffc7c7;line-height:1.5"></div>
+
         <!-- =========================================
              SİPARİŞ
         ========================================= -->
 
-        <div class="card">
+        <div id="orderItemsCard" class="card">
 
             <div class="order-heading-row">
                 <h2>Siparişiniz</h2>
@@ -1291,7 +1291,7 @@
              MÜŞTERİ BİLGİLERİ
         ========================================= -->
 
-        <div class="card">
+        <div id="customerInfoCard" class="card">
 
             <h2>
                 Müşteri Bilgileri
@@ -2013,11 +2013,19 @@
 
     function renderLicenseState() {
         const banner = document.getElementById("licenseBanner");
+        const orderItemsCard = document.getElementById("orderItemsCard");
+        const customerInfoCard = document.getElementById("customerInfoCard");
         if (!banner) return;
+
         platformBusinessActive = platformBusiness ? licenseIsActive(platformBusiness) : true;
-        if (platformBusiness && !platformBusinessActive) {
+        const inactive = !!platformBusiness && !platformBusinessActive;
+
+        orderItemsCard?.classList.toggle("hidden", inactive);
+        customerInfoCard?.classList.toggle("hidden", inactive);
+
+        if (inactive) {
             banner.classList.remove("hidden");
-            banner.textContent = "⚠️ Bu işletmenin online sipariş sistemi şu anda aktif değildir.";
+            banner.innerHTML = "⚠️ <strong>Bu işletme şu anda aktif değildir.</strong><br><span style=\"font-weight:normal\">Kullanım süresi dolmuştur. Lütfen işletme ile iletişime geçiniz.</span>";
         } else {
             banner.classList.add("hidden");
             banner.textContent = "";
