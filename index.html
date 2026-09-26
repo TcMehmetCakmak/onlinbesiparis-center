@@ -3835,6 +3835,7 @@
 
     function getOrderRpcPayload() {
         return {
+            p_business_key: window.PLATFORM_CONFIG?.businessKey || "",
             p_name: order.name,
             p_address: order.address,
             p_payment: order.payment,
