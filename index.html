@@ -1263,7 +1263,7 @@
              SİPARİŞ
         ========================================= -->
 
-        <div id="orderItemsCard" class="card">
+        <div id="orderItemsCard" class="card hidden">
 
             <div class="order-heading-row">
                 <h2>Siparişiniz</h2>
@@ -1291,7 +1291,7 @@
              MÜŞTERİ BİLGİLERİ
         ========================================= -->
 
-        <div id="customerInfoCard" class="card">
+        <div id="customerInfoCard" class="card hidden">
 
             <h2>
                 Müşteri Bilgileri
@@ -2017,15 +2017,25 @@
         const customerInfoCard = document.getElementById("customerInfoCard");
         if (!banner) return;
 
-        platformBusinessActive = platformBusiness ? licenseIsActive(platformBusiness) : true;
-        const inactive = !!platformBusiness && !platformBusinessActive;
+        // Merkezi lisans bilgisi gelene kadar sipariş alanlarını göstermiyoruz.
+        if (!platformBusiness) {
+            orderItemsCard?.classList.add("hidden");
+            customerInfoCard?.classList.add("hidden");
+            banner.classList.add("hidden");
+            banner.textContent = "";
+            return;
+        }
+
+        platformBusinessActive = licenseIsActive(platformBusiness);
+        const inactive = !platformBusinessActive;
 
         orderItemsCard?.classList.toggle("hidden", inactive);
         customerInfoCard?.classList.toggle("hidden", inactive);
 
         if (inactive) {
+            const businessName = String(platformBusiness.shop_name || "işletme").trim() || "işletme";
             banner.classList.remove("hidden");
-            banner.innerHTML = "⚠️ <strong>Bu işletme şu anda aktif değildir.</strong><br><span style=\"font-weight:normal\">Kullanım süresi dolmuştur. Lütfen işletme ile iletişime geçiniz.</span>";
+            banner.textContent = `Kullanım süresinin uzatılması için lütfen ${businessName} işletmesi ile iletişime geçiniz.`;
         } else {
             banner.classList.add("hidden");
             banner.textContent = "";
@@ -2092,8 +2102,13 @@
         } catch (error) {
             console.error("Merkezi işletme bilgisi yüklenemedi:", error);
             platformBusinessActive = false;
+            document.getElementById("orderItemsCard")?.classList.add("hidden");
+            document.getElementById("customerInfoCard")?.classList.add("hidden");
             const banner=document.getElementById("licenseBanner");
-            if (banner) { banner.classList.remove("hidden"); banner.textContent="⚠️ Lisans bilgisi doğrulanamadı. Sipariş geçici olarak kapalı."; }
+            if (banner) {
+                banner.classList.remove("hidden");
+                banner.textContent="Lisans bilgisi doğrulanamadı. Sipariş geçici olarak kapalı.";
+            }
         }
     }
 

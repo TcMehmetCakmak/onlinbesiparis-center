@@ -67,9 +67,33 @@ async function setEnabled(id,val){const {error}=await db.rpc('super_admin_set_bu
 async function rotateToken(id){if(!confirm('Bu işletmenin bağlantı tokenı yenilensin mi? Eski token hemen geçersiz olur.'))return;const {data,error}=await db.rpc('super_admin_rotate_business_token',{p_business_id:id});if(error){toast(error.message);return}document.getElementById('createdPublicKey').textContent=businesses.find(x=>x.id===id)?.public_key||'-';document.getElementById('createdToken').textContent=data.business_token;document.getElementById('createdLicenseEnd').textContent='Token yenilendi — tenant secret güncellenmeli';document.getElementById('tokenModal').classList.remove('hidden')}
 async function approveRequest(id){if(!confirm('Bu dükkan adı değişikliğini onaylıyor musunuz?'))return;const {error}=await db.rpc('super_admin_approve_name_request',{p_request_id:id});if(error)toast(error.message);else{toast('Dükkan adı onaylandı.');await loadAll()}}
 async function rejectRequest(id){const reason=prompt('Red nedeni (opsiyonel):','')??null;if(reason===null)return;const {error}=await db.rpc('super_admin_reject_name_request',{p_request_id:id,p_reason:reason||null});if(error)toast(error.message);else{toast('Talep reddedildi.');await loadRequests()}}
-const ch=db.channel('super-admin-live').on('postgres_changes',{event:'*',schema:'public',table:'businesses'},()=>loadBusinesses()).on('postgres_changes',{event:'*',schema:'public',table:'name_change_requests'},()=>loadRequests()).subscribe();
-db.auth.onAuthStateChange((_,s)=>{if(!s){document.getElementById('loginPage').classList.remove('hidden');document.getElementById('app').classList.add('hidden')}});
-setInterval(()=>{if(!document.hidden)loadBusinesses()},300000);
+let superAdminRefreshBusy=false;
+async function refreshSuperAdminData(){
+  if(superAdminRefreshBusy||document.hidden)return;
+  superAdminRefreshBusy=true;
+  try{
+    await Promise.all([loadBusinesses(),loadRequests()]);
+  }finally{
+    superAdminRefreshBusy=false;
+  }
+}
+
+const ch=db.channel('super-admin-live')
+  .on('postgres_changes',{event:'*',schema:'public',table:'businesses'},()=>refreshSuperAdminData())
+  .on('postgres_changes',{event:'*',schema:'public',table:'business_public'},()=>refreshSuperAdminData())
+  .on('postgres_changes',{event:'*',schema:'public',table:'name_change_requests'},()=>refreshSuperAdminData())
+  .subscribe();
+
+db.auth.onAuthStateChange((_,s)=>{
+  if(!s){
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+  }
+});
+
+setInterval(()=>refreshSuperAdminData(),3000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSuperAdminData()});
+window.addEventListener('focus',()=>refreshSuperAdminData());
 checkSession();
 </script>
 </body>
