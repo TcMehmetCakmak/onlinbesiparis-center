@@ -152,3 +152,6 @@ c04ccab5-1b3e-4320-95b8-8001a7c02893
 
 10. cakmak-tatlici-index.html doyasını cakmak-tatlıcı klasörüne index.html ekle
 11. pushlayınca artık mevcut url'in sonuna /cakmak-tatlici olarak görüntülenir
+
+0. kısayoldan (Genel Şablon varsa)
+Hatta bundan sonra kurulum rehberini de buna göre sadeleştirebiliriz: “yeni işletme aç → klasörü kopyala → sadece platform-config.js businessKey değiştir → admin kullanıcısını business_id’ye bağla → başlangıç ayarlarını/ürünleri ekle.”

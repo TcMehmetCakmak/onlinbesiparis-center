@@ -20,7 +20,7 @@
     <meta
         id="appDescription"
         name="description"
-        content="Dürümcü online sipariş uygulaması"
+        content="Online sipariş uygulaması"
     >
 
     <link
@@ -33,7 +33,7 @@
         href="icon-192.png"
     >
 
-    <title>Dürümcü Sipariş</title>
+    <title>Online Sipariş</title>
 
     <style>
 
@@ -1194,7 +1194,7 @@
             <div class="review-header">
 
                 <h1>
-                    <span id="shopIcon">🌯</span> <span id="shopName">Dürümcü</span>
+                    <span id="shopIcon">🍽️</span> <span id="shopName">İşletme</span>
                 </h1>
 
                 <!-- =========================================
@@ -1391,7 +1391,7 @@
             <!-- SİPARİŞİ OLUŞTUR + ARA -->
             <div class="order-action-row">
                 <button type="button" class="main-button order-button" onclick="createOrder()">Siparişi Oluştur</button>
-                <a href="tel:+905451014563" class="call-button" title="Hemen Ara" aria-label="Hemen Ara">📞</a>
+                <a id="businessCallButton" href="#" class="call-button hidden" title="Hemen Ara" aria-label="Hemen Ara">📞</a>
             </div>
 
         </div>
@@ -1980,18 +1980,28 @@
 
     let products = [];
 
-    const STORAGE_KEY =
-        "durumcu_order";
+    const APP_ROOT_URL = new URL("./", location.href);
+    const TENANT_SLUG = (
+        new URLSearchParams(location.search).get("tenant")
+        || window.PLATFORM_CONFIG?.defaultSlug
+        || "durumcu"
+    ).trim().toLowerCase();
+
+    const TENANT_STORAGE_NAMESPACE =
+        TENANT_SLUG.replace(/[^a-z0-9_-]/g, "_") || "default";
+
+    const STORAGE_KEY = `online_order_${TENANT_STORAGE_NAMESPACE}`;
 
     /* Veritabanından gelen ortak veriler */
     let reviews = [];
     let notifications = [];
 
     let appSettings = {
-        id: 1,
-        shop_name: "Dürümcü",
-        shop_icon: "🌯",
-        background_color: "#f5f5f5"
+        id: null,
+        shop_name: "İşletme",
+        shop_icon: "🍽️",
+        background_color: "#f5f5f5",
+        phone: ""
     };
 
     let platformBusiness = null;
@@ -2047,8 +2057,8 @@
     function applyAppSettings(settings) {
         appSettings = { ...appSettings, ...(settings || {}) };
         const centralName = String(platformBusiness?.shop_name || "").trim();
-        const shopName = centralName || String(appSettings.shop_name || "Dürümcü").trim() || "Dürümcü";
-        const shopIcon = String(appSettings.shop_icon || "🌯").trim() || "🌯";
+        const shopName = centralName || String(appSettings.shop_name || "İşletme").trim() || "İşletme";
+        const shopIcon = String(appSettings.shop_icon || "🍽️").trim() || "🍽️";
         const backgroundColor = normalizeHexColor(appSettings.background_color);
 
         const nameEl = document.getElementById("shopName");
@@ -2063,6 +2073,19 @@
         if (theme) theme.setAttribute("content", backgroundColor);
         const description = document.getElementById("appDescription");
         if (description) description.setAttribute("content", `${shopName} online sipariş uygulaması`);
+
+        const callButton = document.getElementById("businessCallButton");
+        const phone = String(appSettings.phone || "").trim();
+        if (callButton) {
+            if (phone) {
+                callButton.href = `tel:${phone}`;
+                callButton.classList.remove("hidden");
+            } else {
+                callButton.href = "#";
+                callButton.classList.add("hidden");
+            }
+        }
+
         renderLicenseState();
     }
 
@@ -2071,8 +2094,7 @@
         try {
             const { data, error } = await supabaseClient
                 .from("app_settings")
-                .select("id,shop_name,shop_icon,background_color,business_id")
-                .eq("id", 1)
+                .select("id,shop_name,shop_icon,background_color,phone,business_id")
                 .eq("business_id", currentBusinessId)
                 .maybeSingle();
             if (error) throw error;
@@ -2084,35 +2106,49 @@
         }
     }
 
+    function usePrettyTenantUrl() {
+        const params = new URLSearchParams(location.search);
+        if (!params.has("tenant")) return;
+        history.replaceState(
+            { tenant: TENANT_SLUG },
+            "",
+            `${APP_ROOT_URL.pathname}${encodeURIComponent(TENANT_SLUG)}/`
+        );
+    }
+
     async function loadPlatformBusiness() {
-        if (!platformClient || !window.PLATFORM_CONFIG?.businessKey) {
-            console.warn("Platform bağlantısı yapılandırılmamış; merkezi lisans kontrolü pasif.");
+        if (!platformClient || !TENANT_SLUG) {
+            console.warn("Platform bağlantısı yapılandırılmamış.");
             platformBusiness = null;
-            platformBusinessActive = true;
+            platformBusinessActive = false;
             applyAppSettings(appSettings);
             return;
         }
+
         try {
             const { data, error } = await platformClient
                 .from("business_public")
                 .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
-                .eq("public_key", window.PLATFORM_CONFIG.businessKey)
+                .eq("slug", TENANT_SLUG)
                 .maybeSingle();
+
             if (error) throw error;
-            if (!data) throw new Error("Merkezi işletme kaydı bulunamadı.");
+            if (!data) throw new Error(`Merkezi işletme kaydı bulunamadı: ${TENANT_SLUG}`);
+
             platformBusiness = data;
             currentBusinessId = data.business_id;
             platformBusinessActive = licenseIsActive(data);
             applyAppSettings(appSettings);
+            usePrettyTenantUrl();
         } catch (error) {
             console.error("Merkezi işletme bilgisi yüklenemedi:", error);
             platformBusinessActive = false;
             document.getElementById("orderItemsCard")?.classList.add("hidden");
             document.getElementById("customerInfoCard")?.classList.add("hidden");
-            const banner=document.getElementById("licenseBanner");
+            const banner = document.getElementById("licenseBanner");
             if (banner) {
                 banner.classList.remove("hidden");
-                banner.textContent="Lisans bilgisi doğrulanamadı. Sipariş geçici olarak kapalı.";
+                banner.textContent = "Lisans bilgisi doğrulanamadı. Sipariş geçici olarak kapalı.";
             }
         }
     }
@@ -2122,7 +2158,7 @@
      * Bildirimin kendisi Supabase'de ortaktır.
      */
     const NOTIFICATION_READ_STORAGE_KEY =
-        "durumcu_read_notifications";
+        `read_notifications_${TENANT_STORAGE_NAMESPACE}`;
 
 
     /* =========================================
@@ -3835,7 +3871,7 @@
 
     function getOrderRpcPayload() {
         return {
-            p_business_key: window.PLATFORM_CONFIG?.businessKey || "",
+            p_business_key: platformBusiness?.public_key || "",
             p_name: order.name,
             p_address: order.address,
             p_payment: order.payment,
@@ -3911,7 +3947,11 @@ Sipariş No: #${data.id}`;
         message += `
 Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kullanılacaktır.`;
 
-        const businessPhone = "905451014563";
+        const businessPhone = String(appSettings.phone || "").replace(/[^0-9]/g, "");
+        if (!businessPhone) {
+            alert("İşletmenin WhatsApp numarası tanımlanmamış.");
+            return;
+        }
         const whatsappAppUrl =
             "whatsapp://send?phone=" + businessPhone + "&text=" + encodeURIComponent(message);
 
@@ -4468,12 +4508,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             });
     }
 
-    const platformUpdatesChannel = platformClient && window.PLATFORM_CONFIG?.businessKey
+    const platformUpdatesChannel = platformClient && TENANT_SLUG
         ? platformClient
-            .channel("tenant-platform-business")
+            .channel(`tenant-platform-business-${TENANT_SLUG}`)
             .on("postgres_changes", {
                 event: "*", schema: "public", table: "business_public",
-                filter: `public_key=eq.${window.PLATFORM_CONFIG.businessKey}`
+                filter: `slug=eq.${TENANT_SLUG}`
             }, () => loadPlatformBusiness())
             .subscribe()
         : null;
@@ -4561,7 +4601,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             () => {
 
                 navigator.serviceWorker.register(
-                    "service-worker.js"
+                    `${APP_ROOT_URL.pathname}service-worker.js`
                 );
 
             }

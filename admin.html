@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dürümcü İşletme Paneli · Multi-Tenant</title>
+<title>İşletme Yönetim Paneli</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f5f7;color:#222}
@@ -51,7 +51,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <body>
 
 <div id="loginPage" class="login">
-  <h1>🌯 İşletme Girişi</h1>
+  <h1>🍽️ İşletme Girişi</h1>
   <p class="muted">Ürünleri, siparişleri ve ciroyu buradan yönetin.</p>
   <label>E-posta</label>
   <input id="email" type="email" autocomplete="username" placeholder="admin@ornek.com">
@@ -64,7 +64,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <div id="app" class="container hidden">
   <div class="header">
     <div>
-      <h1>🌯 İşletme Yönetim Paneli</h1>
+      <h1>🍽️ İşletme Yönetim Paneli</h1>
       <div class="muted">index.html üzerindeki ürünler ve siparişler merkezi olarak yönetilir.</div>
     </div>
     <div class="header-actions">
@@ -147,7 +147,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
           >Dükkan adı yükleniyor...</button>
           <div id="shopNameHelp" class="muted">Dükkan adını değiştirmek için yukarıdaki alana tıklayın.</div>
         </div>
-        <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🌯"></div>
+        <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🍽️"></div><div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
         <div>
           <label>Uygulama arka plan rengi</label>
           <div style="display:flex;gap:10px;align-items:center">
@@ -257,10 +257,17 @@ const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.ke
   ? window.supabase.createClient(window.PLATFORM_CONFIG.url, window.PLATFORM_CONFIG.key, {auth:{persistSession:false}})
   : null;
 
+const APP_ROOT_URL = new URL("./", location.href);
+const TENANT_SLUG = (
+  new URLSearchParams(location.search).get("tenant")
+  || window.PLATFORM_CONFIG?.defaultSlug
+  || "durumcu"
+).trim().toLowerCase();
+
 let products = [];
 let orders = [];
 let notifications = [];
-let appSettings = {id:1,shop_name:"Dürümcü",shop_icon:"🌯",background_color:"#f5f5f5"};
+let appSettings = {id:null,shop_name:"İşletme",shop_icon:"🍽️",background_color:"#f5f5f5",phone:""};
 let platformBusiness = null;
 let currentBusinessId = null;
 let adminRealtimeChannel = null;
@@ -366,13 +373,15 @@ async function loadAdminNotifications(){
 async function loadAdminSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
-      .select("id,shop_name,shop_icon,background_color,business_id").eq("id",1).eq("business_id",currentBusinessId).maybeSingle();
+      .select("id,shop_name,shop_icon,background_color,phone,business_id").eq("business_id",currentBusinessId).maybeSingle();
     if(error)throw error;
     if(data)appSettings=data;
     const icon=document.getElementById("settingShopIcon");
+    const phone=document.getElementById("settingPhone");
     const color=document.getElementById("settingBackgroundColor");
     const colorText=document.getElementById("settingBackgroundColorText");
-    if(icon)icon.value=appSettings.shop_icon||"🌯";
+    if(icon)icon.value=appSettings.shop_icon||"🍽️";
+    if(phone)phone.value=appSettings.phone||"";
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
     if(color)color.value=c;
     if(colorText)colorText.value=c;
@@ -394,6 +403,7 @@ function renderPlatformBusiness(){
 
   if(platformBusiness){
     if(nameButton)nameButton.textContent=platformBusiness.shop_name||"Dükkan adı";
+    document.title=`${platformBusiness.shop_name||"İşletme"} · Yönetim Paneli`;
 
     const active=tenantLicenseIsActive(platformBusiness);
     if(box){
@@ -412,24 +422,42 @@ function renderPlatformBusiness(){
   }
 }
 
+function usePrettyTenantAdminUrl(){
+  const params=new URLSearchParams(location.search);
+  if(!params.has("tenant"))return;
+  history.replaceState(
+    {tenant:TENANT_SLUG},
+    "",
+    `${APP_ROOT_URL.pathname}${encodeURIComponent(TENANT_SLUG)}/admin.html`
+  );
+}
+
 async function loadPlatformBusiness(){
-  if(!platformClient||!window.PLATFORM_CONFIG?.businessKey){platformBusiness=null;renderPlatformBusiness();return;}
+  if(!platformClient||!TENANT_SLUG){platformBusiness=null;renderPlatformBusiness();return;}
   try{
     const {data,error}=await platformClient.from("business_public")
       .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
-      .eq("public_key",window.PLATFORM_CONFIG.businessKey).maybeSingle();
+      .eq("slug",TENANT_SLUG).maybeSingle();
+
     if(error)throw error;
-    if(!data)throw new Error("Merkezi işletme kaydı bulunamadı.");
+    if(!data)throw new Error(`Merkezi işletme kaydı bulunamadı: ${TENANT_SLUG}`);
+
     if(currentBusinessId && data.business_id !== currentBusinessId){
       throw new Error("Admin hesabı farklı bir işletmeye bağlı. Giriş engellendi.");
     }
+
     platformBusiness=data;
     renderPlatformBusiness();
+    usePrettyTenantAdminUrl();
     loadAdminSettings();
   }catch(e){
     console.error(e);
     const box=document.getElementById("tenantLicenseInfo");
-    if(box){box.textContent="Merkezi işletme bilgisi yüklenemedi: "+e.message;box.style.background="#ffebee";box.style.color="#a11";}
+    if(box){
+      box.textContent="Merkezi işletme bilgisi yüklenemedi: "+e.message;
+      box.style.background="#ffebee";
+      box.style.color="#a11";
+    }
   }
 }
 
@@ -442,6 +470,7 @@ document.addEventListener("input",e=>{
 });
 async function saveAppSettings(){
   const shop_icon=document.getElementById("settingShopIcon").value.trim();
+  const phone=document.getElementById("settingPhone").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
 
   if(!shop_icon){toast("İkon gerekli.");return;}
@@ -450,18 +479,17 @@ async function saveAppSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
       .upsert({
-        id:1,
         business_id:currentBusinessId,
-        shop_name:appSettings.shop_name||"Dürümcü",
+        shop_name:platformBusiness?.shop_name||appSettings.shop_name||"İşletme",
         shop_icon,
+        phone:phone||null,
         background_color,
         updated_at:new Date().toISOString()
-      },{onConflict:"id"})
-      .select("id,shop_name,shop_icon,background_color,business_id")
+      },{onConflict:"business_id"})
+      .select("id,shop_name,shop_icon,background_color,phone,business_id")
       .single();
 
     if(error)throw error;
-
     appSettings=data;
     toast("Genel ayarlar kaydedildi.");
     loadAdminSettings();
@@ -491,99 +519,9 @@ function closeShopNameModal(){
 }
 
 async function requestShopNameChange(){
-  const requestedName=document.getElementById("requestedShopName").value.trim();
-  const currentName=String(platformBusiness?.shop_name||"").trim();
   const errorBox=document.getElementById("shopNameRequestError");
-  const btn=document.getElementById("shopNameRequestButton");
-
-  errorBox.classList.add("hidden");
-  errorBox.textContent="";
-
-  if(!requestedName){
-    errorBox.textContent="Yeni dükkan adı gerekli.";
-    errorBox.classList.remove("hidden");
-    return;
-  }
-
-  if(requestedName.localeCompare(currentName,"tr",{sensitivity:"base"})===0){
-    errorBox.textContent="Yeni dükkan adı mevcut dükkan adı ile aynı olamaz.";
-    errorBox.classList.remove("hidden");
-    return;
-  }
-
-  btn.disabled=true;
-  const oldText=btn.textContent;
-  btn.textContent="Gönderiliyor...";
-
-  try{
-    const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
-
-    if(sessionError)throw sessionError;
-    if(!sessionData?.session?.access_token){
-      throw new Error("Oturum bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.");
-    }
-
-    const {data:reqData,error:reqError}=await supabaseClient.functions.invoke(
-      "request-shop-name-change",
-      {
-        body:{requested_name:requestedName},
-        headers:{
-          Authorization:`Bearer ${sessionData.session.access_token}`
-        }
-      }
-    );
-
-    if(reqError || !reqData?.ok){
-      const details={
-        message:reqError?.message||reqData?.error||"İsim değişikliği talebi gönderilemedi.",
-        functionError:reqError||null,
-        response:reqData||null,
-        requestedName,
-        currentName,
-        businessKey:window.PLATFORM_CONFIG?.businessKey||null
-      };
-      console.error("Dükkan adı güncelleme talebi başarısız:",details);
-
-      errorBox.textContent=
-        "Dükkan adı güncellenemedi.\n"+
-        (details.message||"Bilinmeyen hata.");
-      errorBox.classList.remove("hidden");
-      return;
-    }
-
-    closeShopNameModal();
-
-    const help=document.getElementById("shopNameHelp");
-    if(help){
-      help.dataset.pendingName=requestedName;
-      help.textContent=`⏳ “${requestedName}” için onay bekleniyor.`;
-    }
-
-    // Eski/aktif dükkan adı görünmeye devam eder.
-    const nameButton=document.getElementById("settingShopNameButton");
-    if(nameButton)nameButton.textContent=currentName;
-
-    toast("Dükkan adı değişikliği onaya gönderildi.");
-  }catch(e){
-    const details={
-      message:e?.message||String(e),
-      name:e?.name||null,
-      stack:e?.stack||null,
-      cause:e?.cause||null,
-      requestedName,
-      currentName,
-      businessKey:window.PLATFORM_CONFIG?.businessKey||null
-    };
-    console.error("Dükkan adı güncelleme hatası:",details,e);
-
-    errorBox.textContent=
-      "Dükkan adı güncellenemedi.\n"+
-      (details.message||"Bilinmeyen hata.");
-    errorBox.classList.remove("hidden");
-  }finally{
-    btn.disabled=false;
-    btn.textContent=oldText;
-  }
+  errorBox.textContent="İsim değişikliği özelliği ortak multi-tenant Edge Function güncellemesinden sonra aktif edilecek.";
+  errorBox.classList.remove("hidden");
 }
 
 function loadDashboard(){
@@ -823,9 +761,9 @@ async function deleteNotification(id){
 
 function escapeHtml(v){const d=document.createElement("div");d.textContent=v??"";return d.innerHTML;}
 function escapeAttr(v){return String(v??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-const platformBusinessChannel = platformClient && window.PLATFORM_CONFIG?.businessKey
-  ? platformClient.channel("admin-platform-business")
-      .on("postgres_changes",{event:"*",schema:"public",table:"business_public",filter:`public_key=eq.${window.PLATFORM_CONFIG.businessKey}`},async()=>{
+const platformBusinessChannel = platformClient && TENANT_SLUG
+  ? platformClient.channel(`admin-platform-business-${TENANT_SLUG}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"business_public",filter:`slug=eq.${TENANT_SLUG}`},async()=>{
       const previousName=String(platformBusiness?.shop_name||"");
       await loadPlatformBusiness();
       const currentName=String(platformBusiness?.shop_name||"");
