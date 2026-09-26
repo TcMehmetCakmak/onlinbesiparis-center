@@ -2439,7 +2439,7 @@
         if (order.couponCodes.includes(code)) { if(status){ status.textContent="Bu indirim kodu zaten eklendi."; status.className="coupon-status error";} return; }
         try {
             const proposed = [...order.couponCodes, code];
-            const { data, error } = await supabaseClient.rpc("validate_coupons", { p_codes: proposed, p_subtotal: getSubtotal() });
+            const { data, error } = await supabaseClient.rpc("validate_coupons", { p_business_id: currentBusinessId, p_codes: proposed, p_subtotal: getSubtotal() });
             if (error) throw error;
             if (!data || data.valid !== true) { if(status){status.textContent=data?.message||"İndirim kodu geçersiz veya aktif değil.";status.className="coupon-status error";} return; }
             order.couponCodes = proposed;
@@ -2456,7 +2456,7 @@
     async function revalidateCouponCodes(silent=false) {
         if (!order.couponCodes.length) { appliedCoupons=[]; calculateTotal(); renderAppliedCoupons(); return true; }
         try {
-            const {data,error}=await supabaseClient.rpc("validate_coupons",{p_codes:order.couponCodes,p_subtotal:getSubtotal()});
+            const {data,error}=await supabaseClient.rpc("validate_coupons",{p_business_id:currentBusinessId,p_codes:order.couponCodes,p_subtotal:getSubtotal()});
             if(error) throw error;
             if(!data || data.valid!==true){ order.couponCodes=[]; appliedCoupons=[]; saveOrder(); calculateTotal(); renderAppliedCoupons(); return false; }
             appliedCoupons=Array.isArray(data.coupons)?data.coupons:[]; saveOrder(); calculateTotal(); renderAppliedCoupons(); return true;
