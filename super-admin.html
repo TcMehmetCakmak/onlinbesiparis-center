@@ -36,6 +36,34 @@
 
 <div id="createModal" class="modal hidden"><div class="modal-card"><div class="header"><h2>Yeni İşletme</h2><button class="btn btn-light" onclick="closeCreateBusiness()">✕</button></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Ahmet Çaçure"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Dürümcü"></div><div><label>Slug</label><input id="newSlug" placeholder="durumcu"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-light" onclick="closeCreateBusiness()">Vazgeç</button><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
 
+
+<div id="editBusinessModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="header">
+      <h2>İşletmeyi Düzenle</h2>
+      <button class="btn btn-light" onclick="closeEditBusiness()">✕</button>
+    </div>
+    <input id="editBusinessId" type="hidden">
+    <div class="form-grid">
+      <div><label>İşletme sahibi</label><input id="editOwner"></div>
+      <div><label>Dükkan adı</label><input id="editShop"></div>
+      <div><label>Slug</label><input id="editSlug"></div>
+      <div><label>Tenant Project Ref</label><input id="editProjectRef"></div>
+      <div>
+        <label>Durum</label>
+        <select id="editEnabled">
+          <option value="true">Aktif</option>
+          <option value="false">Deaktif</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-light" onclick="closeEditBusiness()">Vazgeç</button>
+      <button class="btn btn-primary" onclick="saveBusinessEdit()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div id="tokenModal" class="modal hidden"><div class="modal-card"><h2>✅ İşletme Oluşturuldu</h2><p>Bu bilgiler tenant bağlantısı için kullanılacak. <strong>Business Token sadece şimdi gösterilir.</strong></p><label>Business Public Key</label><div id="createdPublicKey" class="token-box"></div><label>Business Token</label><div id="createdToken" class="token-box"></div><label>Lisans sonu</label><div id="createdLicenseEnd" class="token-box"></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="document.getElementById('tokenModal').classList.add('hidden')">Tamam</button></div></div></div>
 <div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -56,12 +84,49 @@ async function loadAll(){await Promise.all([loadBusinesses(),loadRequests()]);re
 async function loadBusinesses(){const {data,error}=await db.rpc('super_admin_list_businesses');if(error){toast(error.message);return}businesses=data||[];renderBusinesses();renderStats()}
 async function loadRequests(){const {data,error}=await db.rpc('super_admin_list_name_requests');if(error){toast(error.message);return}requests=data||[];renderRequests();renderStats()}
 function renderStats(){document.getElementById('statTotal').textContent=businesses.length;document.getElementById('statActive').textContent=businesses.filter(x=>x.is_active).length;document.getElementById('statInactive').textContent=businesses.filter(x=>!x.is_active).length;document.getElementById('statPending').textContent=requests.filter(x=>x.status==='pending').length}
-function renderBusinesses(){const q=document.getElementById('search').value.trim().toLocaleLowerCase('tr'),status=document.getElementById('statusFilter').value,sort=document.getElementById('sortFilter').value;let list=businesses.filter(b=>!q||[b.owner_name,b.shop_name,b.slug,b.tenant_project_ref].some(v=>String(v||'').toLocaleLowerCase('tr').includes(q))).filter(b=>status==='all'||(status==='active'?b.is_active:!b.is_active));if(sort==='license')list.sort((a,b)=>String(a.license_end_date).localeCompare(String(b.license_end_date)));else if(sort==='name')list.sort((a,b)=>String(a.shop_name).localeCompare(String(b.shop_name),'tr'));else list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));const el=document.getElementById('businessList');if(!list.length){el.innerHTML='<div class="card empty">İşletme bulunamadı.</div>';return}el.innerHTML=list.map(b=>`<div class="business card"><div class="business-head"><div><h3 style="margin:0">${esc(b.shop_name)}</h3><div class="muted">${esc(b.owner_name)} · ${esc(b.slug)}</div></div><span class="badge ${b.is_active?'active':'inactive'}">${b.is_active?'🟢 Aktif':'🔴 Deaktif'}</span></div><div class="meta"><div><div class="muted">Lisans başlangıcı</div><strong>${dateTR(b.license_start_date)}</strong></div><div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div><div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div><div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div></div><div class="muted">Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div><div class="actions" style="margin-top:12px"><button class="btn btn-success" onclick="extendLicense('${b.id}',1)">+1 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',3)">+3 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',6)">+6 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',12)">+12 Ay</button><button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button><button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button></div></div>`).join('')}
+function renderBusinesses(){const q=document.getElementById('search').value.trim().toLocaleLowerCase('tr'),status=document.getElementById('statusFilter').value,sort=document.getElementById('sortFilter').value;let list=businesses.filter(b=>!q||[b.owner_name,b.shop_name,b.slug,b.tenant_project_ref].some(v=>String(v||'').toLocaleLowerCase('tr').includes(q))).filter(b=>status==='all'||(status==='active'?b.is_active:!b.is_active));if(sort==='license')list.sort((a,b)=>String(a.license_end_date).localeCompare(String(b.license_end_date)));else if(sort==='name')list.sort((a,b)=>String(a.shop_name).localeCompare(String(b.shop_name),'tr'));else list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));const el=document.getElementById('businessList');if(!list.length){el.innerHTML='<div class="card empty">İşletme bulunamadı.</div>';return}el.innerHTML=list.map(b=>`<div class="business card"><div class="business-head"><div><h3 style="margin:0">${esc(b.shop_name)}</h3><div class="muted">${esc(b.owner_name)} · ${esc(b.slug)}</div></div><span class="badge ${b.is_active?'active':'inactive'}">${b.is_active?'🟢 Aktif':'🔴 Deaktif'}</span></div><div class="meta"><div><div class="muted">Lisans başlangıcı</div><strong>${dateTR(b.license_start_date)}</strong></div><div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div><div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div><div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div></div><div class="muted">Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div><div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="openEditBusiness(\'${b.id}\')">✏️ Düzenle</button><button class="btn btn-success" onclick="extendLicense('${b.id}',1)">+1 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',3)">+3 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',6)">+6 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',12)">+12 Ay</button><button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button><button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button></div></div>`).join('')}
 function renderRequests(){const el=document.getElementById('requestList');if(!requests.length){el.innerHTML='<div class="empty">İsim değişikliği talebi yok.</div>';return}el.innerHTML=requests.map(r=>`<div class="request"><div class="business-head"><div><strong>${esc(r.owner_name)}</strong><div class="muted">${dateTimeTR(r.requested_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Onay Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Mevcut:</span> <strong>${esc(r.current_name)}</strong> → <span class="muted">İstenen:</span> <strong>${esc(r.requested_name)}</strong></div>${r.rejection_reason?`<div class="muted">Red nedeni: ${esc(r.rejection_reason)}</div>`:''}${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approveRequest(${r.id})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectRequest(${r.id})">✕ Reddet</button></div>`:''}</div>`).join('')}
 function showTab(n,b){document.getElementById('businessesTab').classList.toggle('hidden',n!=='businesses');document.getElementById('requestsTab').classList.toggle('hidden',n!=='requests');document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active')}
 function openCreateBusiness(){document.getElementById('createModal').classList.remove('hidden')}
 function closeCreateBusiness(){document.getElementById('createModal').classList.add('hidden')}
 async function createBusiness(){const owner=document.getElementById('newOwner').value.trim(),shop=document.getElementById('newShop').value.trim(),slug=document.getElementById('newSlug').value.trim(),months=Number(document.getElementById('newMonths').value),ref=document.getElementById('newProjectRef').value.trim();const {data,error}=await db.rpc('super_admin_create_business',{p_owner_name:owner,p_shop_name:shop,p_slug:slug,p_initial_months:months,p_tenant_project_ref:ref||null});if(error){toast(error.message);return}closeCreateBusiness();document.getElementById('createdPublicKey').textContent=data.public_key;document.getElementById('createdToken').textContent=data.business_token;document.getElementById('createdLicenseEnd').textContent=data.license_end_date;document.getElementById('tokenModal').classList.remove('hidden');await loadAll()}
+
+function openEditBusiness(id){
+  const b=businesses.find(x=>x.id===id);
+  if(!b){toast('İşletme bulunamadı.');return}
+  document.getElementById('editBusinessId').value=b.id;
+  document.getElementById('editOwner').value=b.owner_name||'';
+  document.getElementById('editShop').value=b.shop_name||'';
+  document.getElementById('editSlug').value=b.slug||'';
+  document.getElementById('editProjectRef').value=b.tenant_project_ref||'';
+  document.getElementById('editEnabled').value=String(!!b.manual_enabled);
+  document.getElementById('editBusinessModal').classList.remove('hidden');
+}
+function closeEditBusiness(){
+  document.getElementById('editBusinessModal').classList.add('hidden');
+}
+async function saveBusinessEdit(){
+  const id=document.getElementById('editBusinessId').value;
+  const owner=document.getElementById('editOwner').value.trim();
+  const shop=document.getElementById('editShop').value.trim();
+  const slug=document.getElementById('editSlug').value.trim();
+  const ref=document.getElementById('editProjectRef').value.trim();
+  const enabled=document.getElementById('editEnabled').value==='true';
+  if(!owner||!shop||!slug){toast('İşletme sahibi, dükkan adı ve slug zorunludur.');return}
+  const {error}=await db.rpc('super_admin_update_business',{
+    p_business_id:id,
+    p_owner_name:owner,
+    p_shop_name:shop,
+    p_slug:slug,
+    p_tenant_project_ref:ref||null,
+    p_manual_enabled:enabled
+  });
+  if(error){toast(error.message);return}
+  closeEditBusiness();
+  toast('İşletme güncellendi.');
+  await refreshSuperAdminData();
+}
+
 async function extendLicense(id,m){const {error}=await db.rpc('super_admin_extend_license',{p_business_id:id,p_months:m});if(error)toast(error.message);else{toast(`Lisans +${m} ay uzatıldı.`);await loadBusinesses()}}
 async function setEnabled(id,val){const {error}=await db.rpc('super_admin_set_business_enabled',{p_business_id:id,p_enabled:val});if(error)toast(error.message);else{toast('İşletme durumu güncellendi.');await loadBusinesses()}}
 async function rotateToken(id){if(!confirm('Bu işletmenin bağlantı tokenı yenilensin mi? Eski token hemen geçersiz olur.'))return;const {data,error}=await db.rpc('super_admin_rotate_business_token',{p_business_id:id});if(error){toast(error.message);return}document.getElementById('createdPublicKey').textContent=businesses.find(x=>x.id===id)?.public_key||'-';document.getElementById('createdToken').textContent=data.business_token;document.getElementById('createdLicenseEnd').textContent='Token yenilendi — tenant secret güncellenmeli';document.getElementById('tokenModal').classList.remove('hidden')}

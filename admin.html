@@ -399,11 +399,18 @@ async function saveAppSettings(){
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
   try{
+    let localSettingsSaved=false;
     const {data,error}=await supabaseClient.from("app_settings")
       .upsert({id:1,shop_name:appSettings.shop_name||"Dürümcü",shop_icon,background_color,updated_at:new Date().toISOString()},{onConflict:"id"})
       .select("id,shop_name,shop_icon,background_color").single();
-    if(error)throw error;
-    appSettings=data;
+
+    if(error){
+      console.error("Yerel ayarlar kaydedilemedi:",error);
+      if(!String(error.message||"").includes("app_settings")) throw error;
+    }else{
+      appSettings=data;
+      localSettingsSaved=true;
+    }
 
     const currentCentralName=String(platformBusiness?.shop_name||"").trim();
     if(currentCentralName && requestedName.localeCompare(currentCentralName,"tr",{sensitivity:"base"})!==0){
