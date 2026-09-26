@@ -138,8 +138,14 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
       <div class="form-grid">
         <div>
           <label>Dükkan adı</label>
-          <input id="settingShopName" maxlength="80" placeholder="Örn. Dürümcü">
-          <div id="shopNameHelp" class="muted">Dükkan adı değişiklikleri süper admin onayına gönderilir.</div>
+          <button
+            id="settingShopNameButton"
+            type="button"
+            class="btn btn-light"
+            style="width:100%;text-align:left;background:#fff;border:1px solid #ddd"
+            onclick="openShopNameModal()"
+          >Dükkan adı yükleniyor...</button>
+          <div id="shopNameHelp" class="muted">Dükkan adını değiştirmek için yukarıdaki alana tıklayın.</div>
         </div>
         <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🌯"></div>
         <div>
@@ -156,6 +162,28 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
       </div>
     </div>
   </section>
+</div>
+
+
+<div id="shopNameModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Dükkan Adını Değiştir</h2>
+    <div class="muted" style="margin-bottom:12px">Yeni ad süper admin onayına gönderilecektir.</div>
+
+    <label>Mevcut dükkan adı</label>
+    <input id="currentShopNameDisplay" disabled>
+
+    <label>Yeni dükkan adı</label>
+    <input id="requestedShopName" maxlength="80" placeholder="Yeni dükkan adını yazın">
+
+    <div id="shopNameRequestError" class="hidden"
+         style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11;white-space:pre-wrap"></div>
+
+    <div class="actions" style="justify-content:flex-end;margin-top:18px">
+      <button class="btn btn-light" onclick="closeShopNameModal()">Vazgeç</button>
+      <button id="shopNameRequestButton" class="btn btn-primary" onclick="requestShopNameChange()">Güncelleme Talebi Gönder</button>
+    </div>
+  </div>
 </div>
 
 <div id="productModal" class="modal hidden">
@@ -328,11 +356,9 @@ async function loadAdminSettings(){
       .select("id,shop_name,shop_icon,background_color").eq("id",1).maybeSingle();
     if(error)throw error;
     if(data)appSettings=data;
-    const name=document.getElementById("settingShopName");
     const icon=document.getElementById("settingShopIcon");
     const color=document.getElementById("settingBackgroundColor");
     const colorText=document.getElementById("settingBackgroundColorText");
-    if(name)name.value=platformBusiness?.shop_name||appSettings.shop_name||"Dürümcü";
     if(icon)icon.value=appSettings.shop_icon||"🌯";
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
     if(color)color.value=c;
@@ -351,18 +377,25 @@ function tenantLicenseIsActive(row){
 function renderPlatformBusiness(){
   const box=document.getElementById("tenantLicenseInfo");
   const help=document.getElementById("shopNameHelp");
-  const name=document.getElementById("settingShopName");
+  const nameButton=document.getElementById("settingShopNameButton");
+
   if(platformBusiness){
-    if(name&&document.activeElement!==name)name.value=platformBusiness.shop_name||name.value;
+    if(nameButton)nameButton.textContent=platformBusiness.shop_name||"Dükkan adı";
+
     const active=tenantLicenseIsActive(platformBusiness);
     if(box){
       box.innerHTML=`<strong>${active?"🟢 Aktif":"🔴 Deaktif"}</strong> · Lisans sonu: ${escapeHtml(platformBusiness.license_end_date||"-")}`;
       box.style.background=active?"#e8f5e9":"#ffebee";
       box.style.color=active?"#176b2c":"#a11";
     }
-    if(help)help.textContent="Mevcut ad: "+platformBusiness.shop_name+" · Farklı bir ad kaydederseniz süper admin onayına gönderilir.";
-  }else if(box){
-    box.textContent="Merkezi platform bağlantısı yapılandırılmamış.";
+
+    // Onay beklerken eski/aktif ad ekranda kalır.
+    if(help && !help.dataset.pendingName){
+      help.textContent="Dükkan adını değiştirmek için yukarıdaki alana tıklayın.";
+    }
+  }else{
+    if(nameButton)nameButton.textContent="Dükkan adı yüklenemedi";
+    if(box)box.textContent="Merkezi platform bağlantısı yapılandırılmamış.";
   }
 }
 
@@ -392,39 +425,148 @@ document.addEventListener("input",e=>{
   if(e.target?.id==="settingBackgroundColor")document.getElementById("settingBackgroundColorText").value=e.target.value;
 });
 async function saveAppSettings(){
-  const requestedName=document.getElementById("settingShopName").value.trim();
   const shop_icon=document.getElementById("settingShopIcon").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
-  if(!requestedName){toast("Dükkan adı gerekli.");return;}
+
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
+
   try{
-    let localSettingsSaved=false;
     const {data,error}=await supabaseClient.from("app_settings")
-      .upsert({id:1,shop_name:appSettings.shop_name||"Dürümcü",shop_icon,background_color,updated_at:new Date().toISOString()},{onConflict:"id"})
-      .select("id,shop_name,shop_icon,background_color").single();
+      .upsert({
+        id:1,
+        shop_name:appSettings.shop_name||"Dürümcü",
+        shop_icon,
+        background_color,
+        updated_at:new Date().toISOString()
+      },{onConflict:"id"})
+      .select("id,shop_name,shop_icon,background_color")
+      .single();
 
-    if(error){
-      console.error("Yerel ayarlar kaydedilemedi:",error);
-      if(!String(error.message||"").includes("app_settings")) throw error;
-    }else{
-      appSettings=data;
-      localSettingsSaved=true;
-    }
+    if(error)throw error;
 
-    const currentCentralName=String(platformBusiness?.shop_name||"").trim();
-    if(currentCentralName && requestedName.localeCompare(currentCentralName,"tr",{sensitivity:"base"})!==0){
-      const {data:reqData,error:reqError}=await supabaseClient.functions.invoke("request-shop-name-change",{body:{requested_name:requestedName}});
-      if(reqError||!reqData?.ok)throw new Error(reqData?.error||reqError?.message||"İsim değişikliği talebi gönderilemedi.");
-      document.getElementById("settingShopName").value=currentCentralName;
-      const help=document.getElementById("shopNameHelp");
-      if(help)help.textContent=`⏳ “${requestedName}” adı süper admin onayına gönderildi.`;
-      toast("İkon ve renk kaydedildi. Dükkan adı onaya gönderildi.");
-    }else{
-      toast("Genel ayarlar kaydedildi.");
-    }
+    appSettings=data;
+    toast("Genel ayarlar kaydedildi.");
     loadAdminSettings();
-  }catch(e){toast(e.message);}
+  }catch(e){
+    console.error("Genel ayarlar kaydedilemedi:",e);
+    toast(e.message||"Genel ayarlar kaydedilemedi.");
+  }
+}
+
+function openShopNameModal(){
+  const modal=document.getElementById("shopNameModal");
+  const current=document.getElementById("currentShopNameDisplay");
+  const requested=document.getElementById("requestedShopName");
+  const errorBox=document.getElementById("shopNameRequestError");
+
+  const currentName=String(platformBusiness?.shop_name||"").trim();
+  current.value=currentName;
+  requested.value="";
+  errorBox.classList.add("hidden");
+  errorBox.textContent="";
+  modal.classList.remove("hidden");
+  setTimeout(()=>requested.focus(),50);
+}
+
+function closeShopNameModal(){
+  document.getElementById("shopNameModal").classList.add("hidden");
+}
+
+async function requestShopNameChange(){
+  const requestedName=document.getElementById("requestedShopName").value.trim();
+  const currentName=String(platformBusiness?.shop_name||"").trim();
+  const errorBox=document.getElementById("shopNameRequestError");
+  const btn=document.getElementById("shopNameRequestButton");
+
+  errorBox.classList.add("hidden");
+  errorBox.textContent="";
+
+  if(!requestedName){
+    errorBox.textContent="Yeni dükkan adı gerekli.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+
+  if(requestedName.localeCompare(currentName,"tr",{sensitivity:"base"})===0){
+    errorBox.textContent="Yeni dükkan adı mevcut dükkan adı ile aynı olamaz.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+
+  btn.disabled=true;
+  const oldText=btn.textContent;
+  btn.textContent="Gönderiliyor...";
+
+  try{
+    const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+
+    if(sessionError)throw sessionError;
+    if(!sessionData?.session?.access_token){
+      throw new Error("Oturum bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.");
+    }
+
+    const {data:reqData,error:reqError}=await supabaseClient.functions.invoke(
+      "request-shop-name-change",
+      {
+        body:{requested_name:requestedName},
+        headers:{
+          Authorization:`Bearer ${sessionData.session.access_token}`
+        }
+      }
+    );
+
+    if(reqError || !reqData?.ok){
+      const details={
+        message:reqError?.message||reqData?.error||"İsim değişikliği talebi gönderilemedi.",
+        functionError:reqError||null,
+        response:reqData||null,
+        requestedName,
+        currentName,
+        businessKey:window.PLATFORM_CONFIG?.businessKey||null
+      };
+      console.error("Dükkan adı güncelleme talebi başarısız:",details);
+
+      errorBox.textContent=
+        "Dükkan adı güncellenemedi.\n"+
+        (details.message||"Bilinmeyen hata.");
+      errorBox.classList.remove("hidden");
+      return;
+    }
+
+    closeShopNameModal();
+
+    const help=document.getElementById("shopNameHelp");
+    if(help){
+      help.dataset.pendingName=requestedName;
+      help.textContent=`⏳ “${requestedName}” için onay bekleniyor.`;
+    }
+
+    // Eski/aktif dükkan adı görünmeye devam eder.
+    const nameButton=document.getElementById("settingShopNameButton");
+    if(nameButton)nameButton.textContent=currentName;
+
+    toast("Dükkan adı değişikliği onaya gönderildi.");
+  }catch(e){
+    const details={
+      message:e?.message||String(e),
+      name:e?.name||null,
+      stack:e?.stack||null,
+      cause:e?.cause||null,
+      requestedName,
+      currentName,
+      businessKey:window.PLATFORM_CONFIG?.businessKey||null
+    };
+    console.error("Dükkan adı güncelleme hatası:",details,e);
+
+    errorBox.textContent=
+      "Dükkan adı güncellenemedi.\n"+
+      (details.message||"Bilinmeyen hata.");
+    errorBox.classList.remove("hidden");
+  }finally{
+    btn.disabled=false;
+    btn.textContent=oldText;
+  }
 }
 
 function loadDashboard(){
@@ -664,7 +806,18 @@ function escapeHtml(v){const d=document.createElement("div");d.textContent=v??""
 function escapeAttr(v){return String(v??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 const platformBusinessChannel = platformClient && window.PLATFORM_CONFIG?.businessKey
   ? platformClient.channel("admin-platform-business")
-      .on("postgres_changes",{event:"*",schema:"public",table:"business_public",filter:`public_key=eq.${window.PLATFORM_CONFIG.businessKey}`},()=>loadPlatformBusiness())
+      .on("postgres_changes",{event:"*",schema:"public",table:"business_public",filter:`public_key=eq.${window.PLATFORM_CONFIG.businessKey}`},async()=>{
+      const previousName=String(platformBusiness?.shop_name||"");
+      await loadPlatformBusiness();
+      const currentName=String(platformBusiness?.shop_name||"");
+      if(previousName!==currentName){
+        const help=document.getElementById("shopNameHelp");
+        if(help){
+          delete help.dataset.pendingName;
+          help.textContent="Dükkan adını değiştirmek için yukarıdaki alana tıklayın.";
+        }
+      }
+    })
       .subscribe()
   : null;
 
