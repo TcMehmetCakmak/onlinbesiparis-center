@@ -51,7 +51,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <body>
 
 <div id="loginPage" class="login">
-  <h1>🍽️ İşletme Girişi</h1>
+  <h1 id="tenantLoginTitle">🍽️ İşletme Girişi</h1>
   <p class="muted">Ürünleri, siparişleri ve ciroyu buradan yönetin.</p>
   <label>E-posta</label>
   <input id="email" type="email" autocomplete="username" placeholder="admin@ornek.com">
@@ -64,7 +64,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <div id="app" class="container hidden">
   <div class="header">
     <div>
-      <h1>🍽️ İşletme Yönetim Paneli</h1>
+      <h1 id="tenantAdminTitle">🍽️ İşletme Yönetim Paneli</h1>
       <div class="muted">index.html üzerindeki ürünler ve siparişler merkezi olarak yönetilir.</div>
     </div>
     <div class="header-actions">
@@ -249,20 +249,36 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <script src="supabase-config.js"></script>
 <script src="platform-config.js"></script>
 <script>
-const supabaseClient = window.supabase.createClient(
-  window.SUPABASE_CONFIG.url,
-  window.SUPABASE_CONFIG.key
-);
-const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.key
-  ? window.supabase.createClient(window.PLATFORM_CONFIG.url, window.PLATFORM_CONFIG.key, {auth:{persistSession:false}})
-  : null;
-
 const APP_ROOT_URL = new URL("./", location.href);
 const TENANT_SLUG = (
   new URLSearchParams(location.search).get("tenant")
   || window.PLATFORM_CONFIG?.defaultSlug
   || "durumcu"
 ).trim().toLowerCase();
+
+const AUTH_STORAGE_KEY =
+  `online-admin-auth-${TENANT_SLUG.replace(/[^a-z0-9_-]/g,"_")}`;
+
+const supabaseClient = window.supabase.createClient(
+  window.SUPABASE_CONFIG.url,
+  window.SUPABASE_CONFIG.key,
+  {
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:true,
+      storageKey:AUTH_STORAGE_KEY
+    }
+  }
+);
+
+const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.key
+  ? window.supabase.createClient(
+      window.PLATFORM_CONFIG.url,
+      window.PLATFORM_CONFIG.key,
+      {auth:{persistSession:false}}
+    )
+  : null;
 
 let products = [];
 let orders = [];
@@ -281,51 +297,147 @@ function toast(message) {
   el.textContent=message; el.style.display="block";
   setTimeout(()=>el.style.display="none",2200);
 }
+async function resolveTenantBusiness(){
+  if(!platformClient||!TENANT_SLUG){
+    throw new Error("İşletme bağlantısı yapılandırılmamış.");
+  }
+
+  const {data,error}=await platformClient.from("business_public")
+    .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
+    .eq("slug",TENANT_SLUG)
+    .maybeSingle();
+
+  if(error)throw error;
+  if(!data)throw new Error(`İşletme bulunamadı: ${TENANT_SLUG}`);
+
+  platformBusiness=data;
+  renderPlatformBusiness();
+  return data;
+}
+
+async function getAdminProfile(userId){
+  const {data,error}=await supabaseClient.from("profiles")
+    .select("id,role,business_id")
+    .eq("id",userId)
+    .eq("role","admin")
+    .maybeSingle();
+
+  if(error)throw error;
+  return data;
+}
+
+async function validateAdminTenant(userId){
+  const tenant=platformBusiness || await resolveTenantBusiness();
+  const adminRow=await getAdminProfile(userId);
+
+  if(!adminRow?.business_id){
+    throw new Error("Bu hesap işletme yöneticisi olarak tanımlanmamış.");
+  }
+
+  if(adminRow.business_id !== tenant.business_id){
+    throw new Error(`Bu admin hesabı ${tenant.shop_name} işletmesine bağlı değil.`);
+  }
+
+  currentBusinessId=adminRow.business_id;
+  return true;
+}
+
 async function checkSession() {
-  const { data } = await supabaseClient.auth.getSession();
-  if (!data.session) return;
-  const { data: adminRow } = await supabaseClient.from("profiles")
-    .select("id,role,business_id").eq("id",data.session.user.id).eq("role","admin").maybeSingle();
-  if (adminRow?.business_id) {
-    currentBusinessId = adminRow.business_id;
+  try{
+    await resolveTenantBusiness();
+
+    const {data,error}=await supabaseClient.auth.getSession();
+    if(error)throw error;
+    if(!data.session)return;
+
+    await validateAdminTenant(data.session.user.id);
     showApp();
+  }catch(e){
+    console.error("Admin oturum kontrolü:",e);
+    currentBusinessId=null;
+    await supabaseClient.auth.signOut();
+    document.getElementById("loginPage").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("loginError").textContent=e.message||"Admin doğrulanamadı.";
   }
 }
+
 async function login() {
   const email=document.getElementById("email").value.trim();
   const password=document.getElementById("password").value;
-  if(!email || !password){document.getElementById("loginError").textContent="E-posta ve şifre gerekli.";return;}
-  const { data, error }=await supabaseClient.auth.signInWithPassword({email,password});
-  if(error){document.getElementById("loginError").textContent=error.message;return;}
-  const { data: adminRow }=await supabaseClient.from("profiles")
-    .select("id,role,business_id").eq("id",data.user.id).eq("role","admin").maybeSingle();
-  if(!adminRow?.business_id){
-    await supabaseClient.auth.signOut();
-    document.getElementById("loginError").textContent="Bu hesap işletme yöneticisi olarak tanımlanmamış.";
+  const errorBox=document.getElementById("loginError");
+
+  if(!email || !password){
+    errorBox.textContent="E-posta ve şifre gerekli.";
     return;
   }
-  currentBusinessId = adminRow.business_id;
-  document.getElementById("loginError").textContent="";
-  showApp();
+
+  try{
+    await resolveTenantBusiness();
+
+    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
+    if(error)throw error;
+
+    await validateAdminTenant(data.user.id);
+
+    errorBox.textContent="";
+    showApp();
+  }catch(e){
+    currentBusinessId=null;
+    await supabaseClient.auth.signOut();
+    errorBox.textContent=e.message||"Giriş yapılamadı.";
+  }
 }
-async function logout(){currentBusinessId=null;await supabaseClient.auth.signOut();location.reload();}
+
+async function logout(){
+  currentBusinessId=null;
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
+
 function showApp(){
+  if(!currentBusinessId || !platformBusiness){
+    document.getElementById("loginError").textContent="İşletme doğrulanmadan panel açılamaz.";
+    return;
+  }
+
   document.getElementById("loginPage").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   subscribeAdminRealtime();
   loadAll();
 }
+
 async function loadAll(){
-  if(!currentBusinessId){
-    toast("İşletme bağlantısı bulunamadı.");
-    return;
+  try{
+    if(!currentBusinessId){
+      throw new Error("İşletme bağlantısı bulunamadı.");
+    }
+
+    if(!platformBusiness){
+      await resolveTenantBusiness();
+    }
+
+    if(platformBusiness.business_id !== currentBusinessId){
+      throw new Error("Admin hesabı ile URL'deki işletme eşleşmiyor.");
+    }
+
+    await Promise.all([
+      loadAdminProducts(),
+      loadAdminOrders(),
+      loadAdminNotifications(),
+      loadAdminSettings()
+    ]);
+
+    renderProducts();
+    renderOrders();
+    renderAdminNotifications();
+    loadDashboard();
+  }catch(e){
+    console.error("Admin verileri yüklenemedi:",e);
+    toast(e.message||"Admin verileri yüklenemedi.");
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("loginPage").classList.remove("hidden");
   }
-  await loadPlatformBusiness();
-  await Promise.allSettled([loadAdminProducts(), loadAdminOrders(), loadAdminNotifications(), loadAdminSettings()]);
-  renderProducts();
-  renderOrders();
-  renderAdminNotifications();
-  loadDashboard();
 }
 
 async function loadAdminProducts(){
@@ -402,8 +514,14 @@ function renderPlatformBusiness(){
   const nameButton=document.getElementById("settingShopNameButton");
 
   if(platformBusiness){
-    if(nameButton)nameButton.textContent=platformBusiness.shop_name||"Dükkan adı";
-    document.title=`${platformBusiness.shop_name||"İşletme"} · Yönetim Paneli`;
+    const tenantName=platformBusiness.shop_name||"İşletme";
+    if(nameButton)nameButton.textContent=tenantName;
+    document.title=`${tenantName} · Yönetim Paneli`;
+
+    const loginTitle=document.getElementById("tenantLoginTitle");
+    const adminTitle=document.getElementById("tenantAdminTitle");
+    if(loginTitle)loginTitle.textContent=`🍽️ ${tenantName} Girişi`;
+    if(adminTitle)adminTitle.textContent=`🍽️ ${tenantName} Yönetim Paneli`;
 
     const active=tenantLicenseIsActive(platformBusiness);
     if(box){
@@ -433,23 +551,16 @@ function usePrettyTenantAdminUrl(){
 }
 
 async function loadPlatformBusiness(){
-  if(!platformClient||!TENANT_SLUG){platformBusiness=null;renderPlatformBusiness();return;}
   try{
-    const {data,error}=await platformClient.from("business_public")
-      .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
-      .eq("slug",TENANT_SLUG).maybeSingle();
-
-    if(error)throw error;
-    if(!data)throw new Error(`Merkezi işletme kaydı bulunamadı: ${TENANT_SLUG}`);
+    const data=await resolveTenantBusiness();
 
     if(currentBusinessId && data.business_id !== currentBusinessId){
       throw new Error("Admin hesabı farklı bir işletmeye bağlı. Giriş engellendi.");
     }
 
-    platformBusiness=data;
-    renderPlatformBusiness();
     usePrettyTenantAdminUrl();
-    loadAdminSettings();
+    await loadAdminSettings();
+    return data;
   }catch(e){
     console.error(e);
     const box=document.getElementById("tenantLicenseInfo");
@@ -458,6 +569,7 @@ async function loadPlatformBusiness(){
       box.style.background="#ffebee";
       box.style.color="#a11";
     }
+    throw e;
   }
 }
 
@@ -801,7 +913,11 @@ setInterval(()=>{
 },5000);
 
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
-  if(!session){document.getElementById("loginPage").classList.remove("hidden");document.getElementById("app").classList.add("hidden");}
+  if(!session){
+    currentBusinessId=null;
+    document.getElementById("loginPage").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+  }
 });
 checkSession();
 </script>
