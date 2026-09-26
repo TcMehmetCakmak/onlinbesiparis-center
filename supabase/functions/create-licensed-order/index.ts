@@ -29,20 +29,29 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const PLATFORM_CONTROL_URL = Deno.env.get("PLATFORM_CONTROL_URL");
-    const PLATFORM_CONTROL_PUBLISHABLE_KEY = Deno.env.get("PLATFORM_CONTROL_PUBLISHABLE_KEY");
-    const PLATFORM_BUSINESS_KEY = Deno.env.get("PLATFORM_BUSINESS_KEY");
+    const PLATFORM_CONTROL_PUBLISHABLE_KEY =
+      Deno.env.get("PLATFORM_CONTROL_PUBLISHABLE_KEY");
 
     if (
       !SUPABASE_URL ||
       !SUPABASE_SERVICE_ROLE_KEY ||
       !PLATFORM_CONTROL_URL ||
-      !PLATFORM_CONTROL_PUBLISHABLE_KEY ||
-      !PLATFORM_BUSINESS_KEY
+      !PLATFORM_CONTROL_PUBLISHABLE_KEY
     ) {
-      return json({
-        ok: false,
-        error: "Sunucu yapılandırması eksik. Edge Function secret ayarlarını kontrol edin.",
-      }, 500);
+      console.error("Eksik Edge Function environment/secrets.");
+      return json({ ok: false, error: "Sunucu yapılandırması eksik." }, 500);
+    }
+
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body !== "object") {
+      return json({ ok: false, error: "Geçersiz sipariş isteği." }, 400);
+    }
+
+    const businessKey = String(body.p_business_key ?? "").trim();
+
+    if (!businessKey) {
+      return json({ ok: false, error: "İşletme anahtarı bulunamadı." }, 400);
     }
 
     const platform = createClient(
@@ -53,30 +62,29 @@ Deno.serve(async (req) => {
 
     const { data: business, error: businessError } = await platform
       .from("business_public")
-      .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active")
-      .eq("public_key", PLATFORM_BUSINESS_KEY)
+      .select(
+        "business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active",
+      )
+      .eq("public_key", businessKey)
       .maybeSingle();
 
     if (businessError) {
       console.error("Merkezi işletme sorgu hatası:", businessError);
-      return json({ ok: false, error: "İşletme lisans bilgisi kontrol edilemedi." }, 502);
+      return json(
+        { ok: false, error: "İşletme lisans bilgisi kontrol edilemedi." },
+        502,
+      );
     }
 
     if (!business) {
-      return json({ ok: false, error: "Merkezi işletme kaydı bulunamadı." }, 404);
+      return json({ ok: false, error: "İşletme kaydı bulunamadı." }, 404);
     }
 
     if (!business.is_active || !business.manual_enabled) {
-      return json({
-        ok: false,
-        error: "Bu işletmenin online sipariş sistemi aktif değildir.",
-      }, 403);
-    }
-
-    const body = await req.json().catch(() => null);
-
-    if (!body || typeof body !== "object") {
-      return json({ ok: false, error: "Geçersiz sipariş isteği." }, 400);
+      return json(
+        { ok: false, error: "Bu işletmenin online sipariş sistemi aktif değildir." },
+        403,
+      );
     }
 
     const items = Array.isArray(body.p_items) ? body.p_items : [];
@@ -98,7 +106,9 @@ Deno.serve(async (req) => {
       p_longitude: body.p_longitude ?? null,
       p_google_maps_url: String(body.p_google_maps_url ?? ""),
       p_items: items,
-      p_coupon_codes: Array.isArray(body.p_coupon_codes) ? body.p_coupon_codes : [],
+      p_coupon_codes: Array.isArray(body.p_coupon_codes)
+        ? body.p_coupon_codes
+        : [],
     };
 
     const { data: orderResult, error: orderError } = await tenant.rpc(
@@ -108,21 +118,22 @@ Deno.serve(async (req) => {
 
     if (orderError) {
       console.error("Sipariş RPC hatası:", orderError);
-      return json({
-        ok: false,
-        error: orderError.message || "Sipariş oluşturulamadı.",
-      }, 400);
+      return json(
+        { ok: false, error: orderError.message || "Sipariş oluşturulamadı." },
+        400,
+      );
     }
 
-    return json({
-      ok: true,
-      data: orderResult,
-    });
+    return json({ ok: true, data: orderResult });
   } catch (error) {
     console.error("create-licensed-order beklenmeyen hata:", error);
-    return json({
-      ok: false,
-      error: error instanceof Error ? error.message : "Beklenmeyen sunucu hatası.",
-    }, 500);
+    return json(
+      {
+        ok: false,
+        error:
+          error instanceof Error ? error.message : "Beklenmeyen sunucu hatası.",
+      },
+      500,
+    );
   }
 });
