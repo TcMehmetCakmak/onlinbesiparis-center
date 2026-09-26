@@ -1996,6 +1996,8 @@
 
     let platformBusiness = null;
     let platformBusinessActive = true;
+    let currentBusinessId = null;
+    let publicUpdatesChannel = null;
 
     function normalizeHexColor(value) {
         const color = String(value || "").trim();
@@ -2065,11 +2067,13 @@
     }
 
     async function loadAppSettings() {
+        if (!currentBusinessId) return;
         try {
             const { data, error } = await supabaseClient
                 .from("app_settings")
-                .select("id,shop_name,shop_icon,background_color")
+                .select("id,shop_name,shop_icon,background_color,business_id")
                 .eq("id", 1)
+                .eq("business_id", currentBusinessId)
                 .maybeSingle();
             if (error) throw error;
             if (data) appSettings = { ...appSettings, ...data };
@@ -2097,6 +2101,7 @@
             if (error) throw error;
             if (!data) throw new Error("Merkezi işletme kaydı bulunamadı.");
             platformBusiness = data;
+            currentBusinessId = data.business_id;
             platformBusinessActive = licenseIsActive(data);
             applyAppSettings(appSettings);
         } catch (error) {
@@ -2210,10 +2215,12 @@
     }
 
     async function loadProducts() {
+        if (!currentBusinessId) return;
         try {
             const { data, error } = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,active,created_at")
+                .select("id,name,icon,price,active,created_at,business_id")
+                .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
 
@@ -4009,12 +4016,14 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     let reviewSyncInProgress = false;
 
     async function loadReviews() {
+        if (!currentBusinessId) return;
         if (reviewSyncInProgress) return;
         reviewSyncInProgress = true;
         try {
             const { data, error } = await supabaseClient
                 .from("reviews")
-                .select("id,name,rating,comment,created_at")
+                .select("id,name,rating,comment,created_at,business_id")
+                .eq("business_id", currentBusinessId)
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
@@ -4061,6 +4070,10 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }
 
     async function submitReview() {
+        if (!currentBusinessId) {
+            alert("İşletme bilgisi henüz yüklenmedi. Lütfen sayfayı yenileyin.");
+            return;
+        }
         const name = document.getElementById("reviewName").value.trim();
         const comment = document.getElementById("reviewComment").value.trim();
 
@@ -4080,6 +4093,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         }
 
         const payload = {
+            business_id: currentBusinessId,
             name: name.substring(0, 50),
             rating: selectedReviewRating,
             comment: comment.substring(0, 500)
@@ -4181,13 +4195,15 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }
 
     async function loadNotifications() {
+        if (!currentBusinessId) return;
         if (notificationSyncInProgress) return;
         notificationSyncInProgress = true;
 
         try {
             const { data, error } = await supabaseClient
                 .from("notifications")
-                .select("id,title,message,active,start_date,end_date,created_at,notification_type,discount_type,discount_value,coupon_code")
+                .select("id,title,message,active,start_date,end_date,created_at,notification_type,discount_type,discount_value,coupon_code,business_id")
+                .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: false });
 
@@ -4429,16 +4445,27 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
      * 1) Realtime olayı geldiğinde kayıt direkt ekrana işlenir.
      * 2) Realtime bağlantısı bir olayı kaçırırsa 5 saniyelik sessiz senkronizasyon düzeltir.
      */
-    const publicUpdatesChannel = supabaseClient
-        .channel("public-updates-v4")
-        .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, applyRealtimeNotification)
-        .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadProducts())
-        .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, applyRealtimeReview)
-        .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, () => loadAppSettings())
-        .subscribe(status => {
-            console.log("Realtime durumu:", status);
-            if (status === "SUBSCRIBED") loadNotifications();
-        });
+    function subscribePublicUpdates() {
+        if (!currentBusinessId) return;
+
+        if (publicUpdatesChannel) {
+            supabaseClient.removeChannel(publicUpdatesChannel);
+            publicUpdatesChannel = null;
+        }
+
+        const businessFilter = `business_id=eq.${currentBusinessId}`;
+
+        publicUpdatesChannel = supabaseClient
+            .channel(`public-updates-${currentBusinessId}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: businessFilter }, applyRealtimeNotification)
+            .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: businessFilter }, () => loadProducts())
+            .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: businessFilter }, applyRealtimeReview)
+            .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: businessFilter }, () => loadAppSettings())
+            .subscribe(status => {
+                console.log("Realtime durumu:", status);
+                if (status === "SUBSCRIBED") loadNotifications();
+            });
+    }
 
     const platformUpdatesChannel = platformClient && window.PLATFORM_CONFIG?.businessKey
         ? platformClient
@@ -4461,8 +4488,10 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         }
     }, 5000);
 
-    window.addEventListener("online", () => {
-        loadPlatformBusiness();
+    window.addEventListener("online", async () => {
+        await loadPlatformBusiness();
+        if (!currentBusinessId) return;
+        subscribePublicUpdates();
         loadAppSettings();
         loadProducts();
         loadNotifications();
@@ -4473,15 +4502,27 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        SAYFA AÇILINCA
     ========================================= */
 
-    loadOrder();
-    loadPlatformBusiness();
-    loadAppSettings();
-    loadProducts();
+    async function bootstrapTenantApp() {
+        loadOrder();
 
+        await loadPlatformBusiness();
 
-    /* Ortak yorum ve bildirimleri veritabanından yükle */
-    loadReviews();
-    loadNotifications();
+        if (!currentBusinessId) {
+            console.error("İşletme kimliği alınamadı. Tenant verileri yüklenmedi.");
+            return;
+        }
+
+        subscribePublicUpdates();
+
+        await Promise.allSettled([
+            loadAppSettings(),
+            loadProducts(),
+            loadReviews(),
+            loadNotifications()
+        ]);
+    }
+
+    bootstrapTenantApp();
 
 
     /* =========================================
