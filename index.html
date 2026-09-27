@@ -1173,13 +1173,81 @@
         .verify-row input{margin:0}
         .verify-status{min-height:20px;font-size:13px;margin-top:8px;color:#666}
         @media(max-width:420px){.verify-actions{grid-template-columns:1fr}}
+    
+        /* =========================================
+           ANA İŞLETME SEÇİM EKRANI
+        ========================================= */
+        .root-landing {
+            max-width: 720px;
+            margin: 55px auto;
+            padding: 20px;
+        }
+        .root-landing-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 8px 28px rgba(0,0,0,.08);
+        }
+        .root-landing-card h1 {
+            margin: 0 0 8px;
+        }
+        .root-landing-muted {
+            color: #777;
+            margin-bottom: 22px;
+            text-align: center;
+        }
+        .root-business-list {
+            display: grid;
+            gap: 12px;
+        }
+        .root-business-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 16px;
+            border: 1px solid #e7e7e7;
+            border-radius: 14px;
+            text-decoration: none;
+            color: #222;
+            background: #fff;
+        }
+        .root-business-link:hover {
+            background: #fafafa;
+        }
+        .root-business-name {
+            font-weight: 700;
+            font-size: 17px;
+        }
+        .root-business-arrow {
+            font-size: 22px;
+        }
+        .root-business-empty {
+            padding: 20px;
+            text-align: center;
+            color: #777;
+        }
+
     </style>
 
 </head>
 
 <body>
 
-<div class="container">
+
+<div id="rootLanding" class="root-landing hidden">
+    <div class="root-landing-card">
+        <h1>🍽️ Online Sipariş</h1>
+        <div class="root-landing-muted">
+            Sipariş vermek istediğiniz işletmeyi seçin.
+        </div>
+        <div id="rootBusinessList" class="root-business-list">
+            <div class="root-business-empty">İşletmeler yükleniyor...</div>
+        </div>
+    </div>
+</div>
+
+<div id="tenantAppContainer" class="container">
 
     <!-- =========================================
          SİPARİŞ SAYFASI
@@ -1253,7 +1321,7 @@
             <p class="small">
                 Online Sipariş
             </p>
-            <a href="admin.html" class="admin-link">⚙️ İşletme Girişi</a>
+            <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
 
         </div>
 
@@ -1978,14 +2046,16 @@
        AYARLAR
     ========================================= */
 
+    const APP_ROOT_URL = new URL("./", location.href);
+    const TENANT_SLUG = String(
+        new URLSearchParams(location.search).get("tenant") || ""
+    ).trim().toLowerCase();
+
     let products = [];
 
-    const APP_ROOT_URL = new URL("./", location.href);
-    const TENANT_SLUG = (
-        new URLSearchParams(location.search).get("tenant")
-        || window.PLATFORM_CONFIG?.defaultSlug
-        || "durumcu"
-    ).trim().toLowerCase();
+    if (!TENANT_SLUG) {
+        document.title = "Online Sipariş · İşletme Seç";
+    }
 
     const TENANT_STORAGE_NAMESPACE =
         TENANT_SLUG.replace(/[^a-z0-9_-]/g, "_") || "default";
@@ -2074,6 +2144,11 @@
         const description = document.getElementById("appDescription");
         if (description) description.setAttribute("content", `${shopName} online sipariş uygulaması`);
 
+        const adminLink = document.getElementById("tenantAdminLink");
+        if (adminLink) {
+            adminLink.href = new URL(`${encodeURIComponent(TENANT_SLUG)}/admin.html`, APP_ROOT_URL).href;
+        }
+
         const callButton = document.getElementById("businessCallButton");
         const phone = String(appSettings.phone || "").trim();
         if (callButton) {
@@ -2107,18 +2182,15 @@
     }
 
     function usePrettyTenantUrl() {
-        const params = new URLSearchParams(location.search);
-        if (!params.has("tenant")) return;
         history.replaceState(
             { tenant: TENANT_SLUG },
             "",
-            `${APP_ROOT_URL.pathname}${encodeURIComponent(TENANT_SLUG)}/`
+            new URL(`${encodeURIComponent(TENANT_SLUG)}/`, APP_ROOT_URL).pathname
         );
     }
 
     async function loadPlatformBusiness() {
         if (!platformClient || !TENANT_SLUG) {
-            console.warn("Platform bağlantısı yapılandırılmamış.");
             platformBusiness = null;
             platformBusinessActive = false;
             applyAppSettings(appSettings);
@@ -2145,10 +2217,11 @@
             platformBusinessActive = false;
             document.getElementById("orderItemsCard")?.classList.add("hidden");
             document.getElementById("customerInfoCard")?.classList.add("hidden");
+
             const banner = document.getElementById("licenseBanner");
             if (banner) {
                 banner.classList.remove("hidden");
-                banner.textContent = "Lisans bilgisi doğrulanamadı. Sipariş geçici olarak kapalı.";
+                banner.textContent = "İşletme bilgisi doğrulanamadı. Sipariş geçici olarak kapalı.";
             }
         }
     }
@@ -4523,13 +4596,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }, 60000);
 
     const liveSyncTimer = setInterval(() => {
-        if (!document.hidden && navigator.onLine) {
+        if (TENANT_SLUG && !document.hidden && navigator.onLine) {
             loadNotifications();
             loadReviews();
         }
     }, 5000);
 
     window.addEventListener("online", async () => {
+        if (!TENANT_SLUG) {
+            loadRootBusinessLanding();
+            return;
+        }
+
         await loadPlatformBusiness();
         if (!currentBusinessId) return;
         subscribePublicUpdates();
@@ -4538,6 +4616,62 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         loadNotifications();
         loadReviews();
     });
+
+
+    function escapeLandingHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = value ?? "";
+        return div.innerHTML;
+    }
+
+    async function loadRootBusinessLanding() {
+        const landing = document.getElementById("rootLanding");
+        const appContainer = document.getElementById("tenantAppContainer");
+        const list = document.getElementById("rootBusinessList");
+
+        landing?.classList.remove("hidden");
+        appContainer?.classList.add("hidden");
+
+        if (!platformClient) {
+            if (list) list.innerHTML =
+                '<div class="root-business-empty">Merkezi platform bağlantısı bulunamadı.</div>';
+            return;
+        }
+
+        try {
+            const { data, error } = await platformClient
+                .from("business_public")
+                .select("shop_name,slug,is_active")
+                .eq("is_active", true)
+                .order("shop_name", { ascending: true });
+
+            if (error) throw error;
+
+            if (!data?.length) {
+                list.innerHTML =
+                    '<div class="root-business-empty">Şu anda aktif işletme bulunmuyor.</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(business => {
+                const href = new URL(
+                    `${encodeURIComponent(business.slug)}/`,
+                    APP_ROOT_URL
+                ).href;
+
+                return `
+                    <a class="root-business-link" href="${href}">
+                        <span class="root-business-name">${escapeLandingHtml(business.shop_name)}</span>
+                        <span class="root-business-arrow">›</span>
+                    </a>
+                `;
+            }).join("");
+        } catch (error) {
+            console.error("İşletme listesi yüklenemedi:", error);
+            if (list) list.innerHTML =
+                '<div class="root-business-empty">İşletmeler yüklenemedi.</div>';
+        }
+    }
 
     /* =========================================
        SAYFA AÇILINCA
@@ -4563,7 +4697,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         ]);
     }
 
-    bootstrapTenantApp();
+    if (TENANT_SLUG) {
+        document.getElementById("rootLanding")?.classList.add("hidden");
+        document.getElementById("tenantAppContainer")?.classList.remove("hidden");
+        bootstrapTenantApp();
+    } else {
+        loadRootBusinessLanding();
+    }
 
 
     /* =========================================
@@ -4576,6 +4716,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         function() {
 
             if (
+                TENANT_SLUG &&
                 !document.hidden
             ) {
 
@@ -4593,6 +4734,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     ========================================= */
 
     if (
+        TENANT_SLUG &&
         "serviceWorker" in navigator
     ) {
 
@@ -4601,7 +4743,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             () => {
 
                 navigator.serviceWorker.register(
-                    `${APP_ROOT_URL.pathname}service-worker.js`
+                    new URL("service-worker.js", APP_ROOT_URL).pathname
                 );
 
             }
