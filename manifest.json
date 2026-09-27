@@ -1,10 +1,10 @@
 {
-  "id": "./",
+  "id": "/pwa/platform",
   "name": "Online Sipariş",
   "short_name": "Sipariş",
   "description": "Çok işletmeli online sipariş uygulaması",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "platform/",
+  "scope": "platform/",
   "display": "standalone",
   "background_color": "#f5f5f5",
   "theme_color": "#f5f5f5",

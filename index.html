@@ -1323,7 +1323,7 @@
                 Online Sipariş
             </p>
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
-            <button id="installAppButton" type="button" class="admin-link hidden" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
+            <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
 
         </div>
 
@@ -2048,9 +2048,22 @@
        AYARLAR
     ========================================= */
 
-    const APP_ROOT_URL = new URL("./", location.href);
+    const KNOWN_TENANT_SLUGS = ["durumcu", "cakmak-tatlici"];
+    const PATH_PARTS = location.pathname.split("/").filter(Boolean);
+    const PATH_TENANT_SLUG =
+        KNOWN_TENANT_SLUGS.find(slug => PATH_PARTS.includes(slug)) || "";
+    const IS_PLATFORM_ROUTE =
+        PATH_PARTS.length > 0 && PATH_PARTS[PATH_PARTS.length - 1] === "platform";
+
+    const APP_ROOT_URL =
+        (PATH_TENANT_SLUG || IS_PLATFORM_ROUTE)
+            ? new URL("../", location.href)
+            : new URL("./", location.href);
+
     const TENANT_SLUG = String(
-        new URLSearchParams(location.search).get("tenant") || ""
+        new URLSearchParams(location.search).get("tenant") ||
+        PATH_TENANT_SLUG ||
+        ""
     ).trim().toLowerCase();
 
     const PWA_TENANT_CONFIG = {
@@ -2083,6 +2096,18 @@
 
             const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
             if (appleTitle) appleTitle.setAttribute("content", "Online Sipariş");
+        }
+
+        const installButton = document.getElementById("installAppButton");
+        if (installButton) {
+            const appName = tenantPwa?.name || "Online Sipariş";
+            installButton.textContent = `📲 ${appName}'i Yükle`;
+
+            const standalone =
+                window.matchMedia("(display-mode: standalone)").matches ||
+                window.navigator.standalone === true;
+
+            installButton.classList.toggle("hidden", standalone);
         }
     }
 
@@ -4787,21 +4812,42 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 
     /* =========================================
-       PWA SERVICE WORKER
+       PWA INSTALL + APP-SPECIFIC SERVICE WORKERS
     ========================================= */
 
     let deferredInstallPrompt = null;
 
+    function currentPwaKey() {
+        return TENANT_SLUG || "platform";
+    }
+
+    function currentPwaName() {
+        return PWA_TENANT_CONFIG[TENANT_SLUG]?.name || "Online Sipariş";
+    }
+
+    function refreshInstallButton() {
+        const button = document.getElementById("installAppButton");
+        if (!button) return;
+
+        button.textContent = `📲 ${currentPwaName()}'i Yükle`;
+
+        const standalone =
+            window.matchMedia("(display-mode: standalone)").matches ||
+            window.navigator.standalone === true;
+
+        button.classList.toggle("hidden", standalone);
+    }
+
     window.addEventListener("beforeinstallprompt", event => {
         event.preventDefault();
         deferredInstallPrompt = event;
-        document.getElementById("installAppButton")?.classList.remove("hidden");
+        refreshInstallButton();
     });
 
     window.addEventListener("appinstalled", () => {
         deferredInstallPrompt = null;
-        document.getElementById("installAppButton")?.classList.add("hidden");
-        localStorage.setItem("online_order_pwa_installed", "1");
+        localStorage.setItem(`online_order_pwa_installed_${currentPwaKey()}`, "1");
+        refreshInstallButton();
     });
 
     async function installPwaApp() {
@@ -4809,24 +4855,81 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             deferredInstallPrompt.prompt();
             await deferredInstallPrompt.userChoice;
             deferredInstallPrompt = null;
-            document.getElementById("installAppButton")?.classList.add("hidden");
+            refreshInstallButton();
             return;
         }
 
         const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
         if (isIos) {
-            alert("iPhone/iPad için Safari paylaş menüsünü açın ve “Ana Ekrana Ekle” seçeneğine dokunun.");
-        } else {
-            alert("Tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle” seçeneğini kullanabilirsiniz.");
+            alert(`${currentPwaName()} için Safari paylaş menüsünü açın ve “Ana Ekrana Ekle” seçeneğine dokunun.`);
+            return;
+        }
+
+        // Root chooser is not controlled by the platform worker on purpose,
+        // so it cannot overlap tenant worker scopes.
+        if (!TENANT_SLUG && !IS_PLATFORM_ROUTE) {
+            location.href = new URL("platform/?install=1", APP_ROOT_URL).href;
+            return;
+        }
+
+        alert(`${currentPwaName()} için tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle” seçeneğini kullanabilirsiniz.`);
+    }
+
+    async function removeLegacyRootServiceWorker() {
+        if (!("serviceWorker" in navigator)) return;
+
+        try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            const rootScope = APP_ROOT_URL.href;
+            const legacyScript = new URL("service-worker.js", APP_ROOT_URL).href;
+
+            for (const registration of registrations) {
+                const scriptUrl =
+                    registration.active?.scriptURL ||
+                    registration.waiting?.scriptURL ||
+                    registration.installing?.scriptURL ||
+                    "";
+
+                if (registration.scope === rootScope && scriptUrl === legacyScript) {
+                    await registration.unregister();
+                }
+            }
+        } catch (error) {
+            console.warn("Eski root Service Worker temizlenemedi:", error);
         }
     }
 
+    async function registerAppSpecificServiceWorker() {
+        if (!("serviceWorker" in navigator)) return;
+
+        await removeLegacyRootServiceWorker();
+
+        let workerUrl = null;
+        let workerScope = null;
+
+        if (TENANT_SLUG) {
+            workerUrl = new URL(`${TENANT_SLUG}/service-worker.js`, APP_ROOT_URL);
+            workerScope = new URL(`${TENANT_SLUG}/`, APP_ROOT_URL);
+        } else {
+            // Online Sipariş has its own /platform/ scope.
+            workerUrl = new URL("platform/service-worker.js", APP_ROOT_URL);
+            workerScope = new URL("platform/", APP_ROOT_URL);
+        }
+
+        try {
+            await navigator.serviceWorker.register(workerUrl.pathname, {
+                scope: workerScope.pathname
+            });
+        } catch (error) {
+            console.error("Uygulamaya özel Service Worker kaydı başarısız:", error);
+        }
+    }
+
+    refreshInstallButton();
+
     if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-            navigator.serviceWorker.register(
-                new URL("service-worker.js", APP_ROOT_URL).pathname
-            ).catch(error => console.error("Service Worker kaydı başarısız:", error));
-        });
+        window.addEventListener("load", registerAppSpecificServiceWorker);
     }
 
 </script>
