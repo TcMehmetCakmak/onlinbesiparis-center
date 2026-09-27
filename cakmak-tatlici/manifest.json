@@ -1,10 +1,10 @@
 {
-  "id": "./",
+  "id": "/onlinbesiparis-center/pwa/cakmak-tatlici",
   "name": "Çakmak Tatlıcı",
   "short_name": "Çakmak",
   "description": "Çakmak Tatlıcı online sipariş uygulaması",
-  "start_url": "../index.html?tenant=cakmak-tatlici",
-  "scope": "../",
+  "start_url": "/onlinbesiparis-center/index.html?tenant=cakmak-tatlici",
+  "scope": "/onlinbesiparis-center/",
   "display": "standalone",
   "background_color": "#f5f5f5",
   "theme_color": "#f5f5f5",

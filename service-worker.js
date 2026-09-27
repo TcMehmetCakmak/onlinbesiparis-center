@@ -1,4 +1,4 @@
-const CACHE_NAME = "online-siparis-shell-v3";
+const CACHE_NAME = "online-siparis-shell-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,7 +8,15 @@ const APP_SHELL = [
   "./platform-config.js",
   "./icon-192.png",
   "./icon-512.png",
-  "./icon-512-maskable.png"
+  "./icon-512-maskable.png",
+  "./durumcu/manifest.json",
+  "./durumcu/icon-192.png",
+  "./durumcu/icon-512.png",
+  "./durumcu/icon-512-maskable.png",
+  "./cakmak-tatlici/manifest.json",
+  "./cakmak-tatlici/icon-192.png",
+  "./cakmak-tatlici/icon-512.png",
+  "./cakmak-tatlici/icon-512-maskable.png"
 ];
 
 self.addEventListener("install", event => {
