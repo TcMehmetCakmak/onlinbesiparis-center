@@ -205,11 +205,11 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 <div id="supportTicketModal" class="modal hidden">
   <div class="modal-card">
     <h2>Yeni Destek Talebi</h2>
-    <div class="muted" style="margin-bottom:12px">Karşılaştığınız hatayı mümkün olduğunca açık şekilde yazın.</div>
-    <label>Hata / Talep Başlığı</label>
+    <div class="muted" style="margin-bottom:12px">Talebinizi mümkün olduğunca açık şekilde yazın.</div>
+    <label>Talep Başlığı</label>
     <input id="supportTicketTitle" maxlength="160" placeholder="Örn. Sipariş ekranında ürün görünmüyor">
-    <label>Hata / Talep Detayı</label>
-    <textarea id="supportTicketDetail" maxlength="5000" style="width:100%;min-height:180px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Hatanın nerede oluştuğunu, ne yaptığınızda oluştuğunu ve beklediğiniz sonucu yazın."></textarea>
+    <label>Talep Detayı</label>
+    <textarea id="supportTicketDetail" maxlength="5000" style="width:100%;min-height:180px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Talebinizin detaylarını, hangi ekranda olduğunu ve beklediğiniz sonucu yazın."></textarea>
     <div id="supportTicketError" class="hidden" style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11"></div>
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
       <button class="btn btn-light" onclick="closeSupportTicketModal()">Vazgeç</button>
@@ -429,6 +429,33 @@ async function logout(){
   location.reload();
 }
 
+
+let supportStatusRealtimeChannel = null;
+
+function subscribeSupportTicketRealtime(){
+  if(!platformClient || !currentBusinessId)return;
+
+  if(supportStatusRealtimeChannel){
+    try{platformClient.removeChannel(supportStatusRealtimeChannel);}catch{}
+    supportStatusRealtimeChannel=null;
+  }
+
+  supportStatusRealtimeChannel = platformClient
+    .channel(`support-status-${currentBusinessId}`)
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"support_ticket_status_public",
+      filter:`business_id=eq.${currentBusinessId}`
+    },payload=>{
+      console.log("Destek talebi durumu Realtime:",payload);
+      loadSupportTickets();
+    })
+    .subscribe(status=>{
+      console.log("Destek talebi Realtime bağlantısı:",status);
+    });
+}
+
 function showApp(){
   if(!currentBusinessId||!platformBusiness){
     document.getElementById("loginError").textContent="İşletme doğrulanmadan panel açılamaz.";
@@ -438,6 +465,7 @@ function showApp(){
   document.getElementById("loginPage").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   subscribeAdminRealtime();
+  subscribeSupportTicketRealtime();
   loadAll();
 }
 
@@ -1180,9 +1208,9 @@ setInterval(()=>{
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
   if(!session){document.getElementById("loginPage").classList.remove("hidden");document.getElementById("app").classList.add("hidden");}
 });
-setInterval(()=>{
-  if(currentBusinessId&&!document.hidden)loadSupportTickets();
-},12000);
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden && currentBusinessId)loadSupportTickets();
+});
 checkSession();
 </script>
 </body>

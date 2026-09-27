@@ -23,11 +23,11 @@
         content="Online sipariş uygulaması"
     >
 
-    <link rel="manifest" href="manifest.json">
+    <link id="appManifestLink" rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Online Sipariş">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link id="appleTouchIconLink" rel="apple-touch-icon" href="icon-192.png">
 
     <link
         rel="icon"
@@ -2052,6 +2052,41 @@
     const TENANT_SLUG = String(
         new URLSearchParams(location.search).get("tenant") || ""
     ).trim().toLowerCase();
+
+    const PWA_TENANT_CONFIG = {
+        "durumcu": {
+            name: "Dürümcü",
+            manifest: "durumcu/manifest.json",
+            appleIcon: "durumcu/icon-192.png"
+        },
+        "cakmak-tatlici": {
+            name: "Çakmak Tatlıcı",
+            manifest: "cakmak-tatlici/manifest.json",
+            appleIcon: "cakmak-tatlici/icon-192.png"
+        }
+    };
+
+    function configureTenantPwa() {
+        const manifestLink = document.getElementById("appManifestLink");
+        const appleIconLink = document.getElementById("appleTouchIconLink");
+        const tenantPwa = PWA_TENANT_CONFIG[TENANT_SLUG];
+
+        if (tenantPwa) {
+            if (manifestLink) manifestLink.href = new URL(tenantPwa.manifest, APP_ROOT_URL).href;
+            if (appleIconLink) appleIconLink.href = new URL(tenantPwa.appleIcon, APP_ROOT_URL).href;
+
+            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (appleTitle) appleTitle.setAttribute("content", tenantPwa.name);
+        } else {
+            if (manifestLink) manifestLink.href = new URL("manifest.json", APP_ROOT_URL).href;
+            if (appleIconLink) appleIconLink.href = new URL("icon-192.png", APP_ROOT_URL).href;
+
+            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (appleTitle) appleTitle.setAttribute("content", "Online Sipariş");
+        }
+    }
+
+    configureTenantPwa();
 
     let products = [];
 
@@ -4595,6 +4630,19 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             .subscribe()
         : null;
 
+    const rootBusinessLandingChannel = platformClient && !TENANT_SLUG
+        ? platformClient
+            .channel("root-business-list-realtime")
+            .on("postgres_changes", {
+                event: "*",
+                schema: "public",
+                table: "business_public"
+            }, () => loadRootBusinessLanding())
+            .subscribe(status => {
+                console.log("Ana işletme listesi Realtime:", status);
+            })
+        : null;
+
     const licenseClockTimer = setInterval(() => {
         if (platformBusiness) renderLicenseState();
     }, 60000);
@@ -4718,6 +4766,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     document.addEventListener(
         "visibilitychange",
         function() {
+
+            if (!document.hidden && !TENANT_SLUG) {
+                loadRootBusinessLanding();
+                return;
+            }
 
             if (
                 TENANT_SLUG &&

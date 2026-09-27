@@ -177,6 +177,7 @@ const ch=db.channel('super-admin-live')
   .on('postgres_changes',{event:'*',schema:'public',table:'business_public'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'name_change_requests'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'support_tickets'},()=>refreshSuperAdminData())
+  .on('postgres_changes',{event:'*',schema:'public',table:'support_ticket_status_public'},()=>refreshSuperAdminData())
   .subscribe();
 
 db.auth.onAuthStateChange((_,s)=>{
