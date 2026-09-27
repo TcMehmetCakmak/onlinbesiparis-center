@@ -32,7 +32,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .order{border:1px solid #eee;border-radius:14px;padding:16px;margin-bottom:12px}
 .order-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .badge{padding:5px 9px;border-radius:999px;font-size:12px;font-weight:bold}
-.badge-pending{background:#fff2cc;color:#8a5a00}.badge-active{background:#e3f2fd;color:#0d47a1}.badge-done{background:#dff5e3;color:#176b2c}.badge-cancel{background:#ffe1e1;color:#a11}
+.badge-pending{background:#fff2cc;color:#8a5a00}.badge-active{background:#e3f2fd;color:#0d47a1}.badge-done{background:#dff5e3;color:#176b2c}.badge-cancel{background:#ffe1e1;color:#a11}.badge-review{background:#e8e4ff;color:#4c3494}.ticket{border:1px solid #eee;border-radius:14px;padding:16px;margin-bottom:12px}.ticket-detail{white-space:pre-wrap;word-break:break-word;margin-top:10px;line-height:1.5}.ticket-resolution{margin-top:12px;padding:12px;background:#f5f8ff;border-radius:10px}.ticket-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .order-items{margin:12px 0;padding:10px;background:#f8f8f8;border-radius:10px}
 .filters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:15px}
 .empty{text-align:center;color:#777;padding:30px}
@@ -69,6 +69,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
     </div>
     <div class="header-actions">
       <a id="tenantCustomerLink" class="btn btn-light" href="#" target="_blank">Müşteri Sayfası</a>
+      <button class="btn btn-primary" onclick="openSupportTicketModal()">+ Talep Ekle</button>
       <button class="btn btn-dark" onclick="logout()">Çıkış</button>
     </div>
   </div>
@@ -85,6 +86,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️ Genel Ayarlar</button>
+    <button class="tab" onclick="showTab('support',this)">🛠️ Talepler <span id="supportPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
   </div>
 
   <section id="productsTab">
@@ -162,6 +164,19 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
       </div>
     </div>
   </section>
+  <section id="supportTab" class="hidden">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h2>🛠️ Destek Talepleri</h2>
+          <div class="muted">Açtığınız hata ve geliştirme taleplerinin durumunu buradan takip edin.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openSupportTicketModal()">+ Talep Ekle</button>
+      </div>
+      <div id="supportTicketList"><div class="empty">Talepler yükleniyor...</div></div>
+    </div>
+  </section>
+
 </div>
 
 
@@ -182,6 +197,23 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
       <button class="btn btn-light" onclick="closeShopNameModal()">Vazgeç</button>
       <button id="shopNameRequestButton" class="btn btn-primary" onclick="requestShopNameChange()">Güncelleme Talebi Gönder</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="supportTicketModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Yeni Destek Talebi</h2>
+    <div class="muted" style="margin-bottom:12px">Karşılaştığınız hatayı mümkün olduğunca açık şekilde yazın.</div>
+    <label>Hata / Talep Başlığı</label>
+    <input id="supportTicketTitle" maxlength="160" placeholder="Örn. Sipariş ekranında ürün görünmüyor">
+    <label>Hata / Talep Detayı</label>
+    <textarea id="supportTicketDetail" maxlength="5000" style="width:100%;min-height:180px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Hatanın nerede oluştuğunu, ne yaptığınızda oluştuğunu ve beklediğiniz sonucu yazın."></textarea>
+    <div id="supportTicketError" class="hidden" style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11"></div>
+    <div class="actions" style="justify-content:flex-end;margin-top:18px">
+      <button class="btn btn-light" onclick="closeSupportTicketModal()">Vazgeç</button>
+      <button id="supportTicketSubmitButton" class="btn btn-primary" onclick="createSupportTicket()">Talebi Gönder</button>
     </div>
   </div>
 </div>
@@ -285,6 +317,7 @@ const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.ke
 let products = [];
 let orders = [];
 let notifications = [];
+let supportTickets = [];
 let appSettings = {id:null,shop_name:"İşletme",shop_icon:"🍽️",background_color:"#f5f5f5",phone:""};
 let platformBusiness = null;
 let currentBusinessId = null;
@@ -426,7 +459,8 @@ async function loadAll(){
       loadAdminProducts(),
       loadAdminOrders(),
       loadAdminNotifications(),
-      loadAdminSettings()
+      loadAdminSettings(),
+      loadSupportTickets()
     ]);
 
     renderProducts();
@@ -546,11 +580,9 @@ function renderPlatformBusiness(){
 }
 
 function usePrettyTenantAdminUrl(){
-  history.replaceState(
-    {tenant:TENANT_SLUG},
-    "",
-    new URL(`${encodeURIComponent(TENANT_SLUG)}/admin.html`,APP_ROOT_URL).pathname
-  );
+  const url=new URL("admin.html",APP_ROOT_URL);
+  url.searchParams.set("tenant",TENANT_SLUG);
+  history.replaceState({tenant:TENANT_SLUG},"",url.pathname+url.search);
 }
 
 async function loadPlatformBusiness(){
@@ -729,6 +761,138 @@ async function requestShopNameChange(){
   }
 }
 
+
+function supportStatusLabel(status){
+  if(status==="pending")return "Talep Bekliyor";
+  if(status==="awaiting_admin_confirmation")return "Onaya Gönderildi";
+  if(status==="completed")return "Tamamlandı";
+  return status||"-";
+}
+function supportStatusClass(status){
+  if(status==="pending")return "badge-pending";
+  if(status==="awaiting_admin_confirmation")return "badge-review";
+  if(status==="completed")return "badge-done";
+  return "badge-active";
+}
+function formatDateTime(value){
+  if(!value)return "-";
+  try{return new Date(value).toLocaleString("tr-TR");}catch{return String(value);}
+}
+function openSupportTicketModal(){
+  document.getElementById("supportTicketTitle").value="";
+  document.getElementById("supportTicketDetail").value="";
+  document.getElementById("supportTicketError").textContent="";
+  document.getElementById("supportTicketError").classList.add("hidden");
+  document.getElementById("supportTicketModal").classList.remove("hidden");
+  setTimeout(()=>document.getElementById("supportTicketTitle")?.focus(),50);
+}
+function closeSupportTicketModal(){
+  document.getElementById("supportTicketModal").classList.add("hidden");
+}
+async function invokeSupportTicket(body){
+  const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+  if(sessionError)throw sessionError;
+  const token=sessionData?.session?.access_token;
+  if(!token)throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+
+  const {data,error}=await supabaseClient.functions.invoke("support-ticket",{
+    body,
+    headers:{Authorization:`Bearer ${token}`}
+  });
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||"Destek talebi işlemi başarısız.");
+  return data;
+}
+async function createSupportTicket(){
+  const title=document.getElementById("supportTicketTitle").value.trim();
+  const detail=document.getElementById("supportTicketDetail").value.trim();
+  const errorBox=document.getElementById("supportTicketError");
+  const button=document.getElementById("supportTicketSubmitButton");
+
+  errorBox.classList.add("hidden");
+  errorBox.textContent="";
+  if(title.length<3){
+    errorBox.textContent="Başlık en az 3 karakter olmalı.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+  if(detail.length<5){
+    errorBox.textContent="Talep detayı en az 5 karakter olmalı.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+
+  button.disabled=true;
+  const oldText=button.textContent;
+  button.textContent="Gönderiliyor...";
+  try{
+    await invokeSupportTicket({action:"create",title,detail});
+    closeSupportTicketModal();
+    toast("Talep oluşturuldu.");
+    await loadSupportTickets();
+  }catch(e){
+    console.error("Destek talebi oluşturulamadı:",e);
+    errorBox.textContent=e?.message||"Talep oluşturulamadı.";
+    errorBox.classList.remove("hidden");
+  }finally{
+    button.disabled=false;
+    button.textContent=oldText;
+  }
+}
+async function loadSupportTickets(){
+  if(!currentBusinessId)return;
+  try{
+    const result=await invokeSupportTicket({action:"list"});
+    supportTickets=Array.isArray(result.tickets)?result.tickets:[];
+    renderSupportTickets();
+  }catch(e){
+    console.error("Destek talepleri yüklenemedi:",e);
+    const el=document.getElementById("supportTicketList");
+    if(el)el.innerHTML=`<div class="empty">Talepler yüklenemedi: ${escapeHtml(e?.message||String(e))}</div>`;
+  }
+}
+function renderSupportTickets(){
+  const el=document.getElementById("supportTicketList");
+  const pendingCount=supportTickets.filter(x=>x.status!=="completed").length;
+  const countEl=document.getElementById("supportPendingCount");
+  if(countEl){
+    countEl.textContent=String(pendingCount);
+    countEl.classList.toggle("hidden",pendingCount===0);
+  }
+  if(!el)return;
+  if(!supportTickets.length){
+    el.innerHTML='<div class="empty">Henüz destek talebi yok.</div>';
+    return;
+  }
+  el.innerHTML=supportTickets.map(t=>`
+    <div class="ticket">
+      <div class="ticket-title-row">
+        <div>
+          <strong>${escapeHtml(t.title)}</strong>
+          <div class="muted">${formatDateTime(t.created_at)} · Talep #${escapeHtml(t.id)}</div>
+        </div>
+        <span class="badge ${supportStatusClass(t.status)}">${supportStatusLabel(t.status)}</span>
+      </div>
+      <div class="ticket-detail">${escapeHtml(t.detail)}</div>
+      ${t.resolution_note?`<div class="ticket-resolution"><strong>Süper Admin Çözüm Notu</strong><div class="ticket-detail">${escapeHtml(t.resolution_note)}</div></div>`:""}
+      ${t.status==="awaiting_admin_confirmation"?`
+        <div class="actions" style="margin-top:14px;justify-content:flex-end">
+          <button class="btn btn-success" onclick="completeSupportTicket(${Number(t.id)})">✓ Kontrol Ettim, Tamamlandı</button>
+        </div>`:""}
+    </div>
+  `).join("");
+}
+async function completeSupportTicket(id){
+  if(!confirm("Düzeltmeyi kontrol ettiniz mi? Bu talep Tamamlandı olarak işaretlenecek."))return;
+  try{
+    await invokeSupportTicket({action:"complete",ticket_id:id});
+    toast("Talep tamamlandı.");
+    await loadSupportTickets();
+  }catch(e){
+    toast(e?.message||"Talep tamamlanamadı.");
+  }
+}
+
 function loadDashboard(){
   document.getElementById("statTotal").textContent=orders.filter(o=>o.status!=="onay-bekliyor").length;
   document.getElementById("statActive").textContent=orders.filter(o=>o.status==="devam-ediyor").length;
@@ -740,6 +904,8 @@ function showTab(name,button){
   document.getElementById("ordersTab").classList.toggle("hidden",name!=="orders");
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
   document.getElementById("settingsTab").classList.toggle("hidden",name!=="settings");
+  document.getElementById("supportTab").classList.toggle("hidden",name!=="support");
+  if(name==="support")loadSupportTickets();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
 }
 function renderProducts(){
@@ -1014,6 +1180,9 @@ setInterval(()=>{
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
   if(!session){document.getElementById("loginPage").classList.remove("hidden");document.getElementById("app").classList.add("hidden");}
 });
+setInterval(()=>{
+  if(currentBusinessId&&!document.hidden)loadSupportTickets();
+},12000);
 checkSession();
 </script>
 </body>

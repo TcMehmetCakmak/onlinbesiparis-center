@@ -23,10 +23,11 @@
         content="Online sipariş uygulaması"
     >
 
-    <link
-        rel="manifest"
-        href="manifest.json"
-    >
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Online Sipariş">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
     <link
         rel="icon"
@@ -1322,6 +1323,7 @@
                 Online Sipariş
             </p>
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
+            <button id="installAppButton" type="button" class="admin-link hidden" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
 
         </div>
 
@@ -2146,7 +2148,9 @@
 
         const adminLink = document.getElementById("tenantAdminLink");
         if (adminLink) {
-            adminLink.href = new URL(`${encodeURIComponent(TENANT_SLUG)}/admin.html`, APP_ROOT_URL).href;
+            const adminUrl = new URL("admin.html", APP_ROOT_URL);
+            adminUrl.searchParams.set("tenant", TENANT_SLUG);
+            adminLink.href = adminUrl.href;
         }
 
         const callButton = document.getElementById("businessCallButton");
@@ -4733,22 +4737,43 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        PWA SERVICE WORKER
     ========================================= */
 
-    if (
-        TENANT_SLUG &&
-        "serviceWorker" in navigator
-    ) {
+    let deferredInstallPrompt = null;
 
-        window.addEventListener(
-            "load",
-            () => {
+    window.addEventListener("beforeinstallprompt", event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        document.getElementById("installAppButton")?.classList.remove("hidden");
+    });
 
-                navigator.serviceWorker.register(
-                    new URL("service-worker.js", APP_ROOT_URL).pathname
-                );
+    window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        document.getElementById("installAppButton")?.classList.add("hidden");
+        localStorage.setItem("online_order_pwa_installed", "1");
+    });
 
-            }
-        );
+    async function installPwaApp() {
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            document.getElementById("installAppButton")?.classList.add("hidden");
+            return;
+        }
 
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        if (isIos) {
+            alert("iPhone/iPad için Safari paylaş menüsünü açın ve “Ana Ekrana Ekle” seçeneğine dokunun.");
+        } else {
+            alert("Tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle” seçeneğini kullanabilirsiniz.");
+        }
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register(
+                new URL("service-worker.js", APP_ROOT_URL).pathname
+            ).catch(error => console.error("Service Worker kaydı başarısız:", error));
+        });
     }
 
 </script>
