@@ -2074,64 +2074,105 @@
        AYARLAR
     ========================================= */
 
-    const KNOWN_TENANT_SLUGS = ["durumcu", "hanim-eller", "ceyiz-sandigi"];
+    /*
+     * =========================================
+     * TENANT + PWA AYARLARI
+     * =========================================
+     *
+     * Artık işletmeler burada tek tek tutulmaz.
+     * Yeni işletme eklendiğinde bu dosyaya slug eklemek gerekmez.
+     *
+     * Örnek:
+     *   /durumcu/        -> tenant = durumcu
+     *   /ceyiz-sandigi/  -> tenant = ceyiz-sandigi
+     *   /yeni-isletme/   -> tenant = yeni-isletme
+     */
+
     const PATH_PARTS = location.pathname.split("/").filter(Boolean);
+    const QUERY_TENANT_SLUG = String(
+        new URLSearchParams(location.search).get("tenant") || ""
+    ).trim().toLowerCase();
+
+    const BASE_HREF =
+        document.querySelector("base")?.getAttribute("href") || "";
+
+    const IS_NESTED_TENANT_PAGE = BASE_HREF === "../";
+
+    const LAST_PATH_PART =
+        PATH_PARTS.length > 0
+            ? PATH_PARTS[PATH_PARTS.length - 1]
+            : "";
+
     const PATH_TENANT_SLUG =
-        KNOWN_TENANT_SLUGS.find(slug => PATH_PARTS.includes(slug)) || "";
+        IS_NESTED_TENANT_PAGE
+            ? (
+                LAST_PATH_PART.toLowerCase() === "index.html"
+                    ? String(PATH_PARTS[PATH_PARTS.length - 2] || "")
+                    : String(LAST_PATH_PART || "")
+              ).trim().toLowerCase()
+            : "";
+
     const IS_PLATFORM_ROUTE =
-        PATH_PARTS.length > 0 && PATH_PARTS[PATH_PARTS.length - 1] === "platform";
+        PATH_PARTS.length > 0 &&
+        PATH_PARTS[PATH_PARTS.length - 1] === "platform";
+
+    const TENANT_SLUG = String(
+        QUERY_TENANT_SLUG ||
+        PATH_TENANT_SLUG ||
+        ""
+    ).trim().toLowerCase();
 
     const APP_ROOT_URL =
         (PATH_TENANT_SLUG || IS_PLATFORM_ROUTE)
             ? new URL("../", location.href)
             : new URL("./", location.href);
 
-    const TENANT_SLUG = String(
-        new URLSearchParams(location.search).get("tenant") ||
-        PATH_TENANT_SLUG ||
-        ""
-    ).trim().toLowerCase();
-
-    const PWA_TENANT_CONFIG = {
-        "durumcu": {
-            name: "Dürümcü",
-            manifest: "durumcu/manifest.json",
-            appleIcon: "durumcu/icon-192.png"
-        },
-        "hanim-eller": {
-            name: "Hanım Eller",
-            manifest: "hanim-eller/manifest.json",
-            appleIcon: "hanim-eller/icon-192.png"
-        },
-        "ceyiz-sandigi": {
-            name: "Çeyiz Sandığı",
-            manifest: "ceyiz-sandigi/manifest.json",
-            appleIcon: "ceyiz-sandigi/icon-192.png"
+    function tenantAssetUrl(fileName) {
+        if (!TENANT_SLUG) {
+            return new URL(fileName, APP_ROOT_URL).href;
         }
-    };
 
-    function configureTenantPwa() {
+        return new URL(
+            `${encodeURIComponent(TENANT_SLUG)}/${fileName}`,
+            APP_ROOT_URL
+        ).href;
+    }
+
+    function tenantNameFromSlug(slug) {
+        return String(slug || "")
+            .split("-")
+            .filter(Boolean)
+            .map(word => word.charAt(0).toLocaleUpperCase("tr-TR") + word.slice(1))
+            .join(" ");
+    }
+
+    function configureTenantPwa(shopName = "") {
         const manifestLink = document.getElementById("appManifestLink");
         const appleIconLink = document.getElementById("appleTouchIconLink");
-        const tenantPwa = PWA_TENANT_CONFIG[TENANT_SLUG];
+        const appleTitle = document.querySelector(
+            'meta[name="apple-mobile-web-app-title"]'
+        );
 
-        if (tenantPwa) {
-            if (manifestLink) manifestLink.href = new URL(tenantPwa.manifest, APP_ROOT_URL).href;
-            if (appleIconLink) appleIconLink.href = new URL(tenantPwa.appleIcon, APP_ROOT_URL).href;
+        const appName =
+            String(shopName || "").trim() ||
+            tenantNameFromSlug(TENANT_SLUG) ||
+            "Online Sipariş";
 
-            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (appleTitle) appleTitle.setAttribute("content", tenantPwa.name);
-        } else {
-            if (manifestLink) manifestLink.href = new URL("manifest.json", APP_ROOT_URL).href;
-            if (appleIconLink) appleIconLink.href = new URL("icon-192.png", APP_ROOT_URL).href;
+        if (manifestLink) {
+            manifestLink.href = tenantAssetUrl("manifest.json");
+        }
 
-            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (appleTitle) appleTitle.setAttribute("content", "Online Sipariş");
+        if (appleIconLink) {
+            appleIconLink.href = tenantAssetUrl("icon-192.png");
+        }
+
+        if (appleTitle) {
+            appleTitle.setAttribute("content", appName);
         }
 
         const installButton = document.getElementById("installAppButton");
+
         if (installButton) {
-            const appName = tenantPwa?.name || "Online Sipariş";
             installButton.textContent = `📲 ${appName}'i Yükle`;
 
             const standalone =
@@ -2354,6 +2395,7 @@
             platformBusiness = data;
             currentBusinessId = data.business_id;
             platformBusinessActive = licenseIsActive(data);
+            configureTenantPwa(data.shop_name);
             applyAppSettings(appSettings);
             usePrettyTenantUrl();
         } catch (error) {
@@ -5053,7 +5095,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }
 
     function currentPwaName() {
-        return PWA_TENANT_CONFIG[TENANT_SLUG]?.name || "Online Sipariş";
+        return String(
+            platformBusiness?.shop_name ||
+            appSettings?.shop_name ||
+            tenantNameFromSlug(TENANT_SLUG) ||
+            "Online Sipariş"
+        ).trim();
     }
 
     function refreshInstallButton() {
