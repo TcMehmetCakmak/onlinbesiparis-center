@@ -13,30 +13,69 @@
     <script>
     (async function () {
         try {
+            const parts = location.pathname
+                .split("/")
+                .filter(Boolean);
+
+            const slug = String(
+                parts[parts.length - 1] || ""
+            ).trim().toLowerCase();
+
+            if (!slug || slug === "index.html") {
+                throw new Error("Tenant slug URL'den okunamadı.");
+            }
+
+            /*
+             * Uygulamanın tenant'ı kesin olarak algılaması için
+             * geçici olarak query parametresi ekliyoruz.
+             *
+             * /ceyiz-sandigi/
+             *      ↓
+             * /ceyiz-sandigi/?tenant=ceyiz-sandigi
+             *
+             * Ana uygulamadaki usePrettyTenantUrl() bunu tekrar
+             * temiz /ceyiz-sandigi/ adresine çevirir.
+             */
+            const currentUrl = new URL(location.href);
+            currentUrl.searchParams.set("tenant", slug);
+
+            history.replaceState(
+                history.state,
+                "",
+                currentUrl.pathname + currentUrl.search + currentUrl.hash
+            );
+
             const response = await fetch("../index.html", {
                 cache: "no-store"
             });
 
             if (!response.ok) {
                 throw new Error(
-                    "Ortak index.html yüklenemedi. HTTP " + response.status
+                    "Ortak index.html yüklenemedi. HTTP " +
+                    response.status
                 );
             }
 
             let html = await response.text();
 
-            // Root index.html'de asset yolu "./".
-            // Tenant URL'sinde çalışırken root assetlerine "../" üzerinden erişmeliyiz.
+            /*
+             * Root uygulamada asset base "./".
+             * Tenant altında root assetlerine "../" ile ulaşılır.
+             */
             html = html.replace(
-                '<base href="./">',
+                /<base\s+href=["']\.\/["']\s*\/?>/i,
                 '<base href="../">'
             );
 
             document.open();
             document.write(html);
             document.close();
+
         } catch (error) {
-            console.error("Tenant uygulaması yüklenemedi:", error);
+            console.error(
+                "Tenant uygulaması yüklenemedi:",
+                error
+            );
 
             document.body.innerHTML = `
                 <div style="
@@ -47,7 +86,9 @@
                     text-align:center
                 ">
                     <h2>Uygulama yüklenemedi</h2>
-                    <p>Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.</p>
+                    <p>
+                        ${String(error.message || error)}
+                    </p>
                     <button
                         onclick="location.reload()"
                         style="
