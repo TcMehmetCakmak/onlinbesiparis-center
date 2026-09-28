@@ -4728,27 +4728,37 @@
          * dolayısıyla DB'de sipariş oluşmaz.
          */
         const whatsappWindow = window.open(
-            "about:blank",
-            "_blank",
-            "noopener=false"
+            "",
+            "abcsepeti_whatsapp_order"
         );
 
         if (!whatsappWindow) {
             alert(
                 "WhatsApp penceresi açılamadı. " +
                 "Tarayıcınız açılır pencereyi engellediği için sipariş oluşturulmadı. " +
-                "Bu site için açılır pencerelere izin verip tekrar deneyin."
+                "Adres çubuğundaki açılır pencere engeli simgesinden bu siteye izin verip tekrar deneyin."
             );
             return;
         }
 
         try {
-            whatsappWindow.document.title = "WhatsApp hazırlanıyor...";
-            whatsappWindow.document.body.innerHTML =
-                '<div style="font-family:Arial,sans-serif;padding:28px;text-align:center">' +
-                '<h3>WhatsApp hazırlanıyor...</h3>' +
-                '<p>Bu pencereyi kapatmayın.</p>' +
-                '</div>';
+            whatsappWindow.document.open();
+            whatsappWindow.document.write(`
+                <!doctype html>
+                <html lang="tr">
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width,initial-scale=1">
+                    <title>WhatsApp hazırlanıyor...</title>
+                </head>
+                <body style="font-family:Arial,sans-serif;padding:30px;text-align:center">
+                    <h3>WhatsApp hazırlanıyor...</h3>
+                    <p>Sipariş hazırlanıyor, lütfen bu pencereyi kapatmayın.</p>
+                </body>
+                </html>
+            `);
+            whatsappWindow.document.close();
+            whatsappWindow.focus();
         } catch (_) {}
 
         orderSubmitInProgress = true;
@@ -4870,14 +4880,44 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 "?text=" +
                 encodeURIComponent(message);
 
-            // Önceden başarıyla açılmış pencereyi WhatsApp'a yönlendir.
-            whatsappWindow.location.replace(whatsappUrl);
+            // Kullanıcı sipariş hazırlanırken pencereyi kapattıysa
+            // siparişi admin tarafında bırakma.
+            if (whatsappWindow.closed) {
+                const cancelled = await cancelPendingWhatsAppOrder(
+                    createdOrderId,
+                    createdSecurityCode
+                );
 
-            /*
-             * window.open() bize geçerli pencere handle'ı döndürdüyse
-             * tarayıcı WhatsApp hedefi için pencereyi gerçekten açmıştır.
-             * Sipariş bu noktada korunur.
-             */
+                createdOrderId = null;
+                createdSecurityCode = "";
+
+                throw new Error(
+                    cancelled
+                        ? "WhatsApp penceresi kapatıldığı için sipariş oluşturulmadı."
+                        : "WhatsApp penceresi kapatıldı ve sipariş geri alınamadı."
+                );
+            }
+
+            try {
+                // Önceden kullanıcı tıklamasıyla açılan AYNI pencereyi yönlendir.
+                whatsappWindow.location.href = whatsappUrl;
+                whatsappWindow.focus();
+            } catch (navigationError) {
+                const cancelled = await cancelPendingWhatsAppOrder(
+                    createdOrderId,
+                    createdSecurityCode
+                );
+
+                createdOrderId = null;
+                createdSecurityCode = "";
+
+                throw new Error(
+                    cancelled
+                        ? "WhatsApp açılamadığı için sipariş oluşturulmadı."
+                        : "WhatsApp açılamadı ve sipariş geri alınamadı."
+                );
+            }
+
             resetOrderState();
 
             setWhatsAppButtonState({
