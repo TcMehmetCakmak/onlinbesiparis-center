@@ -11,13 +11,12 @@ function json(body: unknown, status = 200) {
     status,
     headers: {
       ...corsHeaders,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
     },
   });
 }
 
 Deno.serve(async (req) => {
-  // Browser CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -28,6 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+
     if (!authHeader?.startsWith("Bearer ")) {
       return json({ ok: false, error: "Oturum bilgisi bulunamadı." }, 401);
     }
@@ -36,13 +36,15 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing tenant Supabase environment variables", {
-        hasSupabaseUrl: !!supabaseUrl,
-        hasAnonKey: !!supabaseAnonKey,
-      });
-      return json({ ok: false, error: "Tenant Supabase yapılandırması eksik." }, 500);
+      console.error("Missing tenant Supabase environment variables.");
+      return json(
+        { ok: false, error: "Tenant Supabase yapılandırması eksik." },
+        500,
+      );
     }
 
+    // Kullanıcının gerçek tenant kimliği URL'den veya browser'dan değil,
+    // authenticated admin profilinden alınır.
     const tenant = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
@@ -74,7 +76,7 @@ Deno.serve(async (req) => {
 
     const { data: profile, error: profileError } = await tenant
       .from("profiles")
-      .select("id,role")
+      .select("id,role,business_id")
       .eq("id", user.id)
       .eq("role", "admin")
       .maybeSingle();
@@ -91,9 +93,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!profile) {
+    if (!profile?.business_id) {
       return json(
-        { ok: false, error: "Bu kullanıcı işletme yöneticisi değil." },
+        { ok: false, error: "Bu kullanıcı bir işletme yöneticisine bağlı değil." },
         403,
       );
     }
@@ -105,9 +107,9 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "Yeni dükkan adı gerekli." }, 400);
     }
 
-    if (requestedName.length > 80) {
+    if (requestedName.length < 2 || requestedName.length > 80) {
       return json(
-        { ok: false, error: "Dükkan adı en fazla 80 karakter olabilir." },
+        { ok: false, error: "Dükkan adı 2 ile 80 karakter arasında olmalı." },
         400,
       );
     }
@@ -116,14 +118,12 @@ Deno.serve(async (req) => {
     const controlPublishableKey = Deno.env.get(
       "PLATFORM_CONTROL_PUBLISHABLE_KEY",
     );
-    const businessKey = Deno.env.get("PLATFORM_BUSINESS_KEY");
-    const businessToken = Deno.env.get("PLATFORM_BUSINESS_TOKEN");
+    const bridgeSecret = Deno.env.get("PLATFORM_BRIDGE_SECRET");
 
     const missingSecrets = [
       ["PLATFORM_CONTROL_URL", controlUrl],
       ["PLATFORM_CONTROL_PUBLISHABLE_KEY", controlPublishableKey],
-      ["PLATFORM_BUSINESS_KEY", businessKey],
-      ["PLATFORM_BUSINESS_TOKEN", businessToken],
+      ["PLATFORM_BRIDGE_SECRET", bridgeSecret],
     ].filter(([, value]) => !value).map(([name]) => name);
 
     if (missingSecrets.length) {
@@ -146,10 +146,10 @@ Deno.serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         "apikey": controlPublishableKey!,
+        "x-platform-bridge-secret": bridgeSecret!,
       },
       body: JSON.stringify({
-        business_key: businessKey,
-        business_token: businessToken,
+        business_id: profile.business_id,
         requested_name: requestedName,
       }),
     });
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
         status: response.status,
         statusText: response.statusText,
         response: centralData,
-        businessKey,
+        businessId: profile.business_id,
         requestedName,
       });
 
@@ -186,6 +186,7 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
+      business_id: profile.business_id,
       requested_name: requestedName,
       data: centralData,
     });
