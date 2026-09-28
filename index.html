@@ -1660,7 +1660,7 @@
         ========================================= -->
 
         <div class="card">
-            <button type="button" class="main-button whatsapp-button" onclick="sendToWhatsApp()">
+            <button id="sendWhatsAppButton" type="button" class="main-button whatsapp-button" onclick="sendToWhatsApp()">
                 ✓ Onayla ve WhatsApp'tan Gönder
             </button>
 
@@ -4057,6 +4057,12 @@
     ========================================= */
 
     function resetOrderState() {
+        orderSubmitInProgress = false;
+        createdOrderWhatsAppUrl = "";
+        setWhatsAppButtonState({
+            disabled: false,
+            text: "✓ Onayla ve WhatsApp'tan Gönder"
+        });
         localStorage.removeItem(STORAGE_KEY);
         order = { items: [], name: "", address: "", payment: "", note: "", latitude: null, longitude: null, googleMapsUrl: "", couponCodes: [], provinceId:"", provinceName:"", districtId:"", districtName:"", neighborhoodName:"", street:"", buildingNo:"", apartmentNo:"", addressDetail:"" };
         appliedCoupons = [];
@@ -4095,7 +4101,35 @@
         };
     }
 
+    let orderSubmitInProgress = false;
+    let createdOrderWhatsAppUrl = "";
+
+    function setWhatsAppButtonState({disabled=false, text=null} = {}) {
+        const button = document.getElementById("sendWhatsAppButton");
+        if (!button) return;
+        button.disabled = disabled;
+        button.style.opacity = disabled ? ".65" : "";
+        button.style.cursor = disabled ? "not-allowed" : "";
+        if (text) button.textContent = text;
+    }
+
+    function openCreatedOrderWhatsApp() {
+        if (!createdOrderWhatsAppUrl) return false;
+        window.location.href = createdOrderWhatsAppUrl;
+        return true;
+    }
+
     async function sendToWhatsApp() {
+        // Sipariş daha önce başarıyla oluşturulduysa aynı siparişi tekrar DB'ye yazma.
+        // Sadece hazırlanmış WhatsApp bağlantısını yeniden aç.
+        if (createdOrderWhatsAppUrl) {
+            openCreatedOrderWhatsApp();
+            return;
+        }
+
+        // Çift tıklama / hızlı tekrar tıklamayı ilk milisaniyede kes.
+        if (orderSubmitInProgress) return;
+
         const payload = getOrderRpcPayload();
         if (!payload.p_items.length) return alert("Siparişinizde ürün bulunmuyor.");
 
@@ -4104,97 +4138,166 @@
             return;
         }
 
-        const { data: functionResult, error } = await supabaseClient.functions.invoke("create-licensed-order", { body: payload });
-        if (error || !functionResult?.ok) {
-            console.error(error || functionResult);
-            alert("WhatsApp siparişi hazırlanamadı: " + (functionResult?.error || error?.message || "Bilinmeyen hata"));
-            return;
-        }
-        const data = functionResult.data || {};
+        orderSubmitInProgress = true;
+        setWhatsAppButtonState({
+            disabled: true,
+            text: "⏳ Sipariş oluşturuluyor..."
+        });
 
-        const savedItems = Array.isArray(data.items) ? data.items : [];
-        const savedSubtotal = Number(data.subtotal || data.total || 0);
-        const savedDiscount = Number(data.discount_amount || 0);
-        const savedTotal = Number(data.total || 0);
-        let message = `Merhaba, ben ${order.name}.
+        try {
+            const { data: functionResult, error } =
+                await supabaseClient.functions.invoke("create-licensed-order", { body: payload });
+
+            if (error || !functionResult?.ok) {
+                throw new Error(functionResult?.error || error?.message || "Bilinmeyen hata");
+            }
+
+            const data = functionResult.data || {};
+            const savedItems = Array.isArray(data.items) ? data.items : [];
+            const savedSubtotal = Number(data.subtotal || data.total || 0);
+            const savedDiscount = Number(data.discount_amount || 0);
+            const savedTotal = Number(data.total || 0);
+
+            let message = `Merhaba, ben ${order.name}.
 
 Sipariş vermek istiyorum:
 
 `;
-        savedItems.forEach(item => { message += `${item.quantity} adet ${item.name}
-`; });
-        message += `
+            savedItems.forEach(item => {
+                message += `${item.quantity} adet ${item.name}
+`;
+            });
+
+            message += `
 Ara Toplam: ${savedSubtotal.toLocaleString("tr-TR")} TL
 `;
-        if (savedDiscount > 0) message += `İndirim: -${savedDiscount.toLocaleString("tr-TR")} TL
+            if (savedDiscount > 0) {
+                message += `İndirim: -${savedDiscount.toLocaleString("tr-TR")} TL
 `;
-        message += `Toplam: ${savedTotal.toLocaleString("tr-TR")} TL
+            }
+
+            message += `Toplam: ${savedTotal.toLocaleString("tr-TR")} TL
 Adresim: ${order.address}
 `;
-        if (order.addressDetail) message += `Adres tarifi: ${order.addressDetail}
+
+            if (order.addressDetail) {
+                message += `Adres tarifi: ${order.addressDetail}
 `;
-        if (order.googleMapsUrl) {
-            const qrUrl =
-                "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=" +
-                encodeURIComponent(order.googleMapsUrl);
-            message += `
+            }
+
+            if (order.googleMapsUrl) {
+                const qrUrl =
+                    "https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=" +
+                    encodeURIComponent(order.googleMapsUrl);
+
+                message += `
 📍 Google Maps Konumu:
 ${order.googleMapsUrl}
 `;
-            message += `
+
+                message += `
 📱 Konum QR Kodu:
 ${qrUrl}
 `;
-        }
-        message += `
+            }
+
+            message += `
 Ödeme: ${order.payment}
 `;
-        if (order.note) message += `Sipariş notu: ${order.note}
+
+            if (order.note) {
+                message += `Sipariş notu: ${order.note}
 `;
-        message += `
+            }
+
+            message += `
 Sipariş No: #${data.id}`;
-        message += `
+            message += `
 🔐 Güvenlik Kodu: ${data.security_code}`;
-        message += `
+            message += `
 Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kullanılacaktır.`;
 
-        const businessPhone = String(appSettings.phone || "").replace(/[^0-9]/g, "");
-        if (!businessPhone) {
-            alert("İşletmenin WhatsApp numarası tanımlanmamış.");
-            return;
+            const businessPhone =
+                String(appSettings.phone || "").replace(/[^0-9]/g, "");
+
+            if (!businessPhone) {
+                throw new Error("İşletmenin WhatsApp numarası tanımlanmamış.");
+            }
+
+            createdOrderWhatsAppUrl =
+                "whatsapp://send?phone=" +
+                businessPhone +
+                "&text=" +
+                encodeURIComponent(message);
+
+            // DB kaydı artık oluştu. Bundan sonra bu buton hiçbir koşulda
+            // ikinci bir sipariş oluşturmaz.
+            setWhatsAppButtonState({
+                disabled: false,
+                text: "✓ WhatsApp'ı Aç"
+            });
+
+            let whatsappOpened = false;
+            let detectionTimer = null;
+
+            const markWhatsAppOpened = () => {
+                if (whatsappOpened) return;
+                whatsappOpened = true;
+                if (detectionTimer) clearTimeout(detectionTimer);
+                document.removeEventListener("visibilitychange", onVisibilityChange);
+                window.removeEventListener("pagehide", markWhatsAppOpened);
+                resetOrderState();
+                createdOrderWhatsAppUrl = "";
+                orderSubmitInProgress = false;
+                setWhatsAppButtonState({
+                    disabled: false,
+                    text: "✓ Onayla ve WhatsApp'tan Gönder"
+                });
+            };
+
+            const onVisibilityChange = () => {
+                if (document.hidden) markWhatsAppOpened();
+            };
+
+            document.addEventListener("visibilitychange", onVisibilityChange);
+            window.addEventListener("pagehide", markWhatsAppOpened, { once: true });
+
+            window.location.href = createdOrderWhatsAppUrl;
+
+            detectionTimer = setTimeout(() => {
+                if (whatsappOpened || document.hidden) return;
+
+                document.removeEventListener("visibilitychange", onVisibilityChange);
+                window.removeEventListener("pagehide", markWhatsAppOpened);
+
+                // Sipariş zaten DB'de. Buton tekrar tıklanırsa sadece aynı
+                // WhatsApp URL'si açılır, yeni sipariş oluşturulmaz.
+                orderSubmitInProgress = false;
+                setWhatsAppButtonState({
+                    disabled: false,
+                    text: "✓ WhatsApp'ı Tekrar Aç"
+                });
+
+                alert(
+                    "Sipariş oluşturuldu ancak WhatsApp otomatik açılamadı. " +
+                    "Butona tekrar basarsanız aynı sipariş için WhatsApp yeniden açılır."
+                );
+            }, 1800);
+
+        } catch (e) {
+            console.error(e);
+            orderSubmitInProgress = false;
+
+            // Sipariş oluşturulmadan hata olduysa yeniden denemeye izin ver.
+            if (!createdOrderWhatsAppUrl) {
+                setWhatsAppButtonState({
+                    disabled: false,
+                    text: "✓ Onayla ve WhatsApp'tan Gönder"
+                });
+            }
+
+            alert("WhatsApp siparişi hazırlanamadı: " + (e?.message || "Bilinmeyen hata"));
         }
-        const whatsappAppUrl =
-            "whatsapp://send?phone=" + businessPhone + "&text=" + encodeURIComponent(message);
-
-        let whatsappOpened = false;
-        let detectionTimer = null;
-
-        const markWhatsAppOpened = () => {
-            if (whatsappOpened) return;
-            whatsappOpened = true;
-            if (detectionTimer) clearTimeout(detectionTimer);
-            document.removeEventListener("visibilitychange", onVisibilityChange);
-            window.removeEventListener("pagehide", markWhatsAppOpened);
-            resetOrderState();
-        };
-
-        const onVisibilityChange = () => {
-            if (document.hidden) markWhatsAppOpened();
-        };
-
-        document.addEventListener("visibilitychange", onVisibilityChange);
-        window.addEventListener("pagehide", markWhatsAppOpened, { once: true });
-
-        // WhatsApp yüklüyse uygulamayı doğrudan açar ve hazır metni sohbete taşır.
-        // Yüklü değilse web.whatsapp.com / wa.me fallback'i kullanılmaz.
-        window.location.href = whatsappAppUrl;
-
-        detectionTimer = setTimeout(() => {
-            if (whatsappOpened || document.hidden) return;
-            document.removeEventListener("visibilitychange", onVisibilityChange);
-            window.removeEventListener("pagehide", markWhatsAppOpened);
-            alert("WhatsApp bulunamadı. Lütfen WhatsApp uygulamasını yükleyip tekrar deneyin.");
-        }, 1800);
     }
 
     /* =========================================
@@ -4957,7 +5060,10 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             window.matchMedia("(display-mode: standalone)").matches ||
             window.navigator.standalone === true;
 
-        button.classList.toggle("hidden", standalone);
+        const installedHere =
+            localStorage.getItem(`online_order_pwa_installed_${currentPwaKey()}`) === "1";
+
+        button.classList.toggle("hidden", standalone || installedHere);
     }
 
     window.addEventListener("beforeinstallprompt", event => {
@@ -4977,7 +5083,15 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     async function installPwaApp() {
         if (deferredInstallPrompt) {
             deferredInstallPrompt.prompt();
-            await deferredInstallPrompt.userChoice;
+            const choice = await deferredInstallPrompt.userChoice;
+
+            if (choice?.outcome === "accepted") {
+                localStorage.setItem(
+                    `online_order_pwa_installed_${currentPwaKey()}`,
+                    "1"
+                );
+            }
+
             deferredInstallPrompt = null;
             refreshInstallButton();
             return;
@@ -4990,14 +5104,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             return;
         }
 
-        // Root chooser is not controlled by the platform worker on purpose,
-        // so it cannot overlap tenant worker scopes.
-        if (!TENANT_SLUG && !IS_PLATFORM_ROUTE) {
-            location.href = new URL("platform/?install=1", APP_ROOT_URL).href;
-            return;
-        }
-
-        alert(`${currentPwaName()} için tarayıcı menüsünden “Uygulamayı yükle” veya “Ana ekrana ekle” seçeneğini kullanabilirsiniz.`);
+        alert(
+            `${currentPwaName()} için kurulum istemi henüz hazır değil. ` +
+            `Sayfayı bir kez yenileyip tekrar deneyin veya tarayıcı menüsündeki ` +
+            `“Uygulamayı yükle” seçeneğini kullanın.`
+        );
     }
 
     async function removeLegacyRootServiceWorker() {
@@ -5036,9 +5147,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             workerUrl = new URL(`${TENANT_SLUG}/service-worker.js`, APP_ROOT_URL);
             workerScope = new URL(`${TENANT_SLUG}/`, APP_ROOT_URL);
         } else {
-            // Online Sipariş has its own /platform/ scope.
-            workerUrl = new URL("platform/service-worker.js", APP_ROOT_URL);
-            workerScope = new URL("platform/", APP_ROOT_URL);
+            workerUrl = new URL("service-worker.js", APP_ROOT_URL);
+            workerScope = new URL("./", APP_ROOT_URL);
         }
 
         try {
