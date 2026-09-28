@@ -1,8 +1,10 @@
 <!DOCTYPE html>
+<!-- CANONICAL CUSTOMER APP: edit this root file only. Tenant copies are generated automatically. -->
 
 <html lang="tr">
 
 <head>
+    <base href="./">
 
     <meta charset="UTF-8">
 
@@ -30,6 +32,7 @@
     <link id="appleTouchIconLink" rel="apple-touch-icon" href="icon-192.png">
 
     <link
+        id="appFaviconLink"
         rel="icon"
         href="icon-192.png"
     >
@@ -1229,7 +1232,222 @@
             color: #777;
         }
 
-    </style>
+    
+/* =========================================
+   ÜRÜN FOTOĞRAF GALERİSİ - MÜŞTERİ
+========================================= */
+.product-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.product-main-image,
+.product-no-image {
+    width: 88px;
+    height: 88px;
+    min-width: 88px;
+    max-width: 28vw;
+    max-height: 28vw;
+    border-radius: 12px;
+    object-fit: cover;
+    background: #f3f3f3;
+    border: 1px solid #e8e8e8;
+}
+
+.product-main-image {
+    display: block;
+    cursor: pointer;
+    transition: transform .15s ease, opacity .15s ease;
+}
+
+.product-main-image:hover { opacity: .92; }
+.product-main-image:active { transform: scale(.97); }
+
+.product-no-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #aaa;
+}
+
+.product-info {
+    min-width: 0;
+}
+
+.product-name {
+    word-break: break-word;
+}
+
+.product-gallery-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    background: rgba(0,0,0,.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+}
+
+.product-gallery-modal.hidden {
+    display: none !important;
+}
+
+.product-gallery-card {
+    position: relative;
+    width: min(760px, 100%);
+    max-height: 94vh;
+    background: #111;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+
+.product-gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    color: #fff;
+}
+
+.product-gallery-title {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-gallery-close {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.product-gallery-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 260px;
+    max-height: 76vh;
+    overflow: hidden;
+    background: #000;
+    touch-action: pan-y;
+    user-select: none;
+}
+
+.product-gallery-image {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
+    margin: auto;
+}
+
+.product-gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 52px;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(0,0,0,.48);
+    color: #fff;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.product-gallery-prev { left: 10px; }
+.product-gallery-next { right: 10px; }
+
+.product-gallery-footer {
+    color: #fff;
+    text-align: center;
+    padding: 10px 12px 14px;
+    font-size: 13px;
+}
+
+.product-gallery-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 8px;
+}
+
+.product-gallery-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.36);
+}
+
+.product-gallery-dot.active {
+    background: #fff;
+    transform: scale(1.18);
+}
+
+@media (max-width: 480px) {
+    .product {
+        gap: 10px;
+    }
+
+    .product-main {
+        gap: 10px;
+    }
+
+    .product-main-image,
+    .product-no-image {
+        width: 74px;
+        height: 74px;
+        min-width: 74px;
+        max-width: 24vw;
+        max-height: 24vw;
+        border-radius: 10px;
+    }
+
+    .product-gallery-card {
+        width: 100%;
+        border-radius: 14px;
+    }
+
+    .product-gallery-stage {
+        min-height: 240px;
+        max-height: 72vh;
+    }
+
+    .product-gallery-image {
+        max-height: 68vh;
+    }
+
+    .product-gallery-nav {
+        width: 38px;
+        height: 48px;
+        font-size: 27px;
+    }
+}
+
+</style>
 
 </head>
 
@@ -2052,6 +2270,30 @@
 
 
 
+
+<!-- =========================================
+     ÜRÜN FOTOĞRAF GALERİSİ
+========================================= -->
+<div id="productGalleryModal" class="product-gallery-modal hidden" aria-hidden="true">
+    <div class="product-gallery-card" role="dialog" aria-modal="true" aria-labelledby="productGalleryTitle">
+        <div class="product-gallery-head">
+            <div id="productGalleryTitle" class="product-gallery-title">Ürün Fotoğrafları</div>
+            <button type="button" class="product-gallery-close" onclick="closeProductGallery()" aria-label="Kapat">×</button>
+        </div>
+
+        <div id="productGalleryStage" class="product-gallery-stage">
+            <button id="productGalleryPrev" type="button" class="product-gallery-nav product-gallery-prev" onclick="changeProductGalleryImage(-1)" aria-label="Önceki fotoğraf">‹</button>
+            <img id="productGalleryImage" class="product-gallery-image" src="" alt="Ürün fotoğrafı">
+            <button id="productGalleryNext" type="button" class="product-gallery-nav product-gallery-next" onclick="changeProductGalleryImage(1)" aria-label="Sonraki fotoğraf">›</button>
+        </div>
+
+        <div class="product-gallery-footer">
+            <div id="productGalleryCounter">1 / 1</div>
+            <div id="productGalleryDots" class="product-gallery-dots"></div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="platform-config.js"></script>
@@ -2073,59 +2315,109 @@
        AYARLAR
     ========================================= */
 
-    const KNOWN_TENANT_SLUGS = ["durumcu", "hanim-eller"];
+    /*
+     * =========================================
+     * TENANT + PWA AYARLARI
+     * =========================================
+     *
+     * Artık işletmeler burada tek tek tutulmaz.
+     * Yeni işletme eklendiğinde bu dosyaya slug eklemek gerekmez.
+     *
+     * Örnek:
+     *   /durumcu/        -> tenant = durumcu
+     *   /ceyiz-sandigi/  -> tenant = ceyiz-sandigi
+     *   /yeni-isletme/   -> tenant = yeni-isletme
+     */
+
     const PATH_PARTS = location.pathname.split("/").filter(Boolean);
+    const QUERY_TENANT_SLUG = String(
+        new URLSearchParams(location.search).get("tenant") || ""
+    ).trim().toLowerCase();
+
+    const BASE_HREF =
+        document.querySelector("base")?.getAttribute("href") || "";
+
+    const IS_NESTED_TENANT_PAGE = BASE_HREF === "../";
+
+    const LAST_PATH_PART =
+        PATH_PARTS.length > 0
+            ? PATH_PARTS[PATH_PARTS.length - 1]
+            : "";
+
     const PATH_TENANT_SLUG =
-        KNOWN_TENANT_SLUGS.find(slug => PATH_PARTS.includes(slug)) || "";
+        IS_NESTED_TENANT_PAGE
+            ? (
+                LAST_PATH_PART.toLowerCase() === "index.html"
+                    ? String(PATH_PARTS[PATH_PARTS.length - 2] || "")
+                    : String(LAST_PATH_PART || "")
+              ).trim().toLowerCase()
+            : "";
+
     const IS_PLATFORM_ROUTE =
-        PATH_PARTS.length > 0 && PATH_PARTS[PATH_PARTS.length - 1] === "platform";
+        PATH_PARTS.length > 0 &&
+        PATH_PARTS[PATH_PARTS.length - 1] === "platform";
+
+    const TENANT_SLUG = String(
+        QUERY_TENANT_SLUG ||
+        PATH_TENANT_SLUG ||
+        ""
+    ).trim().toLowerCase();
 
     const APP_ROOT_URL =
         (PATH_TENANT_SLUG || IS_PLATFORM_ROUTE)
             ? new URL("../", location.href)
             : new URL("./", location.href);
 
-    const TENANT_SLUG = String(
-        new URLSearchParams(location.search).get("tenant") ||
-        PATH_TENANT_SLUG ||
-        ""
-    ).trim().toLowerCase();
-
-    const PWA_TENANT_CONFIG = {
-        "durumcu": {
-            name: "Dürümcü",
-            manifest: "durumcu/manifest.json",
-            appleIcon: "durumcu/icon-192.png"
-        },
-        "hanim-eller": {
-            name: "Hanım Eller",
-            manifest: "hanim-eller/manifest.json",
-            appleIcon: "hanim-eller/icon-192.png"
+    function tenantAssetUrl(fileName) {
+        if (!TENANT_SLUG) {
+            return new URL(fileName, APP_ROOT_URL).href;
         }
-    };
 
-    function configureTenantPwa() {
+        return new URL(
+            `${encodeURIComponent(TENANT_SLUG)}/${fileName}`,
+            APP_ROOT_URL
+        ).href;
+    }
+
+    function tenantNameFromSlug(slug) {
+        return String(slug || "")
+            .split("-")
+            .filter(Boolean)
+            .map(word => word.charAt(0).toLocaleUpperCase("tr-TR") + word.slice(1))
+            .join(" ");
+    }
+
+    function configureTenantPwa(shopName = "") {
         const manifestLink = document.getElementById("appManifestLink");
         const appleIconLink = document.getElementById("appleTouchIconLink");
-        const tenantPwa = PWA_TENANT_CONFIG[TENANT_SLUG];
+        const appleTitle = document.querySelector(
+            'meta[name="apple-mobile-web-app-title"]'
+        );
 
-        if (tenantPwa) {
-            if (manifestLink) manifestLink.href = new URL(tenantPwa.manifest, APP_ROOT_URL).href;
-            if (appleIconLink) appleIconLink.href = new URL(tenantPwa.appleIcon, APP_ROOT_URL).href;
+        const appName =
+            String(shopName || "").trim() ||
+            tenantNameFromSlug(TENANT_SLUG) ||
+            "Online Sipariş";
 
-            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (appleTitle) appleTitle.setAttribute("content", tenantPwa.name);
-        } else {
-            if (manifestLink) manifestLink.href = new URL("manifest.json", APP_ROOT_URL).href;
-            if (appleIconLink) appleIconLink.href = new URL("icon-192.png", APP_ROOT_URL).href;
+        if (manifestLink) {
+            manifestLink.href = tenantAssetUrl("manifest.json");
+        }
 
-            const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (appleTitle) appleTitle.setAttribute("content", "Online Sipariş");
+        if (appleIconLink) {
+            appleIconLink.href = tenantAssetUrl("icon-192.png");
+        }
+
+        if (faviconLink) {
+            faviconLink.href = tenantAssetUrl("icon-192.png");
+        }
+
+        if (appleTitle) {
+            appleTitle.setAttribute("content", appName);
         }
 
         const installButton = document.getElementById("installAppButton");
+
         if (installButton) {
-            const appName = tenantPwa?.name || "Online Sipariş";
             installButton.textContent = `📲 ${appName}'i Yükle`;
 
             const standalone =
@@ -2207,8 +2499,7 @@
         if (inactive) {
             const businessName = String(platformBusiness.shop_name || "işletme").trim() || "işletme";
             banner.classList.remove("hidden");
-            banner.textContent = `Bu işletmenin kullanım süresi sona ermiştir. Hizmetten yararlanmaya devam edebilmek için lütfen ${businessName} ile iletişime geçiniz.
-`;
+            banner.textContent = `Kullanım süresinin uzatılması için lütfen ${businessName} işletmesi ile iletişime geçiniz.`;
         } else {
             banner.classList.add("hidden");
             banner.textContent = "";
@@ -2349,6 +2640,7 @@
             platformBusiness = data;
             currentBusinessId = data.business_id;
             platformBusinessActive = licenseIsActive(data);
+            configureTenantPwa(data.shop_name);
             applyAppSettings(appSettings);
             usePrettyTenantUrl();
         } catch (error) {
@@ -2462,92 +2754,352 @@
         }
     }
 
+    function productImagePublicUrl(storagePath) {
+        if (!storagePath) return "";
+        const { data } = supabaseClient.storage
+            .from("product-images")
+            .getPublicUrl(storagePath);
+
+        return data?.publicUrl || "";
+    }
+
     async function loadProducts() {
         if (!currentBusinessId) return;
+
         try {
-            const { data, error } = await supabaseClient
+            const productResult = await supabaseClient
                 .from("products")
                 .select("id,name,icon,price,active,created_at,business_id")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
 
-            if (error) throw error;
+            if (productResult.error) throw productResult.error;
 
-            products = Array.isArray(data) ? data : [];
+            const imageResult = await supabaseClient
+                .from("product_images")
+                .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
+                .eq("business_id", currentBusinessId)
+                .order("sort_order", { ascending: true })
+                .order("created_at", { ascending: true });
+
+            if (imageResult.error) throw imageResult.error;
+
+            const imagesByProduct = new Map();
+
+            (imageResult.data || []).forEach(image => {
+                const key = String(image.product_id);
+
+                if (!imagesByProduct.has(key)) {
+                    imagesByProduct.set(key, []);
+                }
+
+                imagesByProduct.get(key).push(image);
+            });
+
+            products = (Array.isArray(productResult.data) ? productResult.data : [])
+                .map(product => ({
+                    ...product,
+                    images: imagesByProduct.get(String(product.id)) || []
+                }));
+
             renderProducts();
             calculateTotal();
-            if (order.couponCodes.length) revalidateCouponCodes(true);
+
+            if (order.couponCodes.length) {
+                revalidateCouponCodes(true);
+            }
         } catch (error) {
             console.error("Ürünler yüklenemedi:", error);
+
             document.getElementById("productList").innerHTML =
                 '<p class="small">Ürünler yüklenemedi. Lütfen sayfayı yenileyin.</p>';
         }
+    }
+
+    function getProductMainImage(product) {
+        const images = Array.isArray(product?.images)
+            ? product.images
+            : [];
+
+        return images.find(image => image.is_main) || images[0] || null;
     }
 
     function renderProducts() {
         const list = document.getElementById("productList");
         list.innerHTML = "";
 
-        products.filter(p => p.active !== false).forEach(product => {
-            const row = document.createElement("div");
-            row.className = "product";
+        products
+            .filter(product => product.active !== false)
+            .forEach(product => {
+                const row = document.createElement("div");
+                row.className = "product";
 
-            const left = document.createElement("div");
-            left.className = "product-main";
+                const left = document.createElement("div");
+                left.className = "product-main";
 
-            const icon = document.createElement("span");
-            icon.className = "product-icon";
-            icon.textContent = product.icon || "🍽️";
+                const mainImage = getProductMainImage(product);
 
-            const info = document.createElement("div");
-            info.className = "product-info";
+                if (mainImage) {
+                    const image = document.createElement("img");
 
-            const name = document.createElement("div");
-            name.className = "product-name";
-            name.textContent = product.name;
+                    image.className = "product-main-image";
+                    image.src = productImagePublicUrl(mainImage.storage_path);
+                    image.alt = `${product.name} fotoğrafı`;
+                    image.loading = "lazy";
+                    image.decoding = "async";
+                    image.title = "Tüm fotoğrafları görüntüle";
 
-            const price = document.createElement("div");
-            price.className = "price";
-            price.textContent = `${Number(product.price).toLocaleString("tr-TR")} TL`;
+                    image.onclick = () => {
+                        openProductGallery(product.id);
+                    };
 
-            info.appendChild(name);
-            info.appendChild(price);
-            left.appendChild(icon);
-            left.appendChild(info);
+                    left.appendChild(image);
+                } else {
+                    const noImage = document.createElement("div");
+                    noImage.className = "product-no-image";
+                    noImage.textContent = "📷";
+                    noImage.title = "Bu ürün için fotoğraf eklenmemiş.";
+                    left.appendChild(noImage);
+                }
 
-            const quantity = document.createElement("div");
-            quantity.className = "quantity";
+                const info = document.createElement("div");
+                info.className = "product-info";
 
-            const minus = document.createElement("button");
-            minus.type = "button";
-            minus.textContent = "−";
-            minus.onclick = () => changeQuantity(product.id, -1);
+                const name = document.createElement("div");
+                name.className = "product-name";
+                name.textContent = product.name;
 
-            const count = document.createElement("span");
-            count.id = `quantity-${product.id}`;
-            count.textContent = getItemQuantity(product.id);
+                const price = document.createElement("div");
+                price.className = "price";
+                price.textContent =
+                    `${Number(product.price).toLocaleString("tr-TR")} TL`;
 
-            const plus = document.createElement("button");
-            plus.type = "button";
-            plus.textContent = "+";
-            plus.onclick = () => changeQuantity(product.id, 1);
+                info.appendChild(name);
+                info.appendChild(price);
+                left.appendChild(info);
 
-            quantity.appendChild(minus);
-            quantity.appendChild(count);
-            quantity.appendChild(plus);
+                const quantity = document.createElement("div");
+                quantity.className = "quantity";
 
-            row.appendChild(left);
-            row.appendChild(quantity);
-            list.appendChild(row);
-        });
+                const minus = document.createElement("button");
+                minus.type = "button";
+                minus.textContent = "−";
+                minus.onclick = () => changeQuantity(product.id, -1);
 
-        // Removed/deleted products no longer remain in the active cart.
+                const count = document.createElement("span");
+                count.id = `quantity-${product.id}`;
+                count.textContent = getItemQuantity(product.id);
+
+                const plus = document.createElement("button");
+                plus.type = "button";
+                plus.textContent = "+";
+                plus.onclick = () => changeQuantity(product.id, 1);
+
+                quantity.appendChild(minus);
+                quantity.appendChild(count);
+                quantity.appendChild(plus);
+
+                row.appendChild(left);
+                row.appendChild(quantity);
+
+                list.appendChild(row);
+            });
+
+        // Silinmiş / pasif ürünler sepetten temizlenir.
         order.items = order.items.filter(item =>
-            products.some(p => p.id === item.productId && p.active !== false)
+            products.some(
+                product =>
+                    product.id === item.productId &&
+                    product.active !== false
+            )
         );
+
         saveOrder();
     }
+
+    let galleryProduct = null;
+    let galleryImages = [];
+    let galleryIndex = 0;
+    let galleryTouchStartX = null;
+    let galleryTouchStartY = null;
+
+    function openProductGallery(productId) {
+        const product = products.find(
+            item => String(item.id) === String(productId)
+        );
+
+        if (!product) return;
+
+        const images = Array.isArray(product.images)
+            ? product.images
+            : [];
+
+        if (!images.length) return;
+
+        galleryProduct = product;
+        galleryImages = [...images];
+
+        const mainIndex = galleryImages.findIndex(
+            image => image.is_main
+        );
+
+        galleryIndex = mainIndex >= 0
+            ? mainIndex
+            : 0;
+
+        const modal = document.getElementById("productGalleryModal");
+
+        document.getElementById("productGalleryTitle").textContent =
+            product.name;
+
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden", "false");
+
+        document.body.style.overflow = "hidden";
+
+        renderProductGallery();
+    }
+
+    function closeProductGallery() {
+        const modal = document.getElementById("productGalleryModal");
+
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden", "true");
+
+        document.body.style.overflow = "";
+
+        galleryProduct = null;
+        galleryImages = [];
+        galleryIndex = 0;
+    }
+
+    function changeProductGalleryImage(step) {
+        if (!galleryImages.length) return;
+
+        galleryIndex =
+            (galleryIndex + step + galleryImages.length) %
+            galleryImages.length;
+
+        renderProductGallery();
+    }
+
+    function goToProductGalleryImage(index) {
+        if (
+            index < 0 ||
+            index >= galleryImages.length
+        ) {
+            return;
+        }
+
+        galleryIndex = index;
+        renderProductGallery();
+    }
+
+    function renderProductGallery() {
+        if (!galleryImages.length) return;
+
+        const imageData = galleryImages[galleryIndex];
+        const image = document.getElementById("productGalleryImage");
+
+        image.src = productImagePublicUrl(
+            imageData.storage_path
+        );
+
+        image.alt =
+            `${galleryProduct?.name || "Ürün"} fotoğrafı ${galleryIndex + 1}`;
+
+        document.getElementById("productGalleryCounter").textContent =
+            `${galleryIndex + 1} / ${galleryImages.length}`;
+
+        const multiple = galleryImages.length > 1;
+
+        document.getElementById("productGalleryPrev").classList
+            .toggle("hidden", !multiple);
+
+        document.getElementById("productGalleryNext").classList
+            .toggle("hidden", !multiple);
+
+        document.getElementById("productGalleryDots").innerHTML =
+            galleryImages.map((_, index) =>
+                `<span
+                    class="product-gallery-dot ${index === galleryIndex ? "active" : ""}"
+                    onclick="goToProductGalleryImage(${index})"
+                    role="button"
+                    tabindex="0"
+                    aria-label="${index + 1}. fotoğraf"
+                ></span>`
+            ).join("");
+    }
+
+    const galleryStage = document.getElementById("productGalleryStage");
+
+    galleryStage.addEventListener("touchstart", event => {
+        const touch = event.changedTouches?.[0];
+
+        if (!touch) return;
+
+        galleryTouchStartX = touch.clientX;
+        galleryTouchStartY = touch.clientY;
+    }, { passive: true });
+
+    galleryStage.addEventListener("touchend", event => {
+        const touch = event.changedTouches?.[0];
+
+        if (
+            !touch ||
+            galleryTouchStartX === null ||
+            galleryTouchStartY === null
+        ) {
+            return;
+        }
+
+        const deltaX =
+            touch.clientX - galleryTouchStartX;
+
+        const deltaY =
+            touch.clientY - galleryTouchStartY;
+
+        galleryTouchStartX = null;
+        galleryTouchStartY = null;
+
+        if (
+            Math.abs(deltaX) < 45 ||
+            Math.abs(deltaX) <= Math.abs(deltaY)
+        ) {
+            return;
+        }
+
+        changeProductGalleryImage(
+            deltaX < 0 ? 1 : -1
+        );
+    }, { passive: true });
+
+    document.getElementById("productGalleryModal")
+        .addEventListener("click", event => {
+            if (
+                event.target.id === "productGalleryModal"
+            ) {
+                closeProductGallery();
+            }
+        });
+
+    document.addEventListener("keydown", event => {
+        const modal =
+            document.getElementById("productGalleryModal");
+
+        if (modal.classList.contains("hidden")) {
+            return;
+        }
+
+        if (event.key === "Escape") {
+            closeProductGallery();
+        } else if (event.key === "ArrowLeft") {
+            changeProductGalleryImage(-1);
+        } else if (event.key === "ArrowRight") {
+            changeProductGalleryImage(1);
+        }
+    });
 
     function getItemQuantity(productId) {
         const item = order.items.find(x => x.productId === productId);
@@ -5048,7 +5600,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }
 
     function currentPwaName() {
-        return PWA_TENANT_CONFIG[TENANT_SLUG]?.name || "Online Sipariş";
+        return String(
+            platformBusiness?.shop_name ||
+            appSettings?.shop_name ||
+            tenantNameFromSlug(TENANT_SLUG) ||
+            "Online Sipariş"
+        ).trim();
     }
 
     function refreshInstallButton() {
