@@ -2074,7 +2074,7 @@
        AYARLAR
     ========================================= */
 
-    const KNOWN_TENANT_SLUGS = ["durumcu", "cakmak-tatlici"];
+    const KNOWN_TENANT_SLUGS = ["durumcu", "hanim-eller"];
     const PATH_PARTS = location.pathname.split("/").filter(Boolean);
     const PATH_TENANT_SLUG =
         KNOWN_TENANT_SLUGS.find(slug => PATH_PARTS.includes(slug)) || "";
@@ -2098,10 +2098,10 @@
             manifest: "durumcu/manifest.json",
             appleIcon: "durumcu/icon-192.png"
         },
-        "cakmak-tatlici": {
-            name: "Çakmak Tatlıcı",
-            manifest: "cakmak-tatlici/manifest.json",
-            appleIcon: "cakmak-tatlici/icon-192.png"
+        "hanim-eller": {
+            name: "Hanım Eller",
+            manifest: "hanim-eller/manifest.json",
+            appleIcon: "hanim-eller/icon-192.png"
         }
     };
 

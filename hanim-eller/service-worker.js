@@ -1,4 +1,4 @@
-const CACHE_NAME = "cakmak-tatlici-pwa-v10";
+const CACHE_NAME = "hanim-eller-pwa-v11";
 const STATIC_ASSETS = [
   "./manifest.json",
   "./icon-192.png",
