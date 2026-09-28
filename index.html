@@ -1324,10 +1324,34 @@
             </p>
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
             <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
+            <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchiseModal()">🏪 Bayilik Aç</button>
 
         </div>
 
-        <div id="licenseBanner" class="card hidden" style="background:#ffe5e5;color:#9f1d1d;font-weight:bold;text-align:center;border:1px solid #ffc7c7;line-height:1.5"></div>
+        
+<div id="franchiseModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>🏪 Bayilik Talebi</h2>
+      <button type="button" class="modal-close" onclick="closeFranchiseModal()">✕</button>
+    </div>
+    <p class="small">Bayilik talebinizi bırakın, çalışma arkadaşlarımız sizinle iletişime geçsin.</p>
+    <label>Ad Soyad</label>
+    <input id="franchiseName" type="text" maxlength="120" placeholder="Adınız ve soyadınız">
+    <label>Telefon</label>
+    <input id="franchisePhone" type="tel" maxlength="30" placeholder="05xx xxx xx xx">
+    <label>E-posta (opsiyonel)</label>
+    <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
+    <label>Not (opsiyonel)</label>
+    <textarea id="franchiseNote" maxlength="1500" style="width:100%;min-height:100px" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
+    <div class="actions" style="margin-top:14px">
+      <button type="button" class="btn btn-light" onclick="closeFranchiseModal()">Vazgeç</button>
+      <button type="button" class="btn btn-primary" onclick="submitFranchiseRequest()">Talebi Gönder</button>
+    </div>
+  </div>
+</div>
+
+<div id="licenseBanner" class="card hidden" style="background:#ffe5e5;color:#9f1d1d;font-weight:bold;text-align:center;border:1px solid #ffc7c7;line-height:1.5"></div>
 
         <!-- =========================================
              SİPARİŞ
@@ -4811,6 +4835,54 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     );
 
 
+
+    function openFranchiseModal(){
+        const existingName = document.getElementById("customerName")?.value?.trim() || "";
+        if(existingName && !document.getElementById("franchiseName").value){
+            document.getElementById("franchiseName").value = existingName;
+        }
+        document.getElementById("franchiseModal")?.classList.remove("hidden");
+    }
+
+    function closeFranchiseModal(){
+        document.getElementById("franchiseModal")?.classList.add("hidden");
+    }
+
+    async function submitFranchiseRequest(){
+        const name=document.getElementById("franchiseName").value.trim();
+        const phone=document.getElementById("franchisePhone").value.trim();
+        const email=document.getElementById("franchiseEmail").value.trim();
+        const note=document.getElementById("franchiseNote").value.trim();
+
+        if(name.length<2){alert("Lütfen ad soyad bilgisi girin.");return;}
+        if(phone.replace(/\D/g,"").length<10){alert("Lütfen geçerli bir telefon numarası girin.");return;}
+        if(!platformClient){alert("Bayilik talebi servisine ulaşılamıyor.");return;}
+
+        try{
+            const {data,error}=await platformClient.functions.invoke("franchise-request",{
+                body:{
+                    business_id: platformBusiness?.business_id || null,
+                    business_slug: TENANT_SLUG || null,
+                    business_name: platformBusiness?.shop_name || appSettings?.shop_name || null,
+                    customer_name:name,
+                    phone,
+                    email:email||null,
+                    note:note||null
+                }
+            });
+            if(error) throw error;
+            closeFranchiseModal();
+            document.getElementById("franchiseName").value="";
+            document.getElementById("franchisePhone").value="";
+            document.getElementById("franchiseEmail").value="";
+            document.getElementById("franchiseNote").value="";
+            alert("Bayilik talebiniz alınmıştır. Çalışma arkadaşlarımız en kısa sürede sizinle iletişime geçecektir.");
+        }catch(e){
+            console.error(e);
+            alert("Bayilik talebi gönderilemedi. Lütfen daha sonra tekrar deneyin.");
+        }
+    }
+
     /* =========================================
        PWA INSTALL + APP-SPECIFIC SERVICE WORKERS
     ========================================= */
@@ -4829,7 +4901,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         const button = document.getElementById("installAppButton");
         if (!button) return;
 
-        button.textContent = `📲 ${currentPwaName()}'i Yükle`;
+        button.textContent = "📲 Uygulamayı Yükle";
 
         const standalone =
             window.matchMedia("(display-mode: standalone)").matches ||
@@ -4841,6 +4913,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     window.addEventListener("beforeinstallprompt", event => {
         event.preventDefault();
         deferredInstallPrompt = event;
+        // Chrome tekrar install prompt veriyorsa uygulama artık kurulu değildir.
+        localStorage.removeItem(`online_order_pwa_installed_${currentPwaKey()}`);
         refreshInstallButton();
     });
 
