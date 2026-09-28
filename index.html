@@ -2198,6 +2198,7 @@
         }
 
         platformBusinessActive = licenseIsActive(platformBusiness);
+        renderInstagramProfileLink();
         const inactive = !platformBusinessActive;
 
         orderItemsCard?.classList.toggle("hidden", inactive);
@@ -2229,6 +2230,33 @@
             username,
             url: `https://www.instagram.com/${encodeURIComponent(username)}/`
         };
+    }
+
+    function renderInstagramProfileLink() {
+        const instagramLink = document.getElementById("instagramProfileLink");
+        if (!instagramLink) return;
+
+        const instagramUrl = String(appSettings.instagram_url || "").trim();
+
+        // İşletmenin merkezi lisansı/bayiliği aktif değilse Instagram linkini gösterme.
+        if (!platformBusiness || !platformBusinessActive || !instagramUrl) {
+            instagramLink.href = "#";
+            instagramLink.classList.add("hidden");
+            return;
+        }
+
+        const normalized = normalizeInstagramUrl(instagramUrl);
+        if (!normalized) {
+            instagramLink.href = "#";
+            instagramLink.classList.add("hidden");
+            return;
+        }
+
+        const customLabel = String(appSettings.instagram_label || "").trim();
+        const displayLabel = customLabel || `@${normalized.username}`;
+        instagramLink.href = normalized.url;
+        instagramLink.textContent = `📷 ${displayLabel}`;
+        instagramLink.classList.remove("hidden");
     }
 
     function applyAppSettings(settings) {
@@ -2270,27 +2298,7 @@
             }
         }
 
-        const instagramLink = document.getElementById("instagramProfileLink");
-        const instagramUrl = String(appSettings.instagram_url || "").trim();
-        if (instagramLink) {
-            if (instagramUrl) {
-                const normalized = normalizeInstagramUrl(instagramUrl);
-                if (normalized) {
-                    instagramLink.href = normalized.url;
-                    const customLabel = String(appSettings.instagram_label || "").trim();
-                    const displayLabel = customLabel || `@${normalized.username}`;
-                    instagramLink.textContent = `📷 ${displayLabel}`;
-                    instagramLink.classList.remove("hidden");
-                } else {
-                    instagramLink.href = "#";
-                    instagramLink.classList.add("hidden");
-                }
-            } else {
-                instagramLink.href = "#";
-                instagramLink.classList.add("hidden");
-            }
-        }
-
+        renderInstagramProfileLink();
         renderLicenseState();
     }
 
