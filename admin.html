@@ -46,6 +46,52 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .pdf-btn{background:#455a64;color:#fff}
 @media(max-width:600px){.revenue-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.grid{grid-template-columns:1fr 1fr}.products{grid-template-columns:1fr}.form-grid,.filters{grid-template-columns:1fr}.container{padding:14px}.header{align-items:flex-start;flex-direction:column}}
+
+/* =========================================
+   ÜRÜN FOTOĞRAF GALERİSİ - ADMIN
+========================================= */
+.product-admin-thumb{
+  width:72px;height:72px;min-width:72px;border-radius:12px;
+  object-fit:cover;background:#f2f2f2;border:1px solid #e5e5e5;
+}
+.product-admin-no-image{
+  width:72px;height:72px;min-width:72px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:#f2f2f2;border:1px dashed #ccc;font-size:28px;
+}
+.product-upload-box{
+  margin-top:10px;padding:14px;border:1px dashed #bbb;border-radius:12px;background:#fafafa;
+}
+.product-upload-box input[type="file"]{margin:8px 0 0}
+.product-image-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:12px;margin-top:14px;
+}
+.product-image-card{
+  position:relative;border:1px solid #e6e6e6;border-radius:12px;
+  padding:8px;background:#fff;
+}
+.product-image-card img{
+  width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px;
+  display:block;background:#f4f4f4;
+}
+.product-image-badge{
+  position:absolute;top:14px;left:14px;padding:4px 7px;border-radius:999px;
+  font-size:10px;font-weight:bold;background:#1f9d55;color:white;
+}
+.product-image-card .actions{
+  margin-top:8px;gap:6px;display:flex;flex-wrap:wrap;
+}
+.product-image-card .actions .btn{
+  padding:7px 9px;font-size:11px;flex:1;
+}
+.product-gallery-status{
+  min-height:20px;margin-top:10px;font-size:13px;color:#666;
+}
+.product-gallery-help{
+  font-size:12px;color:#777;line-height:1.45;margin-top:6px;
+}
+
 </style>
 </head>
 <body>
@@ -92,7 +138,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
   <section id="productsTab">
     <div class="card">
       <div class="header">
-        <div><h2>Ürün Yönetimi</h2><div class="muted">Ad, ikon ve fiyat değişiklikleri doğrudan müşteri sayfasına yansır.</div></div>
+        <div><h2>Ürün Yönetimi</h2><div class="muted">Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.</div></div>
         <button class="btn btn-primary" onclick="openProductModal()">+ Yeni Ürün</button>
       </div>
       <div id="productList" class="products"></div>
@@ -222,16 +268,42 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 </div>
 
 <div id="productModal" class="modal hidden">
-  <div class="modal-card">
+  <div class="modal-card" style="max-width:760px">
     <h2 id="modalTitle">Yeni Ürün</h2>
     <input id="productId" type="hidden">
-    <label>Ürün adı</label><input id="productName" placeholder="Örn. Adana Dürüm">
-    <label>İkon / emoji</label><input id="productIcon" placeholder="🌯">
-    <label>Fiyat (TL)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="150">
-    <label style="display:flex;align-items:center;gap:8px;font-weight:normal"><input id="productActive" type="checkbox" checked style="width:auto"> Müşteri sayfasında göster</label>
+
+    <label>Ürün adı</label>
+    <input id="productName" placeholder="Örn. Adana Dürüm">
+
+    <label>Fiyat (TL)</label>
+    <input id="productPrice" type="number" min="0" step="0.01" placeholder="150">
+
+    <div class="product-upload-box">
+      <label style="margin:0">Ürün Fotoğrafları</label>
+      <input
+        id="productImageFiles"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        onchange="handleProductImageSelection(this.files)"
+      >
+      <div class="product-gallery-help">
+        En fazla 8 fotoğraf. Yüklemeden önce fotoğraflar tarayıcıda maksimum
+        1600 px'e küçültülür ve WebP formatına dönüştürülür.
+        Ana fotoğraf müşteri ürün listesinde gösterilir.
+      </div>
+      <div id="productGalleryStatus" class="product-gallery-status"></div>
+      <div id="productImageGrid" class="product-image-grid"></div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:16px">
+      <input id="productActive" type="checkbox" checked style="width:auto">
+      Müşteri sayfasında göster
+    </label>
+
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
       <button class="btn btn-light" onclick="closeProductModal()">Vazgeç</button>
-      <button class="btn btn-primary" onclick="saveProduct()">Kaydet</button>
+      <button id="saveProductButton" class="btn btn-primary" onclick="saveProduct()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -318,6 +390,10 @@ const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.ke
   : null;
 
 let products = [];
+let pendingProductFiles = [];
+let pendingMainImageIndex = null;
+let currentProductImages = [];
+let productImageBusy = false;
 let orders = [];
 let notifications = [];
 let supportTickets = [];
@@ -506,12 +582,31 @@ async function loadAll(){
 
 async function loadAdminProducts(){
   try{
-    const {data,error}=await supabaseClient.from("products")
+    const productResult=await supabaseClient.from("products")
       .select("id,name,icon,price,active,created_at,business_id")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
-    if(error)throw error;
-    products=data||[];
+    if(productResult.error)throw productResult.error;
+
+    const imageResult=await supabaseClient.from("product_images")
+      .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
+      .eq("business_id",currentBusinessId)
+      .order("sort_order",{ascending:true})
+      .order("created_at",{ascending:true});
+    if(imageResult.error)throw imageResult.error;
+
+    const imagesByProduct=new Map();
+    (imageResult.data||[]).forEach(img=>{
+      const key=String(img.product_id);
+      if(!imagesByProduct.has(key))imagesByProduct.set(key,[]);
+      imagesByProduct.get(key).push(img);
+    });
+
+    products=(productResult.data||[]).map(p=>({
+      ...p,
+      images:imagesByProduct.get(String(p.id))||[]
+    }));
+
     renderProducts();
   }catch(e){
     console.error("Ürünler yüklenemedi:",e);
@@ -947,60 +1042,450 @@ function showTab(name,button){
   if(name==="support")loadSupportTickets();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
 }
+function productImagePublicUrl(storagePath){
+  if(!storagePath)return "";
+  const {data}=supabaseClient.storage.from("product-images").getPublicUrl(storagePath);
+  return data?.publicUrl||"";
+}
+
+function productMainImage(product){
+  const images=Array.isArray(product?.images)?product.images:[];
+  return images.find(x=>x.is_main)||images[0]||null;
+}
+
 function renderProducts(){
   const el=document.getElementById("productList");
-  if(!products.length){el.innerHTML='<div class="empty">Henüz ürün yok.</div>';return;}
-  el.innerHTML=products.map(p=>`<div class="product">
-    <div class="product-left"><div class="icon">${escapeHtml(p.icon)}</div>
-      <div><strong>${escapeHtml(p.name)}</strong><div class="muted">${money(p.price)} · ${p.active===false?"Gizli":"Aktif"}</div></div>
-    </div>
-    <div class="actions">
-      <button class="btn btn-light" onclick="editProduct('${p.id}')">Düzenle</button>
-      <button class="btn btn-danger" onclick="deleteProduct('${p.id}')">Sil</button>
-    </div></div>`).join("");
+  if(!products.length){
+    el.innerHTML='<div class="empty">Henüz ürün yok.</div>';
+    return;
+  }
+
+  el.innerHTML=products.map(p=>{
+    const mainImage=productMainImage(p);
+    const visual=mainImage
+      ? `<img class="product-admin-thumb" src="${escapeAttr(productImagePublicUrl(mainImage.storage_path))}" alt="${escapeAttr(p.name)}">`
+      : `<div class="product-admin-no-image">📷</div>`;
+
+    return `<div class="product">
+      <div class="product-left">
+        ${visual}
+        <div>
+          <strong>${escapeHtml(p.name)}</strong>
+          <div class="muted">${money(p.price)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-light" onclick="editProduct('${escapeAttr(p.id)}')">Düzenle</button>
+        <button class="btn btn-danger" onclick="deleteProduct('${escapeAttr(p.id)}')">Sil</button>
+      </div>
+    </div>`;
+  }).join("");
 }
+
+function setProductGalleryStatus(message,isError=false){
+  const el=document.getElementById("productGalleryStatus");
+  if(!el)return;
+  el.textContent=message||"";
+  el.style.color=isError?"#b42318":"#666";
+}
+
+function revokePendingPreviewUrls(){
+  pendingProductFiles.forEach(x=>{
+    if(x.previewUrl){
+      try{URL.revokeObjectURL(x.previewUrl);}catch{}
+    }
+  });
+}
+
 function openProductModal(p=null){
+  revokePendingPreviewUrls();
+  pendingProductFiles=[];
+  pendingMainImageIndex=null;
+  currentProductImages=Array.isArray(p?.images)?p.images.map(x=>({...x})):[];
+  productImageBusy=false;
+
   document.getElementById("productId").value=p?.id||"";
   document.getElementById("productName").value=p?.name||"";
-  document.getElementById("productIcon").value=p?.icon||"🍽️";
   document.getElementById("productPrice").value=p?.price??"";
   document.getElementById("productActive").checked=p?.active!==false;
+  document.getElementById("productImageFiles").value="";
   document.getElementById("modalTitle").textContent=p?"Ürünü Düzenle":"Yeni Ürün";
+  setProductGalleryStatus("");
+  renderProductImageEditor();
   document.getElementById("productModal").classList.remove("hidden");
 }
-function closeProductModal(){document.getElementById("productModal").classList.add("hidden");}
-function editProduct(id){openProductModal(products.find(p=>p.id===id));}
+
+function closeProductModal(){
+  if(productImageBusy)return;
+  revokePendingPreviewUrls();
+  pendingProductFiles=[];
+  pendingMainImageIndex=null;
+  currentProductImages=[];
+  document.getElementById("productModal").classList.add("hidden");
+}
+
+function editProduct(id){
+  openProductModal(products.find(p=>String(p.id)===String(id)));
+}
+
+function handleProductImageSelection(fileList){
+  const files=Array.from(fileList||[]);
+  if(!files.length)return;
+
+  const available=8-currentProductImages.length-pendingProductFiles.length;
+  if(available<=0){
+    setProductGalleryStatus("Bu ürün için en fazla 8 fotoğraf eklenebilir.",true);
+    document.getElementById("productImageFiles").value="";
+    return;
+  }
+
+  const accepted=files.slice(0,available);
+  let rejected=files.length-accepted.length;
+
+  accepted.forEach(file=>{
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
+      rejected++;
+      return;
+    }
+    pendingProductFiles.push({
+      file,
+      previewUrl:URL.createObjectURL(file)
+    });
+  });
+
+  if(currentProductImages.length===0 && pendingProductFiles.length && pendingMainImageIndex===null){
+    pendingMainImageIndex=0;
+  }
+
+  document.getElementById("productImageFiles").value="";
+  renderProductImageEditor();
+
+  if(rejected>0){
+    setProductGalleryStatus(`${rejected} dosya eklenmedi. En fazla 8 adet JPG/PNG/WebP kullanılabilir.`,true);
+  }else{
+    setProductGalleryStatus(`${pendingProductFiles.length} yeni fotoğraf kaydedilmeyi bekliyor.`);
+  }
+}
+
+function removePendingProductImage(index){
+  const item=pendingProductFiles[index];
+  if(item?.previewUrl){
+    try{URL.revokeObjectURL(item.previewUrl);}catch{}
+  }
+  pendingProductFiles.splice(index,1);
+
+  if(pendingMainImageIndex===index){
+    pendingMainImageIndex=(currentProductImages.length===0 && pendingProductFiles.length)?0:null;
+  }else if(pendingMainImageIndex!==null && pendingMainImageIndex>index){
+    pendingMainImageIndex--;
+  }
+
+  renderProductImageEditor();
+}
+
+function choosePendingMainImage(index){
+  pendingMainImageIndex=index;
+  renderProductImageEditor();
+}
+
+async function setExistingMainProductImage(imageId){
+  const productId=document.getElementById("productId").value;
+  if(!productId)return;
+
+  try{
+    productImageBusy=true;
+    setProductGalleryStatus("Ana fotoğraf güncelleniyor...");
+
+    const {error}=await supabaseClient.rpc("set_product_main_image",{
+      p_product_id:productId,
+      p_image_id:imageId
+    });
+    if(error)throw error;
+
+    currentProductImages=currentProductImages.map(img=>({
+      ...img,
+      is_main:String(img.id)===String(imageId)
+    }));
+    pendingMainImageIndex=null;
+    renderProductImageEditor();
+    setProductGalleryStatus("Ana fotoğraf güncellendi.");
+    await loadAdminProducts();
+  }catch(e){
+    console.error(e);
+    setProductGalleryStatus(e.message||"Ana fotoğraf değiştirilemedi.",true);
+  }finally{
+    productImageBusy=false;
+  }
+}
+
+async function deleteExistingProductImage(imageId){
+  const image=currentProductImages.find(x=>String(x.id)===String(imageId));
+  if(!image)return;
+  if(!confirm("Bu ürün fotoğrafı silinsin mi?"))return;
+
+  try{
+    productImageBusy=true;
+    setProductGalleryStatus("Fotoğraf siliniyor...");
+
+    const {error:dbError}=await supabaseClient.from("product_images")
+      .delete()
+      .eq("id",image.id)
+      .eq("business_id",currentBusinessId);
+    if(dbError)throw dbError;
+
+    const {error:storageError}=await supabaseClient.storage
+      .from("product-images")
+      .remove([image.storage_path]);
+
+    currentProductImages=currentProductImages.filter(x=>String(x.id)!==String(image.id));
+
+    // Trigger yeni ana fotoğraf seçmiş olabilir; DB'den tekrar çek.
+    const productId=document.getElementById("productId").value;
+    const {data:freshImages,error:freshError}=await supabaseClient.from("product_images")
+      .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
+      .eq("business_id",currentBusinessId)
+      .eq("product_id",productId)
+      .order("sort_order",{ascending:true})
+      .order("created_at",{ascending:true});
+    if(!freshError)currentProductImages=freshImages||[];
+
+    renderProductImageEditor();
+    await loadAdminProducts();
+
+    if(storageError){
+      setProductGalleryStatus("DB kaydı silindi ancak Storage dosyası temizlenemedi: "+storageError.message,true);
+    }else{
+      setProductGalleryStatus("Fotoğraf silindi.");
+    }
+  }catch(e){
+    console.error(e);
+    setProductGalleryStatus(e.message||"Fotoğraf silinemedi.",true);
+  }finally{
+    productImageBusy=false;
+  }
+}
+
+function renderProductImageEditor(){
+  const grid=document.getElementById("productImageGrid");
+  if(!grid)return;
+
+  const existingHtml=currentProductImages.map(img=>{
+    const url=productImagePublicUrl(img.storage_path);
+    return `<div class="product-image-card">
+      ${img.is_main?'<span class="product-image-badge">ANA</span>':""}
+      <img src="${escapeAttr(url)}" alt="Ürün fotoğrafı">
+      <div class="actions">
+        ${img.is_main
+          ? '<button type="button" class="btn btn-light" disabled>Ana Fotoğraf</button>'
+          : `<button type="button" class="btn btn-success" onclick="setExistingMainProductImage('${escapeAttr(img.id)}')">Ana Yap</button>`}
+        <button type="button" class="btn btn-danger" onclick="deleteExistingProductImage('${escapeAttr(img.id)}')">Sil</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  const pendingHtml=pendingProductFiles.map((item,index)=>{
+    const selected=pendingMainImageIndex===index;
+    return `<div class="product-image-card">
+      ${selected?'<span class="product-image-badge">YENİ ANA</span>':""}
+      <img src="${escapeAttr(item.previewUrl)}" alt="Yeni ürün fotoğrafı">
+      <div class="actions">
+        ${selected
+          ? '<button type="button" class="btn btn-light" disabled>Ana Seçildi</button>'
+          : `<button type="button" class="btn btn-success" onclick="choosePendingMainImage(${index})">Ana Yap</button>`}
+        <button type="button" class="btn btn-danger" onclick="removePendingProductImage(${index})">Kaldır</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  grid.innerHTML=(existingHtml+pendingHtml)||
+    '<div class="muted" style="grid-column:1/-1">Henüz fotoğraf eklenmedi.</div>';
+}
+
+async function compressProductImage(file,maxDimension=1600,quality=0.80){
+  const bitmap=await createImageBitmap(file);
+  const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height));
+  const width=Math.max(1,Math.round(bitmap.width*scale));
+  const height=Math.max(1,Math.round(bitmap.height*scale));
+
+  const canvas=document.createElement("canvas");
+  canvas.width=width;
+  canvas.height=height;
+
+  const ctx=canvas.getContext("2d",{alpha:false});
+  ctx.drawImage(bitmap,0,0,width,height);
+  if(typeof bitmap.close==="function")bitmap.close();
+
+  const blob=await new Promise((resolve,reject)=>{
+    canvas.toBlob(
+      b=>b?resolve(b):reject(new Error("Fotoğraf WebP formatına dönüştürülemedi.")),
+      "image/webp",
+      quality
+    );
+  });
+
+  return blob;
+}
+
+async function uploadPendingProductImages(productId){
+  if(!pendingProductFiles.length)return [];
+
+  const existingCount=currentProductImages.length;
+  const uploaded=[];
+
+  for(let i=0;i<pendingProductFiles.length;i++){
+    const item=pendingProductFiles[i];
+    setProductGalleryStatus(`Fotoğraflar hazırlanıyor ve yükleniyor... ${i+1}/${pendingProductFiles.length}`);
+
+    const webpBlob=await compressProductImage(item.file);
+    const objectPath=`${currentBusinessId}/${productId}/${crypto.randomUUID()}.webp`;
+
+    const {error:uploadError}=await supabaseClient.storage
+      .from("product-images")
+      .upload(objectPath,webpBlob,{
+        contentType:"image/webp",
+        cacheControl:"31536000",
+        upsert:false
+      });
+    if(uploadError)throw uploadError;
+
+    const {data:inserted,error:insertError}=await supabaseClient.from("product_images")
+      .insert({
+        business_id:currentBusinessId,
+        product_id:productId,
+        storage_path:objectPath,
+        sort_order:existingCount+i,
+        is_main:false
+      })
+      .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
+      .single();
+
+    if(insertError){
+      await supabaseClient.storage.from("product-images").remove([objectPath]);
+      throw insertError;
+    }
+
+    uploaded.push(inserted);
+  }
+
+  if(pendingMainImageIndex!==null && uploaded[pendingMainImageIndex]){
+    const selected=uploaded[pendingMainImageIndex];
+
+    const {error:mainError}=await supabaseClient.rpc("set_product_main_image",{
+      p_product_id:productId,
+      p_image_id:selected.id
+    });
+    if(mainError)throw mainError;
+  }
+
+  return uploaded;
+}
+
 async function saveProduct(){
+  if(productImageBusy)return;
+
   const id=document.getElementById("productId").value;
   const payload={
     name:document.getElementById("productName").value.trim(),
-    icon:document.getElementById("productIcon").value.trim()||"🍽️",
+    icon:"🍽️", // geriye dönük uyumluluk için kolon korunuyor, UI artık ikon kullanmıyor
     price:Number(document.getElementById("productPrice").value),
     active:document.getElementById("productActive").checked
   };
-  if(!payload.name||!Number.isFinite(payload.price)||payload.price<0){toast("Ürün adı ve geçerli fiyat gerekli.");return;}
+
+  if(!payload.name||!Number.isFinite(payload.price)||payload.price<0){
+    toast("Ürün adı ve geçerli fiyat gerekli.");
+    return;
+  }
+
+  if(currentProductImages.length+pendingProductFiles.length>8){
+    setProductGalleryStatus("Bir ürün için en fazla 8 fotoğraf eklenebilir.",true);
+    return;
+  }
+
+  const saveButton=document.getElementById("saveProductButton");
+
   try{
+    productImageBusy=true;
+    saveButton.disabled=true;
+    saveButton.textContent="Kaydediliyor...";
+
+    let savedProduct;
+
     if(id){
-      const {data,error}=await supabaseClient.from("products").update(payload)
-        .eq("id",id).eq("business_id",currentBusinessId)
-        .select("id,name,icon,price,active,created_at,business_id").single();
-      if(error)throw error;products=products.map(p=>p.id===id?data:p);
+      const {data,error}=await supabaseClient.from("products")
+        .update(payload)
+        .eq("id",id)
+        .eq("business_id",currentBusinessId)
+        .select("id,name,icon,price,active,created_at,business_id")
+        .single();
+      if(error)throw error;
+      savedProduct=data;
     }else{
       const newId=crypto.randomUUID();
-      const {data,error}=await supabaseClient.from("products").insert({...payload,id:newId,business_id:currentBusinessId})
-        .select("id,name,icon,price,active,created_at,business_id").single();
-      if(error)throw error;products.push(data);
+      const {data,error}=await supabaseClient.from("products")
+        .insert({...payload,id:newId,business_id:currentBusinessId})
+        .select("id,name,icon,price,active,created_at,business_id")
+        .single();
+      if(error)throw error;
+      savedProduct=data;
+      document.getElementById("productId").value=savedProduct.id;
     }
-    renderProducts();closeProductModal();toast("Ürün kaydedildi. Müşteri sayfası güncel veriyi kullanıyor.");
-  }catch(e){toast(e.message);}
+
+    if(pendingProductFiles.length){
+      await uploadPendingProductImages(savedProduct.id);
+    }
+
+    revokePendingPreviewUrls();
+    pendingProductFiles=[];
+    pendingMainImageIndex=null;
+
+    await loadAdminProducts();
+    closeProductModal();
+    toast("Ürün ve fotoğrafları kaydedildi.");
+  }catch(e){
+    console.error("Ürün kaydedilemedi:",e);
+    setProductGalleryStatus(e.message||"Ürün kaydedilemedi.",true);
+    toast(e.message||"Ürün kaydedilemedi.");
+  }finally{
+    productImageBusy=false;
+    saveButton.disabled=false;
+    saveButton.textContent="Kaydet";
+  }
 }
+
 async function deleteProduct(id){
-  if(!confirm("Bu ürün silinsin mi?"))return;
+  if(!confirm("Bu ürün ve tüm fotoğrafları silinsin mi?"))return;
+
   try{
-    const {error}=await supabaseClient.from("products").delete().eq("id",id).eq("business_id",currentBusinessId);
-    if(error)throw error;products=products.filter(p=>p.id!==id);renderProducts();toast("Ürün silindi.");
-  }catch(e){toast(e.message);}
+    const product=products.find(p=>String(p.id)===String(id));
+    const imagePaths=(product?.images||[])
+      .map(x=>x.storage_path)
+      .filter(Boolean);
+
+    // Ürün silinince product_images satırları FK ON DELETE CASCADE ile silinir.
+    const {error}=await supabaseClient.from("products")
+      .delete()
+      .eq("id",id)
+      .eq("business_id",currentBusinessId);
+    if(error)throw error;
+
+    // Storage nesneleri FK ile silinmez, ayrıca temizlenir.
+    if(imagePaths.length){
+      const {error:storageError}=await supabaseClient.storage
+        .from("product-images")
+        .remove(imagePaths);
+      if(storageError){
+        console.warn("Ürün silindi fakat bazı Storage dosyaları temizlenemedi:",storageError);
+      }
+    }
+
+    products=products.filter(p=>String(p.id)!==String(id));
+    renderProducts();
+    toast("Ürün silindi.");
+  }catch(e){
+    toast(e.message||"Ürün silinemedi.");
+  }
 }
+
 function renderOrders(){
   document.querySelectorAll('input[id^="wa-code-"]').forEach(input=>{
     const id=input.id.replace("wa-code-","");
