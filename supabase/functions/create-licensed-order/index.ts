@@ -2,7 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -14,6 +15,15 @@ function json(body: unknown, status = 200) {
       "Content-Type": "application/json; charset=utf-8",
     },
   });
+}
+
+
+async function sha256Hex(value: string) {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req) => {
@@ -28,36 +38,38 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     const PLATFORM_CONTROL_URL = Deno.env.get("PLATFORM_CONTROL_URL");
-    const PLATFORM_CONTROL_PUBLISHABLE_KEY =
-      Deno.env.get("PLATFORM_CONTROL_PUBLISHABLE_KEY");
+    const PLATFORM_CONTROL_PUBLISHABLE_KEY = Deno.env.get(
+      "PLATFORM_CONTROL_PUBLISHABLE_KEY",
+    );
+    const PLATFORM_BUSINESS_KEY = Deno.env.get("PLATFORM_BUSINESS_KEY");
 
     if (
       !SUPABASE_URL ||
       !SUPABASE_SERVICE_ROLE_KEY ||
       !PLATFORM_CONTROL_URL ||
-      !PLATFORM_CONTROL_PUBLISHABLE_KEY
+      !PLATFORM_CONTROL_PUBLISHABLE_KEY ||
+      !PLATFORM_BUSINESS_KEY
     ) {
       console.error("Eksik Edge Function environment/secrets.");
-      return json({ ok: false, error: "Sunucu yapılandırması eksik." }, 500);
+      return json(
+        {
+          ok: false,
+          error:
+            "Sunucu yapılandırması eksik. Edge Function secret ayarlarını kontrol edin.",
+        },
+        500,
+      );
     }
 
-    const body = await req.json().catch(() => null);
-
-    if (!body || typeof body !== "object") {
-      return json({ ok: false, error: "Geçersiz sipariş isteği." }, 400);
-    }
-
-    const businessKey = String(body.p_business_key ?? "").trim();
-
-    if (!businessKey) {
-      return json({ ok: false, error: "İşletme anahtarı bulunamadı." }, 400);
-    }
-
+    // Merkezi projeden işletmenin güncel lisans/aktiflik bilgisini al.
     const platform = createClient(
       PLATFORM_CONTROL_URL,
       PLATFORM_CONTROL_PUBLISHABLE_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } },
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+      },
     );
 
     const { data: business, error: businessError } = await platform
@@ -65,7 +77,7 @@ Deno.serve(async (req) => {
       .select(
         "business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active",
       )
-      .eq("public_key", businessKey)
+      .eq("public_key", PLATFORM_BUSINESS_KEY)
       .maybeSingle();
 
     if (businessError) {
@@ -77,14 +89,101 @@ Deno.serve(async (req) => {
     }
 
     if (!business) {
-      return json({ ok: false, error: "İşletme kaydı bulunamadı." }, 404);
+      return json(
+        { ok: false, error: "Merkezi işletme kaydı bulunamadı." },
+        404,
+      );
     }
 
     if (!business.is_active || !business.manual_enabled) {
       return json(
-        { ok: false, error: "Bu işletmenin online sipariş sistemi aktif değildir." },
+        {
+          ok: false,
+          error: "Bu işletmenin online sipariş sistemi aktif değildir.",
+        },
         403,
       );
+    }
+
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body !== "object") {
+      return json({ ok: false, error: "Geçersiz istek." }, 400);
+    }
+
+    // Tenant/ortak veri DB'sinde service_role kullanılır.
+    const tenant = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // ---------------------------------------------------------
+    // WhatsApp penceresi açılamazsa frontend bu aksiyonu çağırır.
+    // Yalnızca:
+    // - aynı işletmeye ait,
+    // - onay-bekliyor durumundaki,
+    // - whatsapp-business siparişi,
+    // - doğru security_code ile
+    // silinebilir.
+    // ---------------------------------------------------------
+    if (body.action === "cancel_pending_whatsapp_order") {
+      const orderId = Number(body.order_id);
+      const securityCode = String(body.security_code ?? "").trim();
+
+      if (!Number.isSafeInteger(orderId) || orderId <= 0 || !securityCode) {
+        return json({ ok: false, error: "Geçersiz iptal isteği." }, 400);
+      }
+
+      const { data: pendingOrder, error: pendingOrderError } = await tenant
+        .from("orders")
+        .select(
+          "id,business_id,status,verification_method,verified_at,whatsapp_code_hash",
+        )
+        .eq("id", orderId)
+        .eq("business_id", business.business_id)
+        .maybeSingle();
+
+      if (pendingOrderError) {
+        console.error("Bekleyen sipariş iptal sorgu hatası:", pendingOrderError);
+        return json({ ok: false, error: "Sipariş iptal edilemedi." }, 500);
+      }
+
+      if (!pendingOrder) {
+        return json({ ok: true, cancelled: true, already_missing: true });
+      }
+
+      if (
+        pendingOrder.status !== "onay-bekliyor" ||
+        pendingOrder.verification_method !== "whatsapp-business" ||
+        pendingOrder.verified_at
+      ) {
+        return json(
+          { ok: false, error: "Bu sipariş artık iptal edilemez." },
+          409,
+        );
+      }
+
+      const suppliedHash = await sha256Hex(securityCode);
+
+      if (
+        !pendingOrder.whatsapp_code_hash ||
+        suppliedHash !== pendingOrder.whatsapp_code_hash
+      ) {
+        return json({ ok: false, error: "Sipariş iptal doğrulaması başarısız." }, 403);
+      }
+
+      const { error: deleteError } = await tenant
+        .from("orders")
+        .delete()
+        .eq("id", orderId)
+        .eq("business_id", business.business_id)
+        .eq("status", "onay-bekliyor");
+
+      if (deleteError) {
+        console.error("Bekleyen WhatsApp siparişi silinemedi:", deleteError);
+        return json({ ok: false, error: "Sipariş iptal edilemedi." }, 500);
+      }
+
+      return json({ ok: true, cancelled: true, order_id: orderId });
     }
 
     const items = Array.isArray(body.p_items) ? body.p_items : [];
@@ -92,12 +191,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "Siparişte ürün bulunmuyor." }, 400);
     }
 
-    const tenant = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
     const rpcPayload = {
-      p_business_id: business.business_id,
       p_name: String(body.p_name ?? ""),
       p_address: String(body.p_address ?? ""),
       p_payment: String(body.p_payment ?? ""),
@@ -119,19 +213,64 @@ Deno.serve(async (req) => {
     if (orderError) {
       console.error("Sipariş RPC hatası:", orderError);
       return json(
-        { ok: false, error: orderError.message || "Sipariş oluşturulamadı." },
+        {
+          ok: false,
+          error: orderError.message || "Sipariş oluşturulamadı.",
+        },
         400,
       );
     }
 
-    return json({ ok: true, data: orderResult });
+    const orderId = orderResult?.id;
+
+    if (!orderId) {
+      console.error("RPC sipariş id döndürmedi:", orderResult);
+      return json(
+        { ok: false, error: "Sipariş oluşturuldu ancak sipariş ID alınamadı." },
+        500,
+      );
+    }
+
+    // Multi-tenant geçişi: siparişi merkezi işletme UUID'sine bağla.
+    const { error: businessIdUpdateError } = await tenant
+      .from("orders")
+      .update({ business_id: business.business_id })
+      .eq("id", orderId);
+
+    if (businessIdUpdateError) {
+      console.error(
+        "Sipariş business_id güncelleme hatası:",
+        businessIdUpdateError,
+      );
+
+      // Yanlış tenant bilgili yarım sipariş bırakmamak için temizle.
+      await tenant.from("orders").delete().eq("id", orderId);
+
+      return json(
+        {
+          ok: false,
+          error:
+            "Sipariş işletmeye bağlanamadı. Sipariş kaydı güvenlik nedeniyle iptal edildi.",
+        },
+        500,
+      );
+    }
+
+    return json({
+      ok: true,
+      data: {
+        ...orderResult,
+        business_id: business.business_id,
+      },
+    });
   } catch (error) {
     console.error("create-licensed-order beklenmeyen hata:", error);
     return json(
       {
         ok: false,
-        error:
-          error instanceof Error ? error.message : "Beklenmeyen sunucu hatası.",
+        error: error instanceof Error
+          ? error.message
+          : "Beklenmeyen sunucu hatası.",
       },
       500,
     );

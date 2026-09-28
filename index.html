@@ -4656,7 +4656,6 @@
     }
 
     let orderSubmitInProgress = false;
-    let createdOrderWhatsAppUrl = "";
 
     function setWhatsAppButtonState({disabled=false, text=null} = {}) {
         const button = document.getElementById("sendWhatsAppButton");
@@ -4667,56 +4666,139 @@
         if (text) button.textContent = text;
     }
 
-    function openCreatedOrderWhatsApp() {
-        if (!createdOrderWhatsAppUrl) return false;
-        window.location.href = createdOrderWhatsAppUrl;
-        return true;
+    async function cancelPendingWhatsAppOrder(orderId, securityCode) {
+        if (!orderId || !securityCode) return false;
+
+        try {
+            const { data, error } =
+                await supabaseClient.functions.invoke("create-licensed-order", {
+                    body: {
+                        action: "cancel_pending_whatsapp_order",
+                        order_id: orderId,
+                        security_code: securityCode
+                    }
+                });
+
+            if (error || !data?.ok) {
+                console.error(
+                    "Bekleyen WhatsApp siparişi geri alınamadı:",
+                    data?.error || error
+                );
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error(
+                "Bekleyen WhatsApp siparişi iptal hatası:",
+                error
+            );
+            return false;
+        }
     }
 
     async function sendToWhatsApp() {
-        // Sipariş daha önce başarıyla oluşturulduysa aynı siparişi tekrar DB'ye yazma.
-        // Sadece hazırlanmış WhatsApp bağlantısını yeniden aç.
-        if (createdOrderWhatsAppUrl) {
-            openCreatedOrderWhatsApp();
-            return;
-        }
-
-        // Çift tıklama / hızlı tekrar tıklamayı ilk milisaniyede kes.
         if (orderSubmitInProgress) return;
 
         const payload = getOrderRpcPayload();
-        if (!payload.p_items.length) return alert("Siparişinizde ürün bulunmuyor.");
+
+        if (!payload.p_items.length) {
+            alert("Siparişinizde ürün bulunmuyor.");
+            return;
+        }
 
         if (!platformBusinessActive) {
             alert("Bu işletmenin online sipariş sistemi şu anda aktif değildir.");
             return;
         }
 
+        // WhatsApp numarası DB siparişi oluşturulmadan ÖNCE kontrol edilir.
+        const businessPhone =
+            String(appSettings.phone || "").replace(/[^0-9]/g, "");
+
+        if (!businessPhone) {
+            alert("İşletmenin WhatsApp numarası tanımlanmamış.");
+            return;
+        }
+
+        /*
+         * ÖNEMLİ:
+         * Popup kullanıcı tıklaması sırasında senkron açılır.
+         * Tarayıcı popup'ı engellerse Edge Function hiç çağrılmaz,
+         * dolayısıyla DB'de sipariş oluşmaz.
+         */
+        const whatsappWindow = window.open(
+            "about:blank",
+            "_blank",
+            "noopener=false"
+        );
+
+        if (!whatsappWindow) {
+            alert(
+                "WhatsApp penceresi açılamadı. " +
+                "Tarayıcınız açılır pencereyi engellediği için sipariş oluşturulmadı. " +
+                "Bu site için açılır pencerelere izin verip tekrar deneyin."
+            );
+            return;
+        }
+
+        try {
+            whatsappWindow.document.title = "WhatsApp hazırlanıyor...";
+            whatsappWindow.document.body.innerHTML =
+                '<div style="font-family:Arial,sans-serif;padding:28px;text-align:center">' +
+                '<h3>WhatsApp hazırlanıyor...</h3>' +
+                '<p>Bu pencereyi kapatmayın.</p>' +
+                '</div>';
+        } catch (_) {}
+
         orderSubmitInProgress = true;
+
         setWhatsAppButtonState({
             disabled: true,
-            text: "⏳ Sipariş oluşturuluyor..."
+            text: "⏳ WhatsApp hazırlanıyor..."
         });
+
+        let createdOrderId = null;
+        let createdSecurityCode = "";
 
         try {
             const { data: functionResult, error } =
-                await supabaseClient.functions.invoke("create-licensed-order", { body: payload });
+                await supabaseClient.functions.invoke(
+                    "create-licensed-order",
+                    { body: payload }
+                );
 
             if (error || !functionResult?.ok) {
-                throw new Error(functionResult?.error || error?.message || "Bilinmeyen hata");
+                throw new Error(
+                    functionResult?.error ||
+                    error?.message ||
+                    "Bilinmeyen hata"
+                );
             }
 
             const data = functionResult.data || {};
-            const savedItems = Array.isArray(data.items) ? data.items : [];
-            const savedSubtotal = Number(data.subtotal || data.total || 0);
-            const savedDiscount = Number(data.discount_amount || 0);
-            const savedTotal = Number(data.total || 0);
+
+            createdOrderId = data.id;
+            createdSecurityCode = String(data.security_code || "");
+
+            const savedItems =
+                Array.isArray(data.items) ? data.items : [];
+
+            const savedSubtotal =
+                Number(data.subtotal || data.total || 0);
+
+            const savedDiscount =
+                Number(data.discount_amount || 0);
+
+            const savedTotal =
+                Number(data.total || 0);
 
             let message = `Merhaba, ben ${order.name}.
 
 Sipariş vermek istiyorum:
 
 `;
+
             savedItems.forEach(item => {
                 message += `${item.quantity} adet ${item.name}
 `;
@@ -4725,17 +4807,21 @@ Sipariş vermek istiyorum:
             message += `
 Ara Toplam: ${savedSubtotal.toLocaleString("tr-TR")} TL
 `;
+
             if (savedDiscount > 0) {
-                message += `İndirim: -${savedDiscount.toLocaleString("tr-TR")} TL
+                message +=
+                    `İndirim: -${savedDiscount.toLocaleString("tr-TR")} TL
 `;
             }
 
-            message += `Toplam: ${savedTotal.toLocaleString("tr-TR")} TL
+            message +=
+                `Toplam: ${savedTotal.toLocaleString("tr-TR")} TL
 Adresim: ${order.address}
 `;
 
             if (order.addressDetail) {
-                message += `Adres tarifi: ${order.addressDetail}
+                message +=
+                    `Adres tarifi: ${order.addressDetail}
 `;
             }
 
@@ -4760,97 +4846,74 @@ ${qrUrl}
 `;
 
             if (order.note) {
-                message += `Sipariş notu: ${order.note}
+                message +=
+                    `Sipariş notu: ${order.note}
 `;
             }
 
             message += `
 Sipariş No: #${data.id}`;
+
             message += `
 🔐 Güvenlik Kodu: ${data.security_code}`;
+
             message += `
 Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kullanılacaktır.`;
 
-            const businessPhone =
-                String(appSettings.phone || "").replace(/[^0-9]/g, "");
-
-            if (!businessPhone) {
-                throw new Error("İşletmenin WhatsApp numarası tanımlanmamış.");
-            }
-
-            createdOrderWhatsAppUrl =
-                "whatsapp://send?phone=" +
+            /*
+             * whatsapp:// yerine HTTPS wa.me kullanıyoruz.
+             * Masaüstünde WhatsApp Web'e, mobilde uygun WhatsApp akışına gider.
+             */
+            const whatsappUrl =
+                "https://wa.me/" +
                 businessPhone +
-                "&text=" +
+                "?text=" +
                 encodeURIComponent(message);
 
-            // DB kaydı artık oluştu. Bundan sonra bu buton hiçbir koşulda
-            // ikinci bir sipariş oluşturmaz.
+            // Önceden başarıyla açılmış pencereyi WhatsApp'a yönlendir.
+            whatsappWindow.location.replace(whatsappUrl);
+
+            /*
+             * window.open() bize geçerli pencere handle'ı döndürdüyse
+             * tarayıcı WhatsApp hedefi için pencereyi gerçekten açmıştır.
+             * Sipariş bu noktada korunur.
+             */
+            resetOrderState();
+
             setWhatsAppButtonState({
                 disabled: false,
-                text: "✓ WhatsApp'ı Aç"
+                text: "✓ Onayla ve WhatsApp'tan Gönder"
             });
-
-            let whatsappOpened = false;
-            let detectionTimer = null;
-
-            const markWhatsAppOpened = () => {
-                if (whatsappOpened) return;
-                whatsappOpened = true;
-                if (detectionTimer) clearTimeout(detectionTimer);
-                document.removeEventListener("visibilitychange", onVisibilityChange);
-                window.removeEventListener("pagehide", markWhatsAppOpened);
-                resetOrderState();
-                createdOrderWhatsAppUrl = "";
-                orderSubmitInProgress = false;
-                setWhatsAppButtonState({
-                    disabled: false,
-                    text: "✓ Onayla ve WhatsApp'tan Gönder"
-                });
-            };
-
-            const onVisibilityChange = () => {
-                if (document.hidden) markWhatsAppOpened();
-            };
-
-            document.addEventListener("visibilitychange", onVisibilityChange);
-            window.addEventListener("pagehide", markWhatsAppOpened, { once: true });
-
-            window.location.href = createdOrderWhatsAppUrl;
-
-            detectionTimer = setTimeout(() => {
-                if (whatsappOpened || document.hidden) return;
-
-                document.removeEventListener("visibilitychange", onVisibilityChange);
-                window.removeEventListener("pagehide", markWhatsAppOpened);
-
-                // Sipariş zaten DB'de. Buton tekrar tıklanırsa sadece aynı
-                // WhatsApp URL'si açılır, yeni sipariş oluşturulmaz.
-                orderSubmitInProgress = false;
-                setWhatsAppButtonState({
-                    disabled: false,
-                    text: "✓ WhatsApp'ı Tekrar Aç"
-                });
-
-                alert(
-                    "Sipariş oluşturuldu ancak WhatsApp otomatik açılamadı. " +
-                    "Butona tekrar basarsanız aynı sipariş için WhatsApp yeniden açılır."
-                );
-            }, 1800);
 
         } catch (e) {
             console.error(e);
-            orderSubmitInProgress = false;
 
-            // Sipariş oluşturulmadan hata olduysa yeniden denemeye izin ver.
-            if (!createdOrderWhatsAppUrl) {
-                setWhatsAppButtonState({
-                    disabled: false,
-                    text: "✓ Onayla ve WhatsApp'tan Gönder"
-                });
+            // Sipariş oluşturulduktan sonra WhatsApp yönlendirmesi başarısızsa
+            // admin panelinde yetim sipariş kalmasın.
+            if (createdOrderId && createdSecurityCode) {
+                await cancelPendingWhatsAppOrder(
+                    createdOrderId,
+                    createdSecurityCode
+                );
             }
 
-            alert("WhatsApp siparişi hazırlanamadı: " + (e?.message || "Bilinmeyen hata"));
+            try {
+                if (!whatsappWindow.closed) {
+                    whatsappWindow.close();
+                }
+            } catch (_) {}
+
+            alert(
+                "WhatsApp açılamadı. Sipariş oluşturulmadı: " +
+                (e?.message || "Bilinmeyen hata")
+            );
+        } finally {
+            orderSubmitInProgress = false;
+
+            setWhatsAppButtonState({
+                disabled: false,
+                text: "✓ Onayla ve WhatsApp'tan Gönder"
+            });
         }
     }
 
