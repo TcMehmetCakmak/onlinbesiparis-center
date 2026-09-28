@@ -288,7 +288,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
         onchange="handleProductImageSelection(this.files)"
       >
       <div class="product-gallery-help">
-        En fazla 8 fotoğraf. Yüklemeden önce fotoğraflar tarayıcıda maksimum
+        En fazla 5 fotoğraf. Yüklemeden önce fotoğraflar tarayıcıda maksimum
         1600 px'e küçültülür ve WebP formatına dönüştürülür.
         Ana fotoğraf müşteri ürün listesinde gösterilir.
       </div>
@@ -1115,8 +1115,8 @@ function openProductModal(p=null){
   document.getElementById("productModal").classList.remove("hidden");
 }
 
-function closeProductModal(){
-  if(productImageBusy)return;
+function closeProductModal(force=false){
+  if(productImageBusy && !force)return;
   revokePendingPreviewUrls();
   pendingProductFiles=[];
   pendingMainImageIndex=null;
@@ -1132,9 +1132,9 @@ function handleProductImageSelection(fileList){
   const files=Array.from(fileList||[]);
   if(!files.length)return;
 
-  const available=8-currentProductImages.length-pendingProductFiles.length;
+  const available=5-currentProductImages.length-pendingProductFiles.length;
   if(available<=0){
-    setProductGalleryStatus("Bu ürün için en fazla 8 fotoğraf eklenebilir.",true);
+    setProductGalleryStatus("Bu ürün için en fazla 5 fotoğraf eklenebilir.",true);
     document.getElementById("productImageFiles").value="";
     return;
   }
@@ -1161,7 +1161,7 @@ function handleProductImageSelection(fileList){
   renderProductImageEditor();
 
   if(rejected>0){
-    setProductGalleryStatus(`${rejected} dosya eklenmedi. En fazla 8 adet JPG/PNG/WebP kullanılabilir.`,true);
+    setProductGalleryStatus(`${rejected} dosya eklenmedi. En fazla 5 adet JPG/PNG/WebP kullanılabilir.`,true);
   }else{
     setProductGalleryStatus(`${pendingProductFiles.length} yeni fotoğraf kaydedilmeyi bekliyor.`);
   }
@@ -1396,8 +1396,8 @@ async function saveProduct(){
     return;
   }
 
-  if(currentProductImages.length+pendingProductFiles.length>8){
-    setProductGalleryStatus("Bir ürün için en fazla 8 fotoğraf eklenebilir.",true);
+  if(currentProductImages.length+pendingProductFiles.length>5){
+    setProductGalleryStatus("Bir ürün için en fazla 5 fotoğraf eklenebilir.",true);
     return;
   }
 
@@ -1439,8 +1439,8 @@ async function saveProduct(){
     pendingMainImageIndex=null;
 
     await loadAdminProducts();
-    closeProductModal();
-    toast("Ürün ve fotoğrafları kaydedildi.");
+    closeProductModal(true);
+    toast("Ürün ve fotoğrafları kaydedildi ve müşteri ekranına yansıtıldı.");
   }catch(e){
     console.error("Ürün kaydedilemedi:",e);
     setProductGalleryStatus(e.message||"Ürün kaydedilemedi.",true);
@@ -1696,6 +1696,7 @@ function subscribeAdminRealtime(){
   adminRealtimeChannel = supabaseClient
     .channel(`admin-live-${currentBusinessId}`)
     .on("postgres_changes",{event:"*",schema:"public",table:"products",filter:businessFilter},()=>loadAdminProducts())
+    .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},()=>loadAdminProducts())
     .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},()=>loadAdminOrders())
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},()=>loadAdminNotifications())
     .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},()=>loadAdminSettings())

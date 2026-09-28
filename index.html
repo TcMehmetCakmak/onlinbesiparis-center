@@ -5368,6 +5368,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             .channel(`public-updates-${currentBusinessId}`)
             .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: businessFilter }, applyRealtimeNotification)
             .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: businessFilter }, () => loadProducts())
+            .on("postgres_changes", { event: "*", schema: "public", table: "product_images", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: businessFilter }, applyRealtimeReview)
             .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: businessFilter }, () => loadAppSettings())
             .subscribe(status => {
@@ -5405,6 +5406,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     const liveSyncTimer = setInterval(() => {
         if (TENANT_SLUG && !document.hidden && navigator.onLine) {
+            loadProducts();
             loadNotifications();
             loadReviews();
         }
