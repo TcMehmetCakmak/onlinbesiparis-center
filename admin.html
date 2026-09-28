@@ -149,7 +149,9 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
           >Dükkan adı yükleniyor...</button>
           <div id="shopNameHelp" class="muted">Dükkan adını değiştirmek için yukarıdaki alana tıklayın.</div>
         </div>
-        <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🍽️"></div><div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
+        <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🍽️"></div>
+        <div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
+        <div><label>Instagram Profili</label><input id="settingInstagram" maxlength="180" placeholder="@cakmak-tatlici veya https://instagram.com/cakmak-tatlici"></div>
         <div>
           <label>Uygulama arka plan rengi</label>
           <div style="display:flex;gap:10px;align-items:center">
@@ -546,15 +548,17 @@ async function loadAdminNotifications(){
 async function loadAdminSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
-      .select("id,shop_name,shop_icon,background_color,phone,business_id").eq("business_id",currentBusinessId).maybeSingle();
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,business_id").eq("business_id",currentBusinessId).maybeSingle();
     if(error)throw error;
     if(data)appSettings=data;
     const icon=document.getElementById("settingShopIcon");
     const phone=document.getElementById("settingPhone");
+    const instagram=document.getElementById("settingInstagram");
     const color=document.getElementById("settingBackgroundColor");
     const colorText=document.getElementById("settingBackgroundColorText");
     if(icon)icon.value=appSettings.shop_icon||"🍽️";
     if(phone)phone.value=appSettings.phone||"";
+    if(instagram)instagram.value=appSettings.instagram_url||"";
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
     if(color)color.value=c;
     if(colorText)colorText.value=c;
@@ -646,6 +650,7 @@ document.addEventListener("input",e=>{
 async function saveAppSettings(){
   const shop_icon=document.getElementById("settingShopIcon").value.trim();
   const phone=document.getElementById("settingPhone").value.trim();
+  const instagram_url=document.getElementById("settingInstagram").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
 
   if(!shop_icon){toast("İkon gerekli.");return;}
@@ -658,10 +663,11 @@ async function saveAppSettings(){
         shop_name:platformBusiness?.shop_name||appSettings.shop_name||"İşletme",
         shop_icon,
         phone:phone||null,
+        instagram_url:instagram_url||null,
         background_color,
         updated_at:new Date().toISOString()
       },{onConflict:"business_id"})
-      .select("id,shop_name,shop_icon,background_color,phone,business_id")
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,business_id")
       .single();
 
     if(error)throw error;

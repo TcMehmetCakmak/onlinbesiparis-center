@@ -1325,6 +1325,7 @@
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
             <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
             <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchiseModal()">🏪 Bayilik Aç</button>
+            <a id="instagramProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="admin-link hidden" style="font-size:14px;font-weight:700">📷 @instagram</a>
 
         </div>
 
@@ -2157,7 +2158,8 @@
         shop_name: "İşletme",
         shop_icon: "🍽️",
         background_color: "#f5f5f5",
-        phone: ""
+        phone: "",
+        instagram_url: ""
     };
 
     let platformBusiness = null;
@@ -2210,6 +2212,24 @@
         }
     }
 
+    function normalizeInstagramUrl(value) {
+        let raw = String(value || "").trim();
+        if (!raw) return null;
+
+        if (raw.startsWith("@")) raw = raw.slice(1);
+        raw = raw.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "");
+        raw = raw.replace(/^www\.instagram\.com\//i, "");
+        raw = raw.split(/[?#/]/)[0].trim();
+
+        const username = raw.replace(/[^a-zA-Z0-9._]/g, "");
+        if (!username) return null;
+
+        return {
+            username,
+            url: `https://www.instagram.com/${encodeURIComponent(username)}/`
+        };
+    }
+
     function applyAppSettings(settings) {
         appSettings = { ...appSettings, ...(settings || {}) };
         const centralName = String(platformBusiness?.shop_name || "").trim();
@@ -2249,6 +2269,25 @@
             }
         }
 
+        const instagramLink = document.getElementById("instagramProfileLink");
+        const instagramUrl = String(appSettings.instagram_url || "").trim();
+        if (instagramLink) {
+            if (instagramUrl) {
+                const normalized = normalizeInstagramUrl(instagramUrl);
+                if (normalized) {
+                    instagramLink.href = normalized.url;
+                    instagramLink.textContent = `📷 @${normalized.username}`;
+                    instagramLink.classList.remove("hidden");
+                } else {
+                    instagramLink.href = "#";
+                    instagramLink.classList.add("hidden");
+                }
+            } else {
+                instagramLink.href = "#";
+                instagramLink.classList.add("hidden");
+            }
+        }
+
         renderLicenseState();
     }
 
@@ -2257,7 +2296,7 @@
         try {
             const { data, error } = await supabaseClient
                 .from("app_settings")
-                .select("id,shop_name,shop_icon,background_color,phone,business_id")
+                .select("id,shop_name,shop_icon,background_color,phone,instagram_url,business_id")
                 .eq("business_id", currentBusinessId)
                 .maybeSingle();
             if (error) throw error;
