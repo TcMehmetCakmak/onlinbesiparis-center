@@ -2160,7 +2160,8 @@
         shop_icon: "🍽️",
         background_color: "#f5f5f5",
         phone: "",
-        instagram_url: ""
+        instagram_url: "",
+        instagram_label: ""
     };
 
     let platformBusiness = null;
@@ -2277,7 +2278,9 @@
                 const normalized = normalizeInstagramUrl(instagramUrl);
                 if (normalized) {
                     instagramLink.href = normalized.url;
-                    instagramLink.textContent = `📷 @${normalized.username}`;
+                    const customLabel = String(appSettings.instagram_label || "").trim();
+                    const displayLabel = customLabel || `@${normalized.username}`;
+                    instagramLink.textContent = `📷 ${displayLabel}`;
                     instagramLink.classList.remove("hidden");
                 } else {
                     instagramLink.href = "#";
@@ -2297,7 +2300,7 @@
         try {
             const { data, error } = await supabaseClient
                 .from("app_settings")
-                .select("id,shop_name,shop_icon,background_color,phone,instagram_url,business_id")
+                .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,business_id")
                 .eq("business_id", currentBusinessId)
                 .maybeSingle();
             if (error) throw error;
