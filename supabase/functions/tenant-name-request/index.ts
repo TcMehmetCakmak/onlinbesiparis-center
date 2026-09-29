@@ -1,8 +1,9 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-platform-name-bridge-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -22,186 +23,248 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return json({ ok: false, error: "Method not allowed." }, 405);
+    return json({ ok: false, error: "Sadece POST destekleniyor." }, 405);
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const PLATFORM_NAME_BRIDGE_SECRET =
+      Deno.env.get("PLATFORM_NAME_BRIDGE_SECRET");
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return json({ ok: false, error: "Oturum bilgisi bulunamadı." }, 401);
+    if (
+      !SUPABASE_URL ||
+      !SUPABASE_SERVICE_ROLE_KEY ||
+      !PLATFORM_NAME_BRIDGE_SECRET
+    ) {
+      console.error("tenant-name-request: eksik secret");
+      return json({
+        ok: false,
+        error: "Merkezi sunucu yapılandırması eksik.",
+      }, 500);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const incomingSecret =
+      req.headers.get("x-platform-name-bridge-secret") || "";
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing tenant Supabase environment variables.");
-      return json(
-        { ok: false, error: "Tenant Supabase yapılandırması eksik." },
-        500,
-      );
+    if (
+      !incomingSecret ||
+      incomingSecret !== PLATFORM_NAME_BRIDGE_SECRET
+    ) {
+      console.warn("Geçersiz name bridge secret");
+      return json({
+        ok: false,
+        error: "Yetkisiz isim talebi isteği.",
+      }, 401);
     }
 
-    // Kullanıcının gerçek tenant kimliği URL'den veya browser'dan değil,
-    // authenticated admin profilinden alınır.
-    const tenant = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
+    const body = await req.json().catch(() => null);
+    const businessId =
+      String(body?.business_id ?? "").trim();
+    const requestedName =
+      String(body?.requested_name ?? "").trim();
+
+    if (!businessId || !requestedName) {
+      return json({
+        ok: false,
+        error: "business_id ve requested_name gerekli.",
+      }, 400);
+    }
+
+    if (
+      requestedName.length < 2 ||
+      requestedName.length > 80
+    ) {
+      return json({
+        ok: false,
+        error: "Dükkan adı 2 ile 80 karakter arasında olmalı.",
+      }, 400);
+    }
+
+    const db = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
         },
       },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await tenant.auth.getUser();
-
-    if (userError || !user) {
-      console.error("Tenant user auth failed", userError);
-      return json(
-        {
-          ok: false,
-          error: "Oturum doğrulanamadı.",
-          detail: userError?.message ?? null,
-        },
-        401,
-      );
-    }
-
-    const { data: profile, error: profileError } = await tenant
-      .from("profiles")
-      .select("id,role,business_id")
-      .eq("id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("Admin profile query failed", profileError);
-      return json(
-        {
-          ok: false,
-          error: "Admin yetkisi kontrol edilemedi.",
-          detail: profileError.message,
-        },
-        500,
-      );
-    }
-
-    if (!profile?.business_id) {
-      return json(
-        { ok: false, error: "Bu kullanıcı bir işletme yöneticisine bağlı değil." },
-        403,
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const requestedName = String(body?.requested_name ?? "").trim();
-
-    if (!requestedName) {
-      return json({ ok: false, error: "Yeni dükkan adı gerekli." }, 400);
-    }
-
-    if (requestedName.length < 2 || requestedName.length > 80) {
-      return json(
-        { ok: false, error: "Dükkan adı 2 ile 80 karakter arasında olmalı." },
-        400,
-      );
-    }
-
-    const controlUrl = Deno.env.get("PLATFORM_CONTROL_URL");
-    const controlPublishableKey = Deno.env.get(
-      "PLATFORM_CONTROL_PUBLISHABLE_KEY",
     );
-    const bridgeSecret = Deno.env.get("PLATFORM_BRIDGE_SECRET");
 
-    const missingSecrets = [
-      ["PLATFORM_CONTROL_URL", controlUrl],
-      ["PLATFORM_CONTROL_PUBLISHABLE_KEY", controlPublishableKey],
-      ["PLATFORM_BRIDGE_SECRET", bridgeSecret],
-    ].filter(([, value]) => !value).map(([name]) => name);
+    const { data: business, error: businessError } =
+      await db
+        .from("businesses")
+        .select("id,shop_name")
+        .eq("id", businessId)
+        .maybeSingle();
 
-    if (missingSecrets.length) {
-      console.error("Missing Edge Function secrets", missingSecrets);
-      return json(
-        {
-          ok: false,
-          error: "Platform bağlantı ayarları eksik.",
-          missing: missingSecrets,
-        },
-        500,
-      );
+    if (businessError) {
+      console.error("Business lookup failed:", businessError);
+      return json({
+        ok: false,
+        error: "İşletme doğrulanamadı.",
+      }, 500);
     }
 
-    const endpoint =
-      `${controlUrl!.replace(/\/+$/, "")}/functions/v1/tenant-name-request`;
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": controlPublishableKey!,
-        "x-platform-bridge-secret": bridgeSecret!,
-      },
-      body: JSON.stringify({
-        business_id: profile.business_id,
-        requested_name: requestedName,
-      }),
-    });
-
-    const raw = await response.text();
-    let centralData: any = null;
-
-    try {
-      centralData = raw ? JSON.parse(raw) : {};
-    } catch {
-      centralData = { raw };
+    if (!business) {
+      return json({
+        ok: false,
+        error: "İşletme bulunamadı.",
+      }, 404);
     }
 
-    if (!response.ok || centralData?.ok === false) {
-      console.error("Central tenant-name-request failed", {
-        status: response.status,
-        statusText: response.statusText,
-        response: centralData,
-        businessId: profile.business_id,
+    const currentName =
+      String(business.shop_name || "").trim();
+
+    if (
+      currentName.localeCompare(
         requestedName,
-      });
-
-      return json(
-        {
-          ok: false,
-          error:
-            centralData?.error ??
-            `Merkezi isim talebi servisi hata verdi (${response.status}).`,
-          detail: centralData,
-        },
-        response.status || 500,
-      );
+        "tr",
+        { sensitivity: "base" },
+      ) === 0
+    ) {
+      return json({
+        ok: false,
+        error:
+          "Yeni dükkan adı mevcut dükkan adı ile aynı olamaz.",
+      }, 409);
     }
+
+    const { data: duplicateBusiness, error: duplicateBusinessError } =
+      await db
+        .from("businesses")
+        .select("id")
+        .ilike("shop_name", requestedName)
+        .neq("id", business.id)
+        .limit(1);
+
+    if (duplicateBusinessError) {
+      console.error(
+        "Duplicate business check failed:",
+        duplicateBusinessError,
+      );
+      return json({
+        ok: false,
+        error: "Dükkan adı kontrol edilemedi.",
+      }, 500);
+    }
+
+    if (duplicateBusiness?.length) {
+      return json({
+        ok: false,
+        error:
+          "Bu dükkan adı başka bir işletme tarafından kullanılıyor.",
+      }, 409);
+    }
+
+    const { data: sameNamePending, error: sameNamePendingError } =
+      await db
+        .from("name_change_requests")
+        .select("id,business_id,requested_name")
+        .eq("status", "pending")
+        .ilike("requested_name", requestedName)
+        .limit(1);
+
+    if (sameNamePendingError) {
+      console.error(
+        "Pending name check failed:",
+        sameNamePendingError,
+      );
+      return json({
+        ok: false,
+        error:
+          "Bekleyen isim talepleri kontrol edilemedi.",
+      }, 500);
+    }
+
+    if (sameNamePending?.length) {
+      const sameBusiness =
+        String(sameNamePending[0].business_id) ===
+        String(business.id);
+
+      return json({
+        ok: false,
+        error: sameBusiness
+          ? "Bu işletme için aynı isimle bekleyen bir talep zaten var."
+          : "Bu dükkan adı başka bir işletmenin bekleyen talebinde rezerve edilmiş.",
+      }, 409);
+    }
+
+    const { data: existingPending, error: existingPendingError } =
+      await db
+        .from("name_change_requests")
+        .select("id,requested_name")
+        .eq("business_id", business.id)
+        .eq("status", "pending")
+        .limit(1);
+
+    if (existingPendingError) {
+      console.error(
+        "Existing pending check failed:",
+        existingPendingError,
+      );
+      return json({
+        ok: false,
+        error: "Mevcut isim talebi kontrol edilemedi.",
+      }, 500);
+    }
+
+    if (existingPending?.length) {
+      return json({
+        ok: false,
+        error:
+          `Bu işletmenin zaten bekleyen bir isim talebi var: ${existingPending[0].requested_name}`,
+      }, 409);
+    }
+
+    const { data: inserted, error: insertError } =
+      await db
+        .from("name_change_requests")
+        .insert({
+          business_id: business.id,
+          current_name: currentName,
+          requested_name: requestedName,
+          status: "pending",
+        })
+        .select(
+          "id,business_id,current_name,requested_name,status,requested_at",
+        )
+        .single();
+
+    if (insertError) {
+      console.error("Name request insert failed:", insertError);
+      return json({
+        ok: false,
+        error:
+          insertError.message ||
+          "İsim değişikliği talebi oluşturulamadı.",
+      }, 500);
+    }
+
+    console.log("Name change request created", {
+      requestId: inserted.id,
+      businessId: business.id,
+      requestedName,
+    });
 
     return json({
       ok: true,
-      business_id: profile.business_id,
-      requested_name: requestedName,
-      data: centralData,
+      request: inserted,
     });
   } catch (error) {
-    console.error("request-shop-name-change unexpected error", error);
-
-    return json(
-      {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "İsim değişikliği talebi gönderilemedi.",
-      },
-      500,
+    console.error(
+      "tenant-name-request unexpected error:",
+      error,
     );
+
+    return json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Beklenmeyen merkezi sunucu hatası.",
+    }, 500);
   }
 });

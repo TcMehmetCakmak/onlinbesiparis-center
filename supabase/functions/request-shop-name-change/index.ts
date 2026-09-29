@@ -1,8 +1,9 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -22,131 +23,127 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return json({ ok: false, error: "Method not allowed." }, 405);
+    return json({ ok: false, error: "Sadece POST destekleniyor." }, 405);
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SUPABASE_SERVICE_ROLE_KEY =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const PLATFORM_CONTROL_URL =
+      Deno.env.get("PLATFORM_CONTROL_URL");
+    const PLATFORM_NAME_BRIDGE_SECRET =
+      Deno.env.get("PLATFORM_NAME_BRIDGE_SECRET");
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return json({ ok: false, error: "Oturum bilgisi bulunamadı." }, 401);
+    if (
+      !SUPABASE_URL ||
+      !SUPABASE_ANON_KEY ||
+      !SUPABASE_SERVICE_ROLE_KEY ||
+      !PLATFORM_CONTROL_URL ||
+      !PLATFORM_NAME_BRIDGE_SECRET
+    ) {
+      console.error("request-shop-name-change: eksik secret");
+      return json({
+        ok: false,
+        error: "Sunucu yapılandırması eksik.",
+      }, 500);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const authHeader = req.headers.get("Authorization") || "";
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing tenant Supabase environment variables.");
-      return json(
-        { ok: false, error: "Tenant Supabase yapılandırması eksik." },
-        500,
-      );
+    if (!authHeader.startsWith("Bearer ")) {
+      return json({
+        ok: false,
+        error: "Oturum doğrulanamadı.",
+      }, 401);
     }
 
-    // Kullanıcının gerçek tenant kimliği URL'den veya browser'dan değil,
-    // authenticated admin profilinden alınır.
-    const tenant = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
+    const accessToken = authHeader.substring(7).trim();
+
+    const authClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
         },
       },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    );
 
-    const {
-      data: { user },
-      error: userError,
-    } = await tenant.auth.getUser();
+    const { data: userData, error: userError } =
+      await authClient.auth.getUser(accessToken);
 
-    if (userError || !user) {
-      console.error("Tenant user auth failed", userError);
-      return json(
-        {
-          ok: false,
-          error: "Oturum doğrulanamadı.",
-          detail: userError?.message ?? null,
-        },
-        401,
-      );
+    if (userError || !userData?.user) {
+      console.error("Admin JWT doğrulama hatası:", userError);
+      return json({
+        ok: false,
+        error: "Oturum geçersiz veya süresi dolmuş.",
+      }, 401);
     }
 
-    const { data: profile, error: profileError } = await tenant
-      .from("profiles")
-      .select("id,role,business_id")
-      .eq("id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+    const tenantAdmin = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      },
+    );
+
+    const { data: profile, error: profileError } =
+      await tenantAdmin
+        .from("profiles")
+        .select("id,role,business_id")
+        .eq("id", userData.user.id)
+        .maybeSingle();
 
     if (profileError) {
-      console.error("Admin profile query failed", profileError);
-      return json(
-        {
-          ok: false,
-          error: "Admin yetkisi kontrol edilemedi.",
-          detail: profileError.message,
-        },
-        500,
-      );
+      console.error("Profil sorgu hatası:", profileError);
+      return json({
+        ok: false,
+        error: "Admin profili doğrulanamadı.",
+      }, 500);
     }
 
-    if (!profile?.business_id) {
-      return json(
-        { ok: false, error: "Bu kullanıcı bir işletme yöneticisine bağlı değil." },
-        403,
-      );
+    if (
+      !profile ||
+      profile.role !== "admin" ||
+      !profile.business_id
+    ) {
+      return json({
+        ok: false,
+        error: "Bu işlem için işletme yöneticisi yetkisi gerekli.",
+      }, 403);
     }
 
-    const body = await req.json().catch(() => ({}));
-    const requestedName = String(body?.requested_name ?? "").trim();
+    const body = await req.json().catch(() => null);
+    const requestedName =
+      String(body?.requested_name ?? "").trim();
 
-    if (!requestedName) {
-      return json({ ok: false, error: "Yeni dükkan adı gerekli." }, 400);
-    }
-
-    if (requestedName.length < 2 || requestedName.length > 80) {
-      return json(
-        { ok: false, error: "Dükkan adı 2 ile 80 karakter arasında olmalı." },
-        400,
-      );
-    }
-
-    const controlUrl = Deno.env.get("PLATFORM_CONTROL_URL");
-    const controlPublishableKey = Deno.env.get(
-      "PLATFORM_CONTROL_PUBLISHABLE_KEY",
-    );
-    const bridgeSecret = Deno.env.get("PLATFORM_BRIDGE_SECRET");
-
-    const missingSecrets = [
-      ["PLATFORM_CONTROL_URL", controlUrl],
-      ["PLATFORM_CONTROL_PUBLISHABLE_KEY", controlPublishableKey],
-      ["PLATFORM_BRIDGE_SECRET", bridgeSecret],
-    ].filter(([, value]) => !value).map(([name]) => name);
-
-    if (missingSecrets.length) {
-      console.error("Missing Edge Function secrets", missingSecrets);
-      return json(
-        {
-          ok: false,
-          error: "Platform bağlantı ayarları eksik.",
-          missing: missingSecrets,
-        },
-        500,
-      );
+    if (
+      requestedName.length < 2 ||
+      requestedName.length > 80
+    ) {
+      return json({
+        ok: false,
+        error: "Dükkan adı 2 ile 80 karakter arasında olmalı.",
+      }, 400);
     }
 
     const endpoint =
-      `${controlUrl!.replace(/\/+$/, "")}/functions/v1/tenant-name-request`;
+      PLATFORM_CONTROL_URL.replace(/\/$/, "") +
+      "/functions/v1/tenant-name-request";
 
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": controlPublishableKey!,
-        "x-platform-bridge-secret": bridgeSecret!,
+        "x-platform-name-bridge-secret":
+          PLATFORM_NAME_BRIDGE_SECRET,
       },
       body: JSON.stringify({
         business_id: profile.business_id,
@@ -154,54 +151,42 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const raw = await response.text();
-    let centralData: any = null;
+    const centralBody =
+      await response.json().catch(() => null);
 
-    try {
-      centralData = raw ? JSON.parse(raw) : {};
-    } catch {
-      centralData = { raw };
-    }
-
-    if (!response.ok || centralData?.ok === false) {
+    if (!response.ok || !centralBody?.ok) {
       console.error("Central tenant-name-request failed", {
         status: response.status,
         statusText: response.statusText,
-        response: centralData,
+        response: centralBody,
         businessId: profile.business_id,
         requestedName,
       });
 
-      return json(
-        {
-          ok: false,
-          error:
-            centralData?.error ??
-            `Merkezi isim talebi servisi hata verdi (${response.status}).`,
-          detail: centralData,
-        },
-        response.status || 500,
-      );
+      return json({
+        ok: false,
+        error:
+          centralBody?.error ||
+          `Merkezi isim servisi hata verdi (${response.status}).`,
+      }, response.status || 502);
     }
 
     return json({
       ok: true,
-      business_id: profile.business_id,
-      requested_name: requestedName,
-      data: centralData,
+      request: centralBody.request,
     });
   } catch (error) {
-    console.error("request-shop-name-change unexpected error", error);
-
-    return json(
-      {
-        ok: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "İsim değişikliği talebi gönderilemedi.",
-      },
-      500,
+    console.error(
+      "request-shop-name-change unexpected error:",
+      error,
     );
+
+    return json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Beklenmeyen sunucu hatası.",
+    }, 500);
   }
 });
