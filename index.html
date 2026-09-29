@@ -4069,25 +4069,26 @@ body{
        ADET DEĞİŞTİR
     ========================================= */
 
-    function changeQuantity(productId, amount) {
-        const product = products.find(p => p.id === productId);
+    function changeQuantity(productId, amount, variantId = null) {
+        const product = products.find(p => String(p.id) === String(productId));
         if (!product) return;
 
-        let item = order.items.find(x =>
-            x.productId === productId &&
-            !x.variantId
+        const item = order.items.find(x =>
+            String(x.productId) === String(productId) &&
+            String(x.variantId || "") === String(variantId || "")
         );
 
-        if (!item) {
-            item = { productId, quantity: 0 };
-            order.items.push(item);
-        }
+        if (!item) return;
 
         item.quantity += amount;
 
         if (item.quantity <= 0) {
-            order.items = order.items.filter(x => x.productId !== productId);
-            item.quantity = 0;
+            order.items = order.items.filter(x =>
+                !(
+                    String(x.productId) === String(productId) &&
+                    String(x.variantId || "") === String(variantId || "")
+                )
+            );
         }
 
         calculateTotal();
