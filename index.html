@@ -6137,13 +6137,26 @@ Sipariş vermek istiyorum:
 `;
 
             savedItems.forEach(item => {
+                const product = products.find(
+                    p => String(p.id) === String(item.productId)
+                );
+
                 const variantText = item.variantName
                     ? ` (Beden: ${item.variantName})`
                     : "";
 
-                const itemPrice = Number(item.price || 0);
+                const variant = product?.variants?.find(
+                    v => String(v.id) === String(item.variantId)
+                );
 
-                message += `${item.quantity} adet ${item.name}${variantText} - ${itemPrice.toLocaleString("tr-TR")} TL
+                const itemPrice = Number(
+                    item.price ??
+                    variant?.price ??
+                    product?.price ??
+                    0
+                );
+
+                message += `${item.quantity} adet ${item.name || product?.name}${variantText} - ${itemPrice.toLocaleString("tr-TR")} TL
 `;
             });
 
