@@ -2254,6 +2254,14 @@ body{
  float:right;border:0;background:none;font-size:28px;cursor:pointer;
 }
 </style>
+
+<style>
+.coupon-real-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60000;display:flex;align-items:center;justify-content:center;padding:16px}
+.coupon-real-modal.hidden{display:none!important}
+.coupon-real-card{background:#fff;width:min(520px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:20px;box-shadow:0 20px 60px #0004}
+.coupon-real-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.coupon-real-x{width:40px;height:40px;border:0;border-radius:50%;background:#eee;font-size:26px;cursor:pointer}
+</style>
 </head>
 
 <body>
@@ -2447,7 +2455,7 @@ body{
                         <button
                             type="button"
                             class="cart-secondary-button"
-                            onclick="openCouponAddPage()"
+                            onclick="openCouponModalReal('add')"
                         >
                             🎟️ İndirim Kodu Ekle
                         </button>
@@ -2455,7 +2463,7 @@ body{
                         <button
                             type="button"
                             class="cart-secondary-button"
-                            onclick="openCouponListPage()"
+                            onclick="openCouponModalReal('list')"
                         >
                             🏷️ Kodları Listele
                             <span id="couponCount" class="coupon-count hidden">0</span>
@@ -7153,6 +7161,57 @@ function applyCouponV12(){
    }
  }
  closeCouponModalV12();
+}
+</script>
+
+<div id="couponRealModal" class="coupon-real-modal hidden">
+ <div class="coupon-real-card">
+  <div class="coupon-real-head">
+   <h2 id="couponRealTitle"></h2>
+   <button class="coupon-real-x" onclick="closeCouponRealModal()">×</button>
+  </div>
+  <div id="couponRealBody"></div>
+ </div>
+</div>
+
+<script>
+function openCouponModalReal(type){
+ const modal=document.getElementById("couponRealModal");
+ const title=document.getElementById("couponRealTitle");
+ const body=document.getElementById("couponRealBody");
+ if(!modal) return;
+
+ if(type==="add"){
+   title.textContent="🎟️ İndirim Kodu Ekle";
+   body.innerHTML=`
+    <input id="realCouponInput" placeholder="İndirim kodu">
+    <button class="main-button order-button" onclick="applyRealCoupon()">Uygula</button>
+   `;
+ }else{
+   title.textContent="🏷️ İndirim Kodu Listesi";
+   body.innerHTML=`
+    <div id="realCouponList"></div>
+   `;
+   if(typeof renderAppliedCoupons==="function"){
+      renderAppliedCoupons();
+      const old=document.getElementById("couponList");
+      if(old) document.getElementById("realCouponList").innerHTML=old.innerHTML;
+   }
+ }
+ modal.classList.remove("hidden");
+}
+
+function closeCouponRealModal(){
+ const modal=document.getElementById("couponRealModal");
+ if(modal) modal.classList.add("hidden");
+}
+
+function applyRealCoupon(){
+ const input=document.getElementById("realCouponInput");
+ const old=document.getElementById("couponCodeInput");
+ if(old && input) old.value=input.value;
+ if(typeof addCouponCode==="function") addCouponCode();
+ closeCouponRealModal();
 }
 </script>
 </body>
