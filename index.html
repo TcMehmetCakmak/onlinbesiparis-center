@@ -3686,12 +3686,30 @@ body{
         try {
             const productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,active,created_at,business_id")
+                .select("id,name,icon,price,product_type,active,created_at,business_id")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
 
             if (productResult.error) throw productResult.error;
+
+            const variantResult = await supabaseClient
+                .from("product_variants")
+                .select("id,product_id,variant_name,price");
+
+            const variantsByProduct = new Map();
+
+            if (!variantResult.error) {
+                (variantResult.data || []).forEach(variant => {
+                    const key = String(variant.product_id);
+
+                    if (!variantsByProduct.has(key)) {
+                        variantsByProduct.set(key, []);
+                    }
+
+                    variantsByProduct.get(key).push(variant);
+                });
+            }
 
             const imageResult = await supabaseClient
                 .from("product_images")
@@ -3717,7 +3735,7 @@ body{
             products = (Array.isArray(productResult.data) ? productResult.data : [])
                 .map(product => ({
                     ...product,
-                    variants: variantsByProduct.get(String(product.id)) || [],
+                    variants: (typeof variantsByProduct !== "undefined" ? variantsByProduct.get(String(product.id)) : []) || [],
                     images: imagesByProduct.get(String(product.id)) || []
                 }));
 
