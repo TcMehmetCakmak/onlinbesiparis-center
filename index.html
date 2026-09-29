@@ -2218,6 +2218,15 @@ body{
     }
 }
 
+
+/* COUPON MODAL V1 */
+.coupon-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:15000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.coupon-modal.hidden{display:none!important;}
+.coupon-modal-card{width:min(500px,100%);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 15px 50px #0004;}
+.coupon-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.coupon-modal-header h2{margin:0;font-size:20px;}
+.coupon-modal-close{width:40px;height:40px;border:0;border-radius:50%;background:#eee;font-size:25px;cursor:pointer;}
+
 </style>
 
 </head>
@@ -2589,13 +2598,13 @@ body{
         </div>
     </div>
 
-    <!-- İNDİRİM KODU EKLE SAYFASI -->
-    <div id="couponAddPage" class="hidden">
-        <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
-            <h2>🎟️ İndirim Kodu Ekle</h2>
-        </div>
-        <div class="card">
+    <!-- İNDİRİM KODU MODALLARI -->
+    <div id="couponAddPage" class="coupon-modal hidden">
+        <div class="coupon-modal-card">
+            <div class="coupon-modal-header">
+                <h2>🎟️ İndirim Kodu Ekle</h2>
+                <button type="button" class="coupon-modal-close" onclick="closeCouponPages()">✕</button>
+            </div>
             <label>İndirim kodu</label>
             <input id="couponCodeInput" type="text" maxlength="40" placeholder="Kodunuzu girin" autocomplete="off" style="text-transform:uppercase">
             <button type="button" class="main-button order-button" onclick="addCouponCode()">İndirimi Uygula</button>
@@ -2603,13 +2612,14 @@ body{
         </div>
     </div>
 
-    <!-- EKLENEN İNDİRİM KODLARI SAYFASI -->
-    <div id="couponListPage" class="hidden">
-        <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
-            <h2>🏷️ Eklenen İndirim Kodları</h2>
+    <div id="couponListPage" class="coupon-modal hidden">
+        <div class="coupon-modal-card">
+            <div class="coupon-modal-header">
+                <h2>🏷️ Eklenen İndirim Kodları</h2>
+                <button type="button" class="coupon-modal-close" onclick="closeCouponPages()">✕</button>
+            </div>
+            <div id="appliedCouponList"></div>
         </div>
-        <div id="appliedCouponList"></div>
     </div>
 
     <!-- =========================================
@@ -3164,38 +3174,29 @@ body{
         }
     });
 
-    /* İndirim ekranından geri dönüş düzeltmesi */
+    /* İndirim ekranından geri dönüşte boş sayfa problemini düzelt */
     window.fixedCloseCouponPages = function(){
-        // Kupon ekranlarını kapat
         document.getElementById("couponAddPage")?.classList.add("hidden");
         document.getElementById("couponListPage")?.classList.add("hidden");
 
-        // Geri dönülecek doğru ekran: Sepet
-        const cartPage = document.getElementById("cartPage");
+        document.getElementById("cartPage")?.classList.add("hidden");
+        document.body.classList.remove("cart-page-open");
 
-        if (cartPage) {
-            cartPage.classList.remove("hidden");
-            cartPage.scrollTop = 0;
-
-            // Sepet tam ekran olduğu için body kilidini tekrar aktif et
-            document.body.classList.add("cart-page-open");
-
-            // Sepet içeriğini ve indirim toplamını güncelle
-            renderCartProducts();
-            calculateTotal();
-            updateCartUi();
-        } else {
-            // Herhangi bir nedenle sepet DOM'da yoksa ana sipariş ekranına dön
-            document.getElementById("orderPage")?.classList.remove("hidden");
-            document.getElementById("orderItemsCard")?.classList.remove("hidden");
-            document.body.classList.remove("cart-page-open");
+        const orderPage=document.getElementById("orderPage");
+        if(orderPage){
+            orderPage.classList.remove("hidden");
         }
 
-        window.scrollTo(0, 0);
+        const orderItems=document.getElementById("orderItemsCard");
+        if(orderItems){
+            orderItems.classList.remove("hidden");
+        }
+
+        window.scrollTo(0,0);
     };
 
-    // Mevcut closeCouponPages çağrılarını güvenli şekilde düzelt
-    window.closeCouponPages = function(){
+    const oldClose=window.closeCouponPages;
+    window.closeCouponPages=function(){
         fixedCloseCouponPages();
     };
 })();
@@ -4267,7 +4268,17 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        // orderPage cartPage'in parent'ı olduğu için gizlenmez.
+        // Sadece açık ekranlar ve kupon ekranları kontrol edilir.
+        [
+            "summaryPage",
+            "locationPage",
+            "reviewPage",
+            "notificationPage",
+            "couponAddPage",
+            "couponListPage",
+            "cartPage"
+        ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
@@ -6974,6 +6985,27 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 </script>
 
+
+<script>
+// Coupon modal override - v1
+(function(){
+ const oldOpenAdd=window.openCouponAddPage;
+ window.openCouponAddPage=function(){
+   const page=document.getElementById('couponAddPage');
+   page?.classList.remove('hidden');
+   const input=document.getElementById('couponCodeInput');
+   if(input){input.value='';setTimeout(()=>input.focus(),100);}
+ };
+ window.openCouponListPage=function(){
+   if(typeof renderAppliedCoupons==='function') renderAppliedCoupons();
+   document.getElementById('couponListPage')?.classList.remove('hidden');
+ };
+ window.closeCouponPages=function(){
+   document.getElementById('couponAddPage')?.classList.add('hidden');
+   document.getElementById('couponListPage')?.classList.add('hidden');
+ };
+})();
+</script>
 </body>
 
 </html>
