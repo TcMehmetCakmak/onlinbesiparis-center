@@ -2297,6 +2297,13 @@ body{
   }
 }
 </style>
+
+<style>
+.product-gallery-image-v17{
+    touch-action: pan-y;
+    user-select:none;
+}
+</style>
 </head>
 
 <body>
@@ -7273,6 +7280,42 @@ function applyRealCoupon(){
  if(typeof addCouponCode==="function") addCouponCode();
  closeCouponRealModal();
 }
+</script>
+
+<script>
+let gallerySwipeStartV17 = 0;
+let gallerySwipeEndV17 = 0;
+
+function initGallerySwipeV17(){
+    const img = document.getElementById("detailProductImage");
+    if(!img) return;
+
+    img.classList.add("product-gallery-image-v17");
+
+    img.addEventListener("touchstart", function(e){
+        gallerySwipeStartV17 = e.changedTouches[0].screenX;
+    }, {passive:true});
+
+    img.addEventListener("touchend", function(e){
+        gallerySwipeEndV17 = e.changedTouches[0].screenX;
+
+        const diff = gallerySwipeEndV17 - gallerySwipeStartV17;
+
+        if(Math.abs(diff) < 50) return;
+
+        if(diff < 0){
+            if(typeof nextGalleryImage === "function"){
+                nextGalleryImage();
+            }
+        }else{
+            if(typeof previousGalleryImage === "function"){
+                previousGalleryImage();
+            }
+        }
+    }, {passive:true});
+}
+
+document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
 </script>
 </body>
 
