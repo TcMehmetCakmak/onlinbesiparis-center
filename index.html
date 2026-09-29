@@ -2218,34 +2218,26 @@ body{
     }
 }
 
-
-/* COUPON MODAL V1 */
-.coupon-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:15000;display:flex;align-items:center;justify-content:center;padding:16px;}
-.coupon-modal.hidden{display:none!important;}
-.coupon-modal-card{width:min(500px,100%);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 15px 50px #0004;}
-.coupon-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.coupon-modal-header h2{margin:0;font-size:20px;}
-.coupon-modal-close{width:40px;height:40px;border:0;border-radius:50%;background:#eee;font-size:25px;cursor:pointer;}
-
 </style>
 
 
 <style>
-.variant-modal{
- position:fixed;inset:0;background:#0008;z-index:30000;
- display:flex;align-items:center;justify-content:center;padding:16px;
+.product-detail-modal{
+ position:fixed;inset:0;background:#0008;z-index:40000;
+ display:flex;align-items:center;justify-content:center;padding:15px;
 }
-.variant-modal.hidden{display:none!important;}
-.variant-card{
- background:#fff;border-radius:18px;padding:20px;width:min(420px,100%);
- max-height:90vh;overflow:auto;
+.product-detail-modal.hidden{display:none!important;}
+.product-detail-card{
+ background:white;border-radius:20px;padding:20px;
+ width:min(500px,100%);max-height:90vh;overflow:auto;
 }
-.variant-option{
- display:flex;justify-content:space-between;align-items:center;
- padding:12px;border:1px solid #ddd;border-radius:12px;margin-bottom:10px;
- cursor:pointer;
+.product-detail-card img{
+ width:100%;max-height:280px;object-fit:contain;border-radius:15px;
 }
-.variant-option input{width:auto;margin:0;}
+.detail-variant{
+ display:flex;justify-content:space-between;
+ padding:12px;border:1px solid #ddd;border-radius:12px;margin:8px 0;
+}
 </style>
 </head>
 
@@ -2616,13 +2608,13 @@ body{
         </div>
     </div>
 
-    <!-- İNDİRİM KODU MODALLARI -->
-    <div id="couponAddPage" class="coupon-modal hidden">
-        <div class="coupon-modal-card">
-            <div class="coupon-modal-header">
-                <h2>🎟️ İndirim Kodu Ekle</h2>
-                <button type="button" class="coupon-modal-close" onclick="closeCouponPages()">✕</button>
-            </div>
+    <!-- İNDİRİM KODU EKLE SAYFASI -->
+    <div id="couponAddPage" class="hidden">
+        <div class="coupon-page-header">
+            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
+            <h2>🎟️ İndirim Kodu Ekle</h2>
+        </div>
+        <div class="card">
             <label>İndirim kodu</label>
             <input id="couponCodeInput" type="text" maxlength="40" placeholder="Kodunuzu girin" autocomplete="off" style="text-transform:uppercase">
             <button type="button" class="main-button order-button" onclick="addCouponCode()">İndirimi Uygula</button>
@@ -2630,14 +2622,13 @@ body{
         </div>
     </div>
 
-    <div id="couponListPage" class="coupon-modal hidden">
-        <div class="coupon-modal-card">
-            <div class="coupon-modal-header">
-                <h2>🏷️ Eklenen İndirim Kodları</h2>
-                <button type="button" class="coupon-modal-close" onclick="closeCouponPages()">✕</button>
-            </div>
-            <div id="appliedCouponList"></div>
+    <!-- EKLENEN İNDİRİM KODLARI SAYFASI -->
+    <div id="couponListPage" class="hidden">
+        <div class="coupon-page-header">
+            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
+            <h2>🏷️ Eklenen İndirim Kodları</h2>
         </div>
+        <div id="appliedCouponList"></div>
     </div>
 
     <!-- =========================================
@@ -3695,7 +3686,7 @@ body{
         try {
             const productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,active,created_at,business_id,product_type")
+                .select("id,name,icon,price,active,created_at,business_id")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -3710,27 +3701,6 @@ body{
                 .order("created_at", { ascending: true });
 
             if (imageResult.error) throw imageResult.error;
-
-            const variantResult = await supabaseClient
-                .from("product_variants")
-                .select("id,product_id,variant_name,price")
-                .in(
-                    "product_id",
-                    (productResult.data || []).map(p => p.id)
-                )
-                .order("variant_name");
-
-            if (variantResult.error) throw variantResult.error;
-
-            const variantsByProduct = new Map();
-
-            (variantResult.data || []).forEach(v => {
-                const key = String(v.product_id);
-                if (!variantsByProduct.has(key)) {
-                    variantsByProduct.set(key, []);
-                }
-                variantsByProduct.get(key).push(v);
-            });
 
             const imagesByProduct = new Map();
 
@@ -3747,8 +3717,7 @@ body{
             products = (Array.isArray(productResult.data) ? productResult.data : [])
                 .map(product => ({
                     ...product,
-                    images: imagesByProduct.get(String(product.id)) || [],
-                    variants: variantsByProduct.get(String(product.id)) || []
+                    images: imagesByProduct.get(String(product.id)) || []
                 }));
 
             renderProducts();
@@ -3782,6 +3751,7 @@ body{
             .forEach(product => {
                 const row = document.createElement("div");
                 row.className = "product";
+                row.onclick = (e) => { if(!e.target.closest("button") && !e.target.closest("img")) openProductDetail(product.id); };
 
                 const left = document.createElement("div");
                 left.className = "product-main";
@@ -3820,8 +3790,8 @@ body{
 
                 const price = document.createElement("div");
                 price.className = "price";
-                price.textContent = product.product_type === "SIZE"
-                    ? `${Math.min(...product.variants.map(v => Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
+                price.textContent = product.product_type === "SIZE" && product.variants?.length
+                    ? `${Math.min(...product.variants.map(v=>Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
                     : `${Number(product.price).toLocaleString("tr-TR")} TL`;
 
                 info.appendChild(name);
@@ -3842,7 +3812,7 @@ body{
                     addButton.classList.add("added");
                 }
 
-                addButton.onclick = () => product.product_type === "SIZE" ? openVariantModal(product.id) : addProductToCart(product.id);
+                addButton.onclick = () => product.product_type === 'SIZE' ? openProductDetail(product.id) : addProductToCart(product.id);
 
                 row.appendChild(left);
                 row.appendChild(addButton);
@@ -4081,7 +4051,7 @@ body{
         updateProductAddButton(productId);
     }
 
-    function addProductToCart(productId, variantId=null) {
+    function addProductToCart(productId) {
         const product = products.find(
             p => String(p.id) === String(productId)
         );
@@ -4090,23 +4060,13 @@ body{
 
         let item = order.items.find(
             x => String(x.productId) === String(productId)
-            && String(x.variantId || "") === String(variantId || "")
         );
 
         if (!item) {
             item = {
                 productId: product.id,
-                variantId: variantId,
-                variantName: null,
-                price: getProductPrice(product, variantId),
                 quantity: 0
             };
-
-            if(product.product_type==="SIZE"){
-                const v=(product.variants||[]).find(x=>String(x.id)===String(variantId));
-                item.variantName=v?.variant_name || "";
-            }
-
             order.items.push(item);
         }
 
@@ -4117,55 +4077,6 @@ body{
         updateCartUi();
         renderCartProducts();
         updateProductAddButton(productId);
-    }
-
-    let selectedVariantProduct=null;
-    let selectedVariantId=null;
-
-    function openVariantModal(productId){
-        const product=products.find(p=>String(p.id)===String(productId));
-        if(!product) return;
-
-        selectedVariantProduct=product;
-        selectedVariantId=null;
-
-        document.getElementById("variantProductName").textContent=product.name;
-
-        const variantImage=document.getElementById("variantProductImage");
-        const mainVariantImage=getProductMainImage(product);
-        if(variantImage){
-            variantImage.src = mainVariantImage
-              ? productImagePublicUrl(mainVariantImage.storage_path)
-              : "";
-        }
-        document.getElementById("variantProductDetail").textContent=product.detail || "";
-
-        document.getElementById("variantOptions").innerHTML=
-          (product.variants||[]).map(v=>`
-          <label class="variant-option">
-             <span>${v.variant_name}</span>
-             <span>${Number(v.price).toLocaleString("tr-TR")} TL
-             <input type="radio" name="variant" value="${v.id}"
-              onchange="selectedVariantId='${v.id}'"></span>
-          </label>`).join("");
-
-        document.getElementById("variantModal").classList.remove("hidden");
-    }
-
-    function closeVariantModal(){
-        document.getElementById("variantModal").classList.add("hidden");
-        selectedVariantProduct=null;
-        selectedVariantId=null;
-    }
-
-    function addSelectedVariantToCart(){
-        if(!selectedVariantProduct || !selectedVariantId){
-            alert("Lütfen beden seçiniz.");
-            return;
-        }
-
-        addProductToCart(selectedVariantProduct.id, selectedVariantId);
-        closeVariantModal();
     }
 
     function updateProductAddButton(productId) {
@@ -4368,17 +4279,7 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        // orderPage cartPage'in parent'ı olduğu için gizlenmez.
-        // Sadece açık ekranlar ve kupon ekranları kontrol edilir.
-        [
-            "summaryPage",
-            "locationPage",
-            "reviewPage",
-            "notificationPage",
-            "couponAddPage",
-            "couponListPage",
-            "cartPage"
-        ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
@@ -7086,47 +6987,69 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 </script>
 
 
-<script>
-// Coupon modal override - v1
-(function(){
- const oldOpenAdd=window.openCouponAddPage;
- window.openCouponAddPage=function(){
-   const page=document.getElementById('couponAddPage');
-   page?.classList.remove('hidden');
-   const input=document.getElementById('couponCodeInput');
-   if(input){input.value='';setTimeout(()=>input.focus(),100);}
- };
- window.openCouponListPage=function(){
-   if(typeof renderAppliedCoupons==='function') renderAppliedCoupons();
-   document.getElementById('couponListPage')?.classList.remove('hidden');
- };
- window.closeCouponPages=function(){
-   document.getElementById('couponAddPage')?.classList.add('hidden');
-   document.getElementById('couponListPage')?.classList.add('hidden');
- };
-})();
-</script>
-
-<script>
-function getProductPrice(product, variantId=null){
-    if(product && product.product_type==="SIZE" && variantId){
-        const v=(product.variants||[]).find(x=>String(x.id)===String(variantId));
-        return Number(v?.price||0);
-    }
-    return Number(product?.price||0);
-}
-</script>
-
-<div id="variantModal" class="variant-modal hidden">
- <div class="variant-card">
-   <img id="variantProductImage" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;margin-bottom:12px"><h2 id="variantProductName"></h2>
-   <p id="variantProductDetail"></p>
-   <h3>Beden / Boyut Seç</h3>
-   <div id="variantOptions"></div>
-   <button class="main-button order-button" onclick="addSelectedVariantToCart()">Sepete Ekle</button>
-   <button class="main-button back-button" onclick="closeVariantModal()">Vazgeç</button>
+<div id="productDetailModal" class="product-detail-modal hidden">
+ <div class="product-detail-card">
+   <img id="detailProductImage">
+   <h2 id="detailProductName"></h2>
+   <p id="detailProductText"></p>
+   <div id="detailVariants"></div>
+   <div id="detailPrice"></div>
+   <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
+   <button onclick="closeProductDetail()" class="product-add-button">Kapat</button>
  </div>
 </div>
+
+<script>
+let detailSelectedVariant=null;
+let detailProduct=null;
+
+function openProductDetail(productId){
+ const product=products.find(p=>String(p.id)===String(productId));
+ if(!product)return;
+
+ detailProduct=product;
+ detailSelectedVariant=null;
+
+ document.getElementById("detailProductName").textContent=product.name;
+ document.getElementById("detailProductText").textContent=product.detail || "";
+
+ const img=getProductMainImage(product);
+ document.getElementById("detailProductImage").src=
+   img ? productImagePublicUrl(img.storage_path) : "";
+
+ const area=document.getElementById("detailVariants");
+
+ if(product.product_type==="SIZE"){
+   area.innerHTML=(product.variants||[]).map(v=>`
+    <label class="detail-variant">
+      <span>${v.variant_name}</span>
+      <span>${Number(v.price).toLocaleString("tr-TR")} TL
+      <input type="radio" name="detailVariant"
+       onchange="detailSelectedVariant='${v.id}'"></span>
+    </label>`).join("");
+ }else{
+   area.innerHTML="";
+   detailSelectedVariant=null;
+ }
+
+ document.getElementById("detailAddButton").onclick=()=>{
+   if(product.product_type==="SIZE" && !detailSelectedVariant){
+      alert("Lütfen beden seçiniz.");
+      return;
+   }
+   addProductToCart(product.id, detailSelectedVariant);
+   closeProductDetail();
+ };
+
+ document.getElementById("productDetailModal").classList.remove("hidden");
+}
+
+function closeProductDetail(){
+ document.getElementById("productDetailModal").classList.add("hidden");
+ detailProduct=null;
+ detailSelectedVariant=null;
+}
+</script>
 </body>
 
 </html>
