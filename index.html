@@ -1447,6 +1447,110 @@
     }
 }
 
+
+        /* =========================================
+           BAYİLİK - TAM EKRAN MOBİL UYUMLU SAYFA
+        ========================================= */
+        .franchise-page {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            background: #f5f5f5;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+        }
+
+        .franchise-page-inner {
+            width: min(680px, 100%);
+            min-height: 100%;
+            margin: 0 auto;
+            padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+            box-sizing: border-box;
+        }
+
+        .franchise-page-header {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: calc(8px + env(safe-area-inset-top)) 0 12px;
+            background: #f5f5f5;
+        }
+
+        .franchise-page-header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .franchise-back {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border: 0;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 10px #0002;
+            font-size: 32px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .franchise-form-card {
+            margin: 0;
+        }
+
+        .franchise-form-card label {
+            display: block;
+            margin-top: 14px;
+        }
+
+        .franchise-form-card input,
+        .franchise-form-card textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .franchise-form-card textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        .franchise-actions {
+            margin-top: 18px;
+            padding-bottom: 8px;
+        }
+
+        body.franchise-page-open {
+            overflow: hidden !important;
+        }
+
+        @media (max-width: 600px) {
+            .franchise-page-inner {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .franchise-form-card {
+                padding: 16px;
+            }
+
+            .franchise-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .franchise-actions .btn {
+                width: 100%;
+                min-height: 46px;
+            }
+        }
+
 </style>
 
 </head>
@@ -1542,30 +1646,38 @@
             </p>
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
             <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
-            <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchiseModal()">🏪 Bayilik Aç</button>
+            <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchisePage()">🏪 Bayilik Aç</button>
             <a id="instagramProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="admin-link hidden" style="font-size:14px;font-weight:700">📷 @instagram</a>
 
         </div>
 
         
-<div id="franchiseModal" class="modal hidden">
-  <div class="modal-card">
-    <div class="modal-header">
+<div id="franchisePage" class="franchise-page hidden">
+  <div class="franchise-page-inner">
+    <div class="franchise-page-header">
+      <button type="button" class="franchise-back" onclick="closeFranchisePage()" aria-label="Geri">‹</button>
       <h2>🏪 Bayilik Talebi</h2>
-      <button type="button" class="modal-close" onclick="closeFranchiseModal()">✕</button>
     </div>
-    <p class="small">Bayilik talebinizi bırakın, çalışma arkadaşlarımız sizinle iletişime geçsin.</p>
-    <label>Ad Soyad</label>
-    <input id="franchiseName" type="text" maxlength="120" placeholder="Adınız ve soyadınız">
-    <label>Telefon</label>
-    <input id="franchisePhone" type="tel" maxlength="30" placeholder="05xx xxx xx xx">
-    <label>E-posta (opsiyonel)</label>
-    <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
-    <label>Not (opsiyonel)</label>
-    <textarea id="franchiseNote" maxlength="1500" style="width:100%;min-height:100px" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
-    <div class="actions" style="margin-top:14px">
-      <button type="button" class="btn btn-light" onclick="closeFranchiseModal()">Vazgeç</button>
-      <button type="button" class="btn btn-primary" onclick="submitFranchiseRequest()">Talebi Gönder</button>
+
+    <div class="card franchise-form-card">
+      <p class="small">Bayilik talebinizi bırakın, çalışma arkadaşlarımız sizinle iletişime geçsin.</p>
+
+      <label>Ad Soyad</label>
+      <input id="franchiseName" type="text" maxlength="120" placeholder="Adınız ve soyadınız">
+
+      <label>Telefon</label>
+      <input id="franchisePhone" type="tel" maxlength="30" placeholder="05xx xxx xx xx">
+
+      <label>E-posta (opsiyonel)</label>
+      <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
+
+      <label>Not (opsiyonel)</label>
+      <textarea id="franchiseNote" maxlength="1500" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
+
+      <div class="actions franchise-actions">
+        <button type="button" class="btn btn-light" onclick="closeFranchisePage()">Vazgeç</button>
+        <button type="button" class="btn btn-primary" onclick="submitFranchiseRequest()">Talebi Gönder</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5687,16 +5799,32 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 
 
-    function openFranchiseModal(){
-        const existingName = document.getElementById("customerName")?.value?.trim() || "";
-        if(existingName && !document.getElementById("franchiseName").value){
+    let franchisePageScrollY = 0;
+
+    function openFranchisePage(){
+        const existingName =
+            document.getElementById("customerName")?.value?.trim() || "";
+
+        if(existingName && !document.getElementById("franchiseName")?.value){
             document.getElementById("franchiseName").value = existingName;
         }
-        document.getElementById("franchiseModal")?.classList.remove("hidden");
+
+        franchisePageScrollY = window.scrollY || window.pageYOffset || 0;
+
+        const page = document.getElementById("franchisePage");
+        if(!page) return;
+
+        page.classList.remove("hidden");
+        page.scrollTop = 0;
+        document.body.classList.add("franchise-page-open");
     }
 
-    function closeFranchiseModal(){
-        document.getElementById("franchiseModal")?.classList.add("hidden");
+    function closeFranchisePage(){
+        const page = document.getElementById("franchisePage");
+        if(page) page.classList.add("hidden");
+
+        document.body.classList.remove("franchise-page-open");
+        window.scrollTo(0, franchisePageScrollY);
     }
 
     async function submitFranchiseRequest(){
@@ -5722,7 +5850,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 }
             });
             if(error) throw error;
-            closeFranchiseModal();
+            closeFranchisePage();
             document.getElementById("franchiseName").value="";
             document.getElementById("franchisePhone").value="";
             document.getElementById("franchiseEmail").value="";
