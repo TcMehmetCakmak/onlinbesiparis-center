@@ -4233,9 +4233,9 @@ body{
                         </div>
 
                         <div class="cart-quantity">
-                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', -1)">−</button>
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', -1, '${String(item.variantId || '').replace(/'/g, "\'")}')">−</button>
                             <span>${Number(item.quantity || 0)}</span>
-                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', 1)">+</button>
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', 1, '${String(item.variantId || '').replace(/'/g, "\'")}')">+</button>
                         </div>
                     </div>
 
