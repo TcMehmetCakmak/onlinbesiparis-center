@@ -4291,62 +4291,52 @@ body{
 
     function backFromCouponPage() {
 
-        // Önce kupon ekranlarını kapat
-        document.getElementById("couponAddPage")
-            ?.classList.add("hidden");
-
-        document.getElementById("couponListPage")
-            ?.classList.add("hidden");
-
-
-        // Açık olabilecek tüm müşteri sayfalarını temizle
+        // Önce bütün sayfa state'lerini temizle
         [
+            "couponAddPage",
+            "couponListPage",
             "orderPage",
             "summaryPage",
             "locationPage",
             "reviewPage",
-            "notificationPage",
-            "couponAddPage",
-            "couponListPage"
+            "notificationPage"
         ].forEach(id => {
-            document.getElementById(id)
-                ?.classList.add("hidden");
+            document.getElementById(id)?.classList.add("hidden");
         });
 
+        const cartPage = document.getElementById("cartPage");
 
-        // Sepeti tekrar normal akış ile aç
-        if (typeof openCartPage === "function") {
-            openCartPage();
+        if (!cartPage) {
+            console.error("cartPage bulunamadı");
             return;
         }
 
+        // Sepeti zorla aç
+        cartPage.classList.remove("hidden");
 
-        // Güvenlik amaçlı fallback
-        const cartPage = document.getElementById("cartPage");
+        // Body kilidini tekrar uygula
+        document.body.classList.add("cart-page-open");
 
-        if (cartPage) {
-            cartPage.classList.remove("hidden");
-            document.body.classList.add("cart-page-open");
+        cartPage.scrollTop = 0;
 
-            if (typeof renderCartProducts === "function") {
-                renderCartProducts();
-            }
-
-            if (typeof calculateTotal === "function") {
-                calculateTotal();
-            }
-
-            if (typeof updateCartUi === "function") {
-                updateCartUi();
-            }
-
-        } else {
-            console.error("cartPage bulunamadı");
+        // Sepeti yeniden oluştur
+        if (typeof renderCartProducts === "function") {
+            renderCartProducts();
         }
+
+        if (typeof calculateTotal === "function") {
+            calculateTotal();
+        }
+
+        if (typeof updateCartUi === "function") {
+            updateCartUi();
+        }
+
+        couponPreviousPage = "cartPage";
     }
 
 
-    function closeCouponPages() {
+function closeCouponPages() {
         backFromCouponPage();
     }
 
