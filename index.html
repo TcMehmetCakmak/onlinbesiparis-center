@@ -2334,6 +2334,29 @@ body{
   }
 }
 </style>
+
+<style>
+/* Sipariş özeti ekranı scroll desteği */
+.order-summary-page,
+.order-summary-modal,
+#orderSummary,
+.order-summary-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobilde ekran taşmasını engelle */
+@media(max-width:768px){
+    .order-summary-page,
+    .order-summary-modal,
+    #orderSummary,
+    .order-summary-content {
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+}
+</style>
 </head>
 
 <body>
