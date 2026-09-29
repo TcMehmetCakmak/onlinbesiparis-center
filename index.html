@@ -4265,7 +4265,8 @@ body{
     let couponPreviousPage = "cartPage";
 
     function openCouponAddPage() {
-        couponPreviousPage = document.getElementById("cartPage")?.classList.contains("hidden") ? "orderPage" : "cartPage";
+        // Kupon ekranı her zaman sepet üzerinden açılıyor
+        couponPreviousPage = "cartPage";
         document.body.classList.remove("cart-page-open");
 
         hideMainPagesForCoupon();
@@ -4279,7 +4280,8 @@ body{
     }
 
     function openCouponListPage() {
-        couponPreviousPage = document.getElementById("cartPage")?.classList.contains("hidden") ? "orderPage" : "cartPage";
+        // Kupon listesi ekranı da her zaman sepete geri döner
+        couponPreviousPage = "cartPage";
         document.body.classList.remove("cart-page-open");
 
         renderAppliedCoupons();
@@ -4292,21 +4294,21 @@ body{
         document.getElementById("couponAddPage")?.classList.add("hidden");
         document.getElementById("couponListPage")?.classList.add("hidden");
 
-        // Önceki ekranı güvenli şekilde geri aç
-        const backTarget = couponPreviousPage || "cartPage";
-        document.getElementById(backTarget)?.classList.remove("hidden");
+        // Kupon ekranlarından geri dönüş noktası daima sepet
+        const cartPage = document.getElementById("cartPage");
 
-        if (backTarget === "cartPage") {
+        if (cartPage) {
+            cartPage.classList.remove("hidden");
+            cartPage.scrollTop = 0;
+
             document.body.classList.add("cart-page-open");
-            const cartPage = document.getElementById("cartPage");
-            if (cartPage) cartPage.scrollTop = 0;
+
             renderCartProducts();
             calculateTotal();
             updateCartUi();
-        } else {
-            document.body.classList.remove("cart-page-open");
-            window.scrollTo(0,0);
         }
+
+        couponPreviousPage = "cartPage";
     }
 
     async function addCouponCode() {
