@@ -4293,21 +4293,23 @@ body{
         document.getElementById("couponAddPage")?.classList.add("hidden");
         document.getElementById("couponListPage")?.classList.add("hidden");
 
-        // Kupon ekranlarından geri dönüş noktası daima sepet
-        const cartPage = document.getElementById("cartPage");
-
-        if (cartPage) {
-            cartPage.classList.remove("hidden");
-            cartPage.scrollTop = 0;
-
-            document.body.classList.add("cart-page-open");
-
-            renderCartProducts();
-            calculateTotal();
-            updateCartUi();
-        }
-
+        // Kupon ekranları sadece sepetten açılıyor.
+        // Direkt class değişimi yerine mevcut sepet açma akışını kullan.
+        // Böylece render, scroll ve body state aynı kalır.
         couponPreviousPage = "cartPage";
+
+        if (typeof openCartPage === "function") {
+            openCartPage();
+        } else {
+            const cartPage = document.getElementById("cartPage");
+            if (cartPage) {
+                cartPage.classList.remove("hidden");
+                renderCartProducts?.();
+                calculateTotal?.();
+                updateCartUi?.();
+                document.body.classList.add("cart-page-open");
+            }
+        }
     }
 
     async function addCouponCode() {
