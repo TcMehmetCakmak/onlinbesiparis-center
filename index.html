@@ -5847,8 +5847,14 @@ body{
         order.items.forEach(item => {
             const product = products.find(p => p.id === item.productId);
             if (!product) return;
-            const lineTotal = Number(product.price) * item.quantity;
-            html += `<div class="summary-row"><span>${escapeHtml(product.icon || "🍽️")} ${escapeHtml(product.name)} × ${item.quantity}</span><span>${lineTotal.toLocaleString("tr-TR")} TL</span></div>`;
+            const itemPrice = Number(item.price ?? product.price ?? 0);
+            const lineTotal = itemPrice * Number(item.quantity || 0);
+
+            const variantText = item.variantName
+                ? ` (Beden: ${escapeHtml(item.variantName)})`
+                : "";
+
+            html += `<div class="summary-row"><span>${escapeHtml(product.icon || "🍽️")} ${escapeHtml(product.name)}${variantText} × ${item.quantity}</span><span>${lineTotal.toLocaleString("tr-TR")} TL</span></div>`;
         });
         document.getElementById("summaryContent").innerHTML = html;
         document.getElementById("summaryTotal").textContent = `${total.toLocaleString("tr-TR")} TL`;
