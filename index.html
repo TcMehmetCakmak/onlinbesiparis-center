@@ -4674,6 +4674,7 @@
                 await supabaseClient.functions.invoke("create-licensed-order", {
                     body: {
                         action: "cancel_pending_whatsapp_order",
+                        p_business_key: platformBusiness?.public_key || "",
                         order_id: orderId,
                         security_code: securityCode
                     }
