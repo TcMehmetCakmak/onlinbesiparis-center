@@ -1450,16 +1450,33 @@ async function saveProduct(){
   if(productImageBusy)return;
 
   const id=document.getElementById("productId").value;
+  const productType=document.getElementById("productType")?.value || "";
+
   const payload={
     name:document.getElementById("productName").value.trim(),
-    icon:"🍽️", // geriye dönük uyumluluk için kolon korunuyor, UI artık ikon kullanmıyor
-    price:Number(document.getElementById("productPrice").value),
+    icon:"🍽️",
+    price: productType==="SIZE" ? null : Number(document.getElementById("productPrice").value),
+    product_type: productType || null,
     active:document.getElementById("productActive").checked
   };
 
-  if(!payload.name||!Number.isFinite(payload.price)||payload.price<0){
+  if(!payload.name){
+    toast("Ürün adı gerekli.");
+    return;
+  }
+
+  if(productType!=="SIZE" && (!Number.isFinite(payload.price)||payload.price<0)){
     toast("Ürün adı ve geçerli fiyat gerekli.");
     return;
+  }
+
+  if(productType==="SIZE"){
+    productVariantsDraft = productVariantsDraft.filter(x=>x.variant_name && x.price!=="");
+
+    if(productVariantsDraft.length===0){
+      toast("En az bir beden/boyut ve fiyat ekleyin.");
+      return;
+    }
   }
 
   if(currentProductImages.length+pendingProductFiles.length>5){
@@ -1494,6 +1511,25 @@ async function saveProduct(){
       if(error)throw error;
       savedProduct=data;
       document.getElementById("productId").value=savedProduct.id;
+    }
+
+    if(productType==="SIZE"){
+      await supabaseClient
+        .from("product_variants")
+        .delete()
+        .eq("product_id", savedProduct.id);
+
+      const variantRows = productVariantsDraft.map(v=>({
+        product_id:savedProduct.id,
+        variant_name:v.variant_name,
+        price:Number(v.price)
+      }));
+
+      const {error:variantError}=await supabaseClient
+        .from("product_variants")
+        .insert(variantRows);
+
+      if(variantError) throw variantError;
     }
 
     if(pendingProductFiles.length){
