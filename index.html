@@ -6121,7 +6121,9 @@ body{
             );
 
             const savedItems =
-                Array.isArray(data.items) ? data.items : [];
+                Array.isArray(order.items) && order.items.length
+                    ? order.items
+                    : (Array.isArray(data.items) ? data.items : []);
 
             const calculatedSubtotal = order.items.reduce((sum, item) => {
                 const product = products.find(
