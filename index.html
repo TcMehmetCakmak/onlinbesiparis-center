@@ -3717,6 +3717,7 @@ body{
             products = (Array.isArray(productResult.data) ? productResult.data : [])
                 .map(product => ({
                     ...product,
+                    variants: variantsByProduct.get(String(product.id)) || [],
                     images: imagesByProduct.get(String(product.id)) || []
                 }));
 
@@ -3751,7 +3752,7 @@ body{
             .forEach(product => {
                 const row = document.createElement("div");
                 row.className = "product";
-                row.onclick = (e) => { if(!e.target.closest("button") && !e.target.closest("img")) openProductDetail(product.id); };
+                row.onclick = (e) => { if(!e.target.closest("button")) openProductDetail(product.id); };
 
                 const left = document.createElement("div");
                 left.className = "product-main";
