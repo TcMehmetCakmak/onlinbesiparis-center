@@ -331,6 +331,18 @@ body.modal-open{
 
     <label>Fiyat (TL)</label>
     <input id="productPrice" type="number" min="0" step="0.01" placeholder="150">
+<label>Ürün Tipi</label>
+<select id="productType" onchange="toggleProductVariantFields()">
+  <option value="">Normal Ürün</option>
+  <option value="SIZE">Boyut / Bedenli Ürün</option>
+</select>
+
+<div id="productVariantArea" class="hidden" style="margin-top:14px;padding:14px;background:#f8f8f8;border-radius:12px">
+  <label>Boyut / Beden Fiyatları</label>
+  <div id="productVariantRows"></div>
+  <button type="button" class="btn btn-light" onclick="addProductVariantRow()">+ Boyut Ekle</button>
+</div>
+
 
     <div class="product-upload-box">
       <label style="margin:0">Ürün Fotoğrafları</label>
@@ -1951,6 +1963,50 @@ document.querySelectorAll(".modal").forEach(modal => {
 
 syncAdminModalScrollLock();
 
+</script>
+
+<script>
+let productVariantsDraft=[];
+
+function toggleProductVariantFields(){
+ const type=document.getElementById("productType");
+ const area=document.getElementById("productVariantArea");
+ const price=document.getElementById("productPrice");
+ if(!type||!area||!price)return;
+
+ const size=type.value==="SIZE";
+ area.classList.toggle("hidden",!size);
+ price.closest("label")?.classList.toggle("hidden",size);
+
+ if(size && productVariantsDraft.length===0){
+   addProductVariantRow();
+ }
+}
+
+function addProductVariantRow(name="",price=""){
+ productVariantsDraft.push({variant_name:name,price:price});
+ renderProductVariantRows();
+}
+
+function removeProductVariantRow(i){
+ productVariantsDraft.splice(i,1);
+ renderProductVariantRows();
+}
+
+function renderProductVariantRows(){
+ const el=document.getElementById("productVariantRows");
+ if(!el)return;
+
+ el.innerHTML=productVariantsDraft.map((v,i)=>`
+ <div style="display:flex;gap:8px;margin-bottom:8px">
+   <input placeholder="Beden / Boyut" value="${v.variant_name||''}"
+    onchange="productVariantsDraft[${i}].variant_name=this.value">
+   <input type="number" placeholder="Fiyat" value="${v.price||''}"
+    onchange="productVariantsDraft[${i}].price=this.value">
+   <button type="button" class="btn btn-danger"
+    onclick="removeProductVariantRow(${i})">X</button>
+ </div>`).join("");
+}
 </script>
 </body>
 </html>
