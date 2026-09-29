@@ -4291,7 +4291,7 @@ body{
 
     function backFromCouponPage() {
 
-        // Kupon ekranlarını kapat
+        // Önce kupon ekranlarını kapat
         document.getElementById("couponAddPage")
             ?.classList.add("hidden");
 
@@ -4299,32 +4299,34 @@ body{
             ?.classList.add("hidden");
 
 
-        // Diğer ekranların yanlışlıkla açık kalmasını engelle
+        // Açık olabilecek tüm müşteri sayfalarını temizle
         [
             "orderPage",
             "summaryPage",
             "locationPage",
             "reviewPage",
-            "notificationPage"
+            "notificationPage",
+            "couponAddPage",
+            "couponListPage"
         ].forEach(id => {
             document.getElementById(id)
                 ?.classList.add("hidden");
         });
 
 
-        const cartPage =
-            document.getElementById("cartPage");
+        // Sepeti tekrar normal akış ile aç
+        if (typeof openCartPage === "function") {
+            openCartPage();
+            return;
+        }
 
+
+        // Güvenlik amaçlı fallback
+        const cartPage = document.getElementById("cartPage");
 
         if (cartPage) {
-
             cartPage.classList.remove("hidden");
-
-            document.body.classList.add(
-                "cart-page-open"
-            );
-
-            cartPage.scrollTop = 0;
+            document.body.classList.add("cart-page-open");
 
             if (typeof renderCartProducts === "function") {
                 renderCartProducts();
@@ -4339,13 +4341,7 @@ body{
             }
 
         } else {
-
-            console.error(
-                "cartPage bulunamadı"
-            );
-
-            document.getElementById("orderPage")
-                ?.classList.remove("hidden");
+            console.error("cartPage bulunamadı");
         }
     }
 
