@@ -2392,6 +2392,14 @@ body{
     display:block;
 }
 </style>
+
+<style id="productModalSwipeV26">
+.product-detail-image,
+.product-gallery-image {
+    touch-action: pan-y;
+    user-select:none;
+}
+</style>
 </head>
 
 <body>
@@ -7441,6 +7449,69 @@ function initGallerySwipeV17(){
 }
 
 document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
+</script>
+
+<script id="productModalSwipeV26">
+(function(){
+    let startX = 0;
+    let startY = 0;
+
+    function bindProductSwipe(){
+        const selectors = [
+            ".product-detail-image",
+            ".product-gallery-image",
+            "#productDetailImage"
+        ];
+
+        let img = null;
+        for(const s of selectors){
+            img = document.querySelector(s);
+            if(img) break;
+        }
+
+        if(!img || img.dataset.swipeBoundV26) return;
+
+        img.dataset.swipeBoundV26 = "1";
+
+        img.addEventListener("touchstart", function(e){
+            startX = e.changedTouches[0].screenX;
+            startY = e.changedTouches[0].screenY;
+        }, {passive:true});
+
+        img.addEventListener("touchend", function(e){
+            const endX = e.changedTouches[0].screenX;
+            const endY = e.changedTouches[0].screenY;
+
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+
+            if(Math.abs(diffX) < 50 || Math.abs(diffX) < Math.abs(diffY)){
+                return;
+            }
+
+            if(diffX < 0){
+                if(typeof nextProductImage === "function"){
+                    nextProductImage();
+                } else if(typeof nextGalleryImage === "function"){
+                    nextGalleryImage();
+                }
+            } else {
+                if(typeof previousProductImage === "function"){
+                    previousProductImage();
+                } else if(typeof previousGalleryImage === "function"){
+                    previousGalleryImage();
+                }
+            }
+        }, {passive:true});
+    }
+
+    const observer = new MutationObserver(bindProductSwipe);
+
+    document.addEventListener("DOMContentLoaded", function(){
+        bindProductSwipe();
+        observer.observe(document.body,{childList:true,subtree:true});
+    });
+})();
 </script>
 </body>
 
