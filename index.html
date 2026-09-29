@@ -6111,14 +6111,24 @@ body{
             const savedItems =
                 Array.isArray(data.items) ? data.items : [];
 
+            const calculatedSubtotal = order.items.reduce((sum, item) => {
+                const product = products.find(
+                    p => String(p.id) === String(item.productId)
+                );
+
+                return sum +
+                    Number(item.price ?? product?.price ?? 0) *
+                    Number(item.quantity || 0);
+            }, 0);
+
             const savedSubtotal =
-                Number(data.subtotal || data.total || 0);
+                Number(data.subtotal || calculatedSubtotal || 0);
 
             const savedDiscount =
-                Number(data.discount_amount || 0);
+                Number(data.discount_amount || getPreviewDiscount(savedSubtotal) || 0);
 
             const savedTotal =
-                Number(data.total || 0);
+                Number(data.total || (savedSubtotal - savedDiscount) || 0);
 
             let message = `Merhaba, ben ${order.name}.
 
@@ -6127,7 +6137,13 @@ Sipariş vermek istiyorum:
 `;
 
             savedItems.forEach(item => {
-                message += `${item.quantity} adet ${item.name}
+                const variantText = item.variantName
+                    ? ` (Beden: ${item.variantName})`
+                    : "";
+
+                const itemPrice = Number(item.price || 0);
+
+                message += `${item.quantity} adet ${item.name}${variantText} - ${itemPrice.toLocaleString("tr-TR")} TL
 `;
             });
 
