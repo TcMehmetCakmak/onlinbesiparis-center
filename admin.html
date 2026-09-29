@@ -1486,6 +1486,23 @@ async function deleteProduct(id){
   }
 }
 
+
+function getProductById(productId){
+  return products.find(p=>String(p.id)===String(productId));
+}
+
+function getProductMainImageUrl(productId){
+  const product=getProductById(productId);
+  if(!product)return "";
+  const images=Array.isArray(product.images)?product.images:[];
+  const main=images.find(img=>img.is_main)||images[0];
+  if(!main?.storage_path)return "";
+  const {data}=supabaseClient.storage
+    .from("product-images")
+    .getPublicUrl(main.storage_path);
+  return data?.publicUrl||"";
+}
+
 function renderOrders(){
   document.querySelectorAll('input[id^="wa-code-"]').forEach(input=>{
     const id=input.id.replace("wa-code-","");
@@ -1511,7 +1528,19 @@ function renderOrders(){
     const needsWhatsappVerification=isWhatsapp&&!whatsappVerified&&order.status!=="iptal-edildi";
     const statusBadge=needsWhatsappVerification?'<span class="badge badge-pending">Doğrulama Bekleniyor</span>':order.status==="tamamlandi"?'<span class="badge badge-done">Tamamlandı</span>':order.status==="iptal-edildi"?'<span class="badge badge-cancel">İptal edildi</span>':'<span class="badge badge-active">Devam ediyor</span>';
     const badge=statusBadge;
-    const items=(order.items||[]).map(i=>`${escapeHtml(i.icon)} ${escapeHtml(i.name)} × ${i.quantity} — ${money(i.lineTotal)}`).join("<br>");
+    const items=(order.items||[]).map(i=>{
+      const imageUrl=getProductMainImageUrl(i.productId);
+      const visual=imageUrl
+        ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
+        : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
+      return `<div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+        ${visual}
+        <div>
+          <div><strong>${escapeHtml(i.name)}</strong> × ${i.quantity}</div>
+          <div class="muted">${money(i.lineTotal)}</div>
+        </div>
+      </div>`;
+    }).join("");
     const date=new Date(order.created_at).toLocaleString("tr-TR");
     return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${escapeHtml(order.name)}<div class="muted">${date}</div></div>${badge}</div>
       <div class="order-items">${items}</div>
