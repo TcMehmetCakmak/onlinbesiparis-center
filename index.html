@@ -2229,6 +2229,24 @@ body{
 
 </style>
 
+
+<style>
+.variant-modal{
+ position:fixed;inset:0;background:#0008;z-index:30000;
+ display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.variant-modal.hidden{display:none!important;}
+.variant-card{
+ background:#fff;border-radius:18px;padding:20px;width:min(420px,100%);
+ max-height:90vh;overflow:auto;
+}
+.variant-option{
+ display:flex;justify-content:space-between;align-items:center;
+ padding:12px;border:1px solid #ddd;border-radius:12px;margin-bottom:10px;
+ cursor:pointer;
+}
+.variant-option input{width:auto;margin:0;}
+</style>
 </head>
 
 <body>
@@ -3824,7 +3842,7 @@ body{
                     addButton.classList.add("added");
                 }
 
-                addButton.onclick = () => addProductToCart(product.id);
+                addButton.onclick = () => product.product_type === "SIZE" ? openVariantModal(product.id) : addProductToCart(product.id);
 
                 row.appendChild(left);
                 row.appendChild(addButton);
@@ -4063,7 +4081,7 @@ body{
         updateProductAddButton(productId);
     }
 
-    function addProductToCart(productId) {
+    function addProductToCart(productId, variantId=null) {
         const product = products.find(
             p => String(p.id) === String(productId)
         );
@@ -4072,13 +4090,23 @@ body{
 
         let item = order.items.find(
             x => String(x.productId) === String(productId)
+            && String(x.variantId || "") === String(variantId || "")
         );
 
         if (!item) {
             item = {
                 productId: product.id,
+                variantId: variantId,
+                variantName: null,
+                price: getProductPrice(product, variantId),
                 quantity: 0
             };
+
+            if(product.product_type==="SIZE"){
+                const v=(product.variants||[]).find(x=>String(x.id)===String(variantId));
+                item.variantName=v?.variant_name || "";
+            }
+
             order.items.push(item);
         }
 
@@ -4089,6 +4117,47 @@ body{
         updateCartUi();
         renderCartProducts();
         updateProductAddButton(productId);
+    }
+
+    let selectedVariantProduct=null;
+    let selectedVariantId=null;
+
+    function openVariantModal(productId){
+        const product=products.find(p=>String(p.id)===String(productId));
+        if(!product) return;
+
+        selectedVariantProduct=product;
+        selectedVariantId=null;
+
+        document.getElementById("variantProductName").textContent=product.name;
+        document.getElementById("variantProductDetail").textContent=product.detail || "";
+
+        document.getElementById("variantOptions").innerHTML=
+          (product.variants||[]).map(v=>`
+          <label class="variant-option">
+             <span>${v.variant_name}</span>
+             <span>${Number(v.price).toLocaleString("tr-TR")} TL
+             <input type="radio" name="variant" value="${v.id}"
+              onchange="selectedVariantId='${v.id}'"></span>
+          </label>`).join("");
+
+        document.getElementById("variantModal").classList.remove("hidden");
+    }
+
+    function closeVariantModal(){
+        document.getElementById("variantModal").classList.add("hidden");
+        selectedVariantProduct=null;
+        selectedVariantId=null;
+    }
+
+    function addSelectedVariantToCart(){
+        if(!selectedVariantProduct || !selectedVariantId){
+            alert("Lütfen beden seçiniz.");
+            return;
+        }
+
+        addProductToCart(selectedVariantProduct.id, selectedVariantId);
+        closeVariantModal();
     }
 
     function updateProductAddButton(productId) {
@@ -7039,6 +7108,17 @@ function getProductPrice(product, variantId=null){
     return Number(product?.price||0);
 }
 </script>
+
+<div id="variantModal" class="variant-modal hidden">
+ <div class="variant-card">
+   <h2 id="variantProductName"></h2>
+   <p id="variantProductDetail"></p>
+   <h3>Beden / Boyut Seç</h3>
+   <div id="variantOptions"></div>
+   <button class="main-button order-button" onclick="addSelectedVariantToCart()">Sepete Ekle</button>
+   <button class="main-button back-button" onclick="closeVariantModal()">Vazgeç</button>
+ </div>
+</div>
 </body>
 
 </html>
