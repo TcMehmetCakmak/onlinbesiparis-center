@@ -36,8 +36,63 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .order-items{margin:12px 0;padding:10px;background:#f8f8f8;border-radius:10px}
 .filters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:15px}
 .empty{text-align:center;color:#777;padding:30px}
-.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-card{background:#fff;border-radius:16px;padding:22px;max-width:520px;width:100%}
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  background:#0008;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+}
+
+.modal-card{
+  background:#fff;
+  border-radius:16px;
+  padding:22px;
+  max-width:520px;
+  width:100%;
+  max-height:calc(100dvh - 40px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+}
+
+html.modal-open,
+body.modal-open{
+  overflow:hidden !important;
+  overscroll-behavior:none;
+}
+
+body.modal-open{
+  position:fixed;
+  width:100%;
+  left:0;
+  right:0;
+}
+
+@media(max-width:600px){
+  .modal{
+    align-items:flex-start;
+    padding:10px;
+  }
+
+  .modal-card{
+    max-width:none;
+    max-height:calc(100dvh - 20px);
+    border-radius:14px;
+    padding:16px;
+    margin:0;
+  }
+}
 .toast{position:fixed;right:20px;bottom:20px;background:#222;color:#fff;padding:12px 16px;border-radius:10px;display:none}
 
 .revenue-card{cursor:pointer;transition:transform .15s ease}.revenue-card:hover{transform:translateY(-2px)}
@@ -1745,6 +1800,88 @@ document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && currentBusinessId)loadSupportTickets();
 });
 checkSession();
+
+
+/* =========================================================
+   TÜM ADMIN MODALLARI İÇİN MOBİL SCROLL YÖNETİMİ
+   - Modal açıkken arka sayfa sabit kalır.
+   - Scroll yalnızca modal / modal-card içinde yapılır.
+   - Yeni eklenen modallar da otomatik desteklenir.
+========================================================= */
+let adminModalSavedScrollY = 0;
+let adminModalBodyLocked = false;
+
+function getVisibleAdminModals(){
+  return Array.from(document.querySelectorAll(".modal"))
+    .filter(modal => !modal.classList.contains("hidden"));
+}
+
+function lockAdminBackgroundScroll(){
+  if(adminModalBodyLocked)return;
+
+  adminModalSavedScrollY = window.scrollY || window.pageYOffset || 0;
+  adminModalBodyLocked = true;
+
+  document.documentElement.classList.add("modal-open");
+  document.body.classList.add("modal-open");
+  document.body.style.top = `-${adminModalSavedScrollY}px`;
+}
+
+function unlockAdminBackgroundScroll(){
+  if(!adminModalBodyLocked)return;
+
+  adminModalBodyLocked = false;
+
+  document.documentElement.classList.remove("modal-open");
+  document.body.classList.remove("modal-open");
+  document.body.style.top = "";
+
+  window.scrollTo(0, adminModalSavedScrollY);
+}
+
+function syncAdminModalScrollLock(){
+  if(getVisibleAdminModals().length){
+    lockAdminBackgroundScroll();
+  }else{
+    unlockAdminBackgroundScroll();
+  }
+}
+
+/*
+ * Modal class'ları open/close fonksiyonlarında değiştiği anda yakalanır.
+ * Böylece product, notification, support, revenue, shop-name vb.
+ * bütün admin pencerelerine tek tek kod eklemek gerekmez.
+ */
+const adminModalObserver = new MutationObserver(mutations => {
+  if(mutations.some(m =>
+    m.type === "attributes" &&
+    m.attributeName === "class" &&
+    m.target?.classList?.contains("modal")
+  )){
+    syncAdminModalScrollLock();
+  }
+});
+
+document.querySelectorAll(".modal").forEach(modal => {
+  adminModalObserver.observe(modal, {
+    attributes:true,
+    attributeFilter:["class"]
+  });
+
+  /*
+   * Modalın boş arka alanında touch sürüklemesi ana sayfaya taşmasın.
+   * Kart içindeki scroll normal devam eder.
+   */
+  modal.addEventListener("touchmove", event => {
+    const card = event.target.closest(".modal-card");
+    if(!card){
+      event.preventDefault();
+    }
+  }, {passive:false});
+});
+
+syncAdminModalScrollLock();
+
 </script>
 </body>
 </html>
