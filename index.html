@@ -4258,7 +4258,17 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        // orderPage cartPage'in parent'ı olduğu için gizlenmez.
+        // Sadece açık ekranlar ve kupon ekranları kontrol edilir.
+        [
+            "summaryPage",
+            "locationPage",
+            "reviewPage",
+            "notificationPage",
+            "couponAddPage",
+            "couponListPage",
+            "cartPage"
+        ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
