@@ -4258,7 +4258,7 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        ["summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
@@ -4303,6 +4303,9 @@ body{
         ].forEach(id => {
             document.getElementById(id)?.classList.add("hidden");
         });
+
+        // cartPage, orderPage içinde olduğu için önce parent açılmalı
+        document.getElementById("orderPage")?.classList.remove("hidden");
 
         const cartPage = document.getElementById("cartPage");
 
