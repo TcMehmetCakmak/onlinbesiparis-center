@@ -2592,7 +2592,7 @@ body{
     <!-- İNDİRİM KODU EKLE SAYFASI -->
     <div id="couponAddPage" class="hidden">
         <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="backFromCouponPage()">‹</button>
+            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
             <h2>🎟️ İndirim Kodu Ekle</h2>
         </div>
         <div class="card">
@@ -2606,7 +2606,7 @@ body{
     <!-- EKLENEN İNDİRİM KODLARI SAYFASI -->
     <div id="couponListPage" class="hidden">
         <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="backFromCouponPage()">‹</button>
+            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
             <h2>🏷️ Eklenen İndirim Kodları</h2>
         </div>
         <div id="appliedCouponList"></div>
@@ -4258,7 +4258,7 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        ["summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
@@ -4289,58 +4289,25 @@ body{
         window.scrollTo(0,0);
     }
 
-    function backFromCouponPage() {
+    function closeCouponPages() {
+        document.getElementById("couponAddPage")?.classList.add("hidden");
+        document.getElementById("couponListPage")?.classList.add("hidden");
 
-        // Önce bütün sayfa state'lerini temizle
-        [
-            "couponAddPage",
-            "couponListPage",
-            "orderPage",
-            "summaryPage",
-            "locationPage",
-            "reviewPage",
-            "notificationPage"
-        ].forEach(id => {
-            document.getElementById(id)?.classList.add("hidden");
-        });
-
-        // cartPage, orderPage içinde olduğu için önce parent açılmalı
-        document.getElementById("orderPage")?.classList.remove("hidden");
-
+        // Kupon ekranlarından geri dönüş noktası daima sepet
         const cartPage = document.getElementById("cartPage");
 
-        if (!cartPage) {
-            console.error("cartPage bulunamadı");
-            return;
-        }
+        if (cartPage) {
+            cartPage.classList.remove("hidden");
+            cartPage.scrollTop = 0;
 
-        // Sepeti zorla aç
-        cartPage.classList.remove("hidden");
+            document.body.classList.add("cart-page-open");
 
-        // Body kilidini tekrar uygula
-        document.body.classList.add("cart-page-open");
-
-        cartPage.scrollTop = 0;
-
-        // Sepeti yeniden oluştur
-        if (typeof renderCartProducts === "function") {
             renderCartProducts();
-        }
-
-        if (typeof calculateTotal === "function") {
             calculateTotal();
-        }
-
-        if (typeof updateCartUi === "function") {
             updateCartUi();
         }
 
         couponPreviousPage = "cartPage";
-    }
-
-
-function closeCouponPages() {
-        backFromCouponPage();
     }
 
     async function addCouponCode() {
