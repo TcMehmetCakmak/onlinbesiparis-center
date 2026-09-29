@@ -2262,7 +2262,13 @@ body{
 .coupon-real-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
 .coupon-real-x{width:40px;height:40px;border:0;border-radius:50%;background:#eee;font-size:26px;cursor:pointer}
 </style>
-</head>
+<style>
+.detail-gallery-v15{position:relative;text-align:center;}
+.detail-gallery-v15 img{width:100%;max-height:280px;object-fit:contain;border-radius:15px;}
+.detail-gallery-v15 button{position:absolute;top:45%;border:0;background:#fff;border-radius:50%;font-size:28px;width:40px;height:40px;}
+.detail-gallery-v15 button:first-of-type{left:5px;}
+.detail-gallery-v15 button:last-of-type{right:5px;}
+</style></head>
 
 <body>
 
@@ -7059,7 +7065,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
-   <img id="detailProductImage">
+   <div class="detail-gallery-v15">
+<img id="detailProductImage">
+<button type="button" onclick="changeDetailGallery(-1)">‹</button>
+<button type="button" onclick="changeDetailGallery(1)">›</button>
+<div id="detailGalleryDots"></div>
+</div>
    <h2 id="detailProductName"></h2>
    <p id="detailProductText"></p>
    <div id="detailVariants"></div>
@@ -7072,6 +7083,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 <script>
 let detailSelectedVariant=null;
 let detailProduct=null;
+let detailGalleryImages=[];
+let detailGalleryIndex=0;
 
 function openProductDetail(productId){
  const product=products.find(p=>String(p.id)===String(productId));
@@ -7083,9 +7096,9 @@ function openProductDetail(productId){
  document.getElementById("detailProductName").textContent=product.name;
  document.getElementById("detailProductText").textContent=product.detail || "";
 
- const img=getProductMainImage(product);
- document.getElementById("detailProductImage").src=
-   img ? productImagePublicUrl(img.storage_path) : "";
+ detailGalleryImages = (product.images || []).length ? product.images : [];
+ detailGalleryIndex = 0;
+ renderDetailGalleryV15();
 
  const area=document.getElementById("detailVariants");
 
@@ -7112,6 +7125,22 @@ function openProductDetail(productId){
  };
 
  document.getElementById("productDetailModal").classList.remove("hidden");
+}
+
+
+function renderDetailGalleryV15(){
+ const img=document.getElementById("detailProductImage");
+ const dots=document.getElementById("detailGalleryDots");
+ if(!img) return;
+ if(!detailGalleryImages.length){ img.src=""; dots.innerHTML=""; return; }
+ const current=detailGalleryImages[detailGalleryIndex];
+ img.src = current.storage_path ? productImagePublicUrl(current.storage_path) : current.url;
+ dots.innerHTML=detailGalleryImages.map((x,i)=>`<span onclick="detailGalleryIndex=${i};renderDetailGalleryV15()" style="cursor:pointer;margin:3px">${i===detailGalleryIndex?'●':'○'}</span>`).join('');
+}
+function changeDetailGallery(step){
+ if(!detailGalleryImages.length)return;
+ detailGalleryIndex=(detailGalleryIndex+step+detailGalleryImages.length)%detailGalleryImages.length;
+ renderDetailGalleryV15();
 }
 
 function closeProductDetail(){
