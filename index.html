@@ -4130,6 +4130,14 @@ body{
         selectedVariantId=null;
 
         document.getElementById("variantProductName").textContent=product.name;
+
+        const variantImage=document.getElementById("variantProductImage");
+        const mainVariantImage=getProductMainImage(product);
+        if(variantImage){
+            variantImage.src = mainVariantImage
+              ? productImagePublicUrl(mainVariantImage.storage_path)
+              : "";
+        }
         document.getElementById("variantProductDetail").textContent=product.detail || "";
 
         document.getElementById("variantOptions").innerHTML=
@@ -7111,7 +7119,7 @@ function getProductPrice(product, variantId=null){
 
 <div id="variantModal" class="variant-modal hidden">
  <div class="variant-card">
-   <h2 id="variantProductName"></h2>
+   <img id="variantProductImage" style="width:100%;max-height:260px;object-fit:contain;border-radius:14px;margin-bottom:12px"><h2 id="variantProductName"></h2>
    <p id="variantProductDetail"></p>
    <h3>Beden / Boyut Seç</h3>
    <div id="variantOptions"></div>
