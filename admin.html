@@ -649,7 +649,7 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     const productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,active,created_at,business_id")
+      .select("id,name,icon,price,product_type,active,created_at,business_id")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error)throw productResult.error;
@@ -1455,7 +1455,7 @@ async function saveProduct(){
   const payload={
     name:document.getElementById("productName").value.trim(),
     icon:"🍽️",
-    price: productType==="SIZE" ? null : Number(document.getElementById("productPrice").value),
+    price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
     product_type: productType || null,
     active:document.getElementById("productActive").checked
   };
@@ -1498,7 +1498,7 @@ async function saveProduct(){
         .update(payload)
         .eq("id",id)
         .eq("business_id",currentBusinessId)
-        .select("id,name,icon,price,active,created_at,business_id")
+        .select("id,name,icon,price,product_type,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
@@ -1506,7 +1506,7 @@ async function saveProduct(){
       const newId=crypto.randomUUID();
       const {data,error}=await supabaseClient.from("products")
         .insert({...payload,id:newId,business_id:currentBusinessId})
-        .select("id,name,icon,price,active,created_at,business_id")
+        .select("id,name,icon,price,product_type,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
