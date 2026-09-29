@@ -2032,6 +2032,192 @@ body{
  }
 }
 
+
+/* =========================================================
+   HEADER LAYOUT - BUSINESS LEFT / NAV CENTER / TOOLS RIGHT
+   ========================================================= */
+.review-header{
+    position:relative;
+    width:100%;
+    min-height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+}
+
+.shop-title{
+    flex:0 0 auto;
+    margin:0 !important;
+    padding:0 !important;
+    text-align:left !important;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    white-space:nowrap;
+    font-size:clamp(24px,3vw,36px);
+}
+
+.header-navigation{
+    flex:1 1 auto;
+    min-width:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+}
+
+.header-online-title{
+    font-size:16px;
+    color:#777;
+    font-weight:600;
+    white-space:nowrap;
+}
+
+.header-nav-link,
+.header-nav-button{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    border:0;
+    background:transparent;
+    color:#555;
+    font-size:13px;
+    text-decoration:none;
+    white-space:nowrap;
+    cursor:pointer;
+    padding:6px 4px;
+    font-family:inherit;
+}
+
+.header-nav-link:hover,
+.header-nav-button:hover{
+    color:#1f7a4d;
+    text-decoration:none;
+}
+
+.header-tools{
+    position:static !important;
+    flex:0 0 auto;
+    transform:none !important;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:7px;
+}
+
+.header-cart-button{
+    min-height:38px !important;
+    height:38px;
+    padding:7px 11px !important;
+    border-radius:9px !important;
+    font-size:14px;
+    box-shadow:none !important;
+}
+
+.header-cart-button .cart-item-count{
+    min-width:19px;
+    height:19px;
+    padding:0 5px;
+    font-size:10px;
+}
+
+@media(max-width:1050px){
+    .review-header{
+        gap:10px;
+    }
+
+    .header-navigation{
+        gap:8px;
+    }
+
+    .header-online-title{
+        display:none;
+    }
+
+    .header-nav-link,
+    .header-nav-button{
+        font-size:12px;
+    }
+}
+
+@media(max-width:760px){
+    .review-header{
+        min-height:auto;
+        display:grid;
+        grid-template-columns:1fr auto;
+        grid-template-areas:
+            "shop tools"
+            "nav nav";
+        row-gap:10px;
+        align-items:center;
+    }
+
+    .shop-title{
+        grid-area:shop;
+        font-size:24px;
+        white-space:normal;
+    }
+
+    .header-tools{
+        grid-area:tools;
+    }
+
+    .header-navigation{
+        grid-area:nav;
+        justify-content:flex-start;
+        overflow-x:auto;
+        flex-wrap:nowrap;
+        width:100%;
+        padding-bottom:2px;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+    }
+
+    .header-navigation::-webkit-scrollbar{
+        display:none;
+    }
+
+    .header-online-title{
+        display:inline;
+    }
+}
+
+@media(max-width:430px){
+    .shop-title{
+        font-size:21px;
+    }
+
+    .header-tools{
+        gap:4px;
+    }
+
+    .review-button,
+    .notification-button{
+        width:35px !important;
+        height:35px !important;
+        min-width:35px !important;
+        font-size:17px;
+    }
+
+    .header-cart-button{
+        height:35px;
+        min-height:35px !important;
+        padding:6px 8px !important;
+        font-size:12px;
+    }
+
+    .header-cart-button > span:first-of-type{
+        display:none;
+    }
+
+    .header-navigation{
+        gap:7px;
+    }
+}
+
 </style>
 
 </head>
@@ -2065,17 +2251,43 @@ body{
 
             <div class="review-header">
 
-                <h1>
-                    <span id="shopIcon">🍽️</span> <span id="shopName">İşletme</span>
+                <!-- İŞLETME ADI - EN SOL -->
+                <h1 class="shop-title">
+                    <span id="shopIcon">🍽️</span>
+                    <span id="shopName">İşletme</span>
                 </h1>
 
-                <!-- =========================================
-                     YORUM + BİLDİRİM BUTONLARI
-                ========================================= -->
+                <!-- ONLINE SİPARİŞ + LİNKLER - ORTA -->
+                <div class="header-navigation">
+                    <span class="header-online-title">Online Sipariş</span>
 
+                    <a id="tenantAdminLink" href="#" class="header-nav-link">⚙️ İşletme Girişi</a>
+
+                    <button
+                        id="installAppButton"
+                        type="button"
+                        class="header-nav-button"
+                        onclick="installPwaApp()"
+                    >📲 Uygulamayı Yükle</button>
+
+                    <button
+                        id="franchiseButton"
+                        type="button"
+                        class="header-nav-button"
+                        onclick="openFranchisePage()"
+                    >🏪 Bayilik Aç</button>
+
+                    <a
+                        id="instagramProfileLink"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="header-nav-link hidden"
+                    >📷 @Bizitakipedin</a>
+                </div>
+
+                <!-- BİLDİRİM → YORUM → SEPET -->
                 <div class="header-tools">
-
-                    <!-- BİLDİRİMLER -->
 
                     <button
                         type="button"
@@ -2084,20 +2296,9 @@ body{
                         title="Bildirimler"
                         aria-label="Bildirimler"
                     >
-
                         🔔
-
-                        <span
-                            id="notificationCount"
-                            class="notification-count"
-                        >
-                            0
-                        </span>
-
+                        <span id="notificationCount" class="notification-count">0</span>
                     </button>
-
-
-                    <!-- YORUMLAR -->
 
                     <button
                         type="button"
@@ -2106,29 +2307,25 @@ body{
                         title="Müşteri Yorumları"
                         aria-label="Müşteri Yorumları"
                     >
-
                         💬
+                        <span id="reviewCount" class="review-count">0</span>
+                    </button>
 
-                        <span
-                            id="reviewCount"
-                            class="review-count"
-                        >
-                            0
-                        </span>
-
+                    <button
+                        type="button"
+                        id="cartOpenButton"
+                        class="cart-open-button header-cart-button"
+                        onclick="openCartPage()"
+                        title="Sepetim"
+                        aria-label="Sepetim"
+                    >
+                        🛒 <span>Sepet</span>
+                        <span id="cartItemCount" class="cart-item-count">0</span>
                     </button>
 
                 </div>
 
             </div>
-
-            <p class="small">
-                Online Sipariş
-            </p>
-            <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
-            <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
-            <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchisePage()">🏪 Bayilik Aç</button>
-            <a id="instagramProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="admin-link hidden" style="font-size:14px;font-weight:700">📷 @instagram</a>
 
         </div>
 
