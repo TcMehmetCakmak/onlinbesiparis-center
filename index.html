@@ -4050,7 +4050,10 @@ body{
         const product = products.find(p => p.id === productId);
         if (!product) return;
 
-        let item = order.items.find(x => x.productId === productId);
+        let item = order.items.find(x =>
+            x.productId === productId &&
+            !x.variantId
+        );
 
         if (!item) {
             item = { productId, quantity: 0 };
@@ -4198,10 +4201,11 @@ body{
                     <div class="cart-product-info">
                         <div class="cart-product-name">
                             ${escapeHtml(product.name)}
+                            ${item.variantName ? `<div>Beden: ${escapeHtml(item.variantName)}</div>` : ""}
                         </div>
 
                         <div class="cart-product-price">
-                            ${Number(product.price || 0).toLocaleString("tr-TR")} TL
+                            ${Number(item.price ?? product.price ?? 0).toLocaleString("tr-TR")} TL
                         </div>
 
                         <div class="cart-quantity">
@@ -4250,7 +4254,12 @@ body{
     function getSubtotal() {
         return order.items.reduce((sum, item) => {
             const product = products.find(p => p.id === item.productId);
-            return sum + (product ? Number(product.price) * Number(item.quantity || 0) : 0);
+            return sum + (
+                item
+                    ? Number(item.price ?? product?.price ?? 0) *
+                      Number(item.quantity || 0)
+                    : 0
+            );
         }, 0);
     }
 
