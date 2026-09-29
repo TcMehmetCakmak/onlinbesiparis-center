@@ -2592,7 +2592,7 @@ body{
     <!-- İNDİRİM KODU EKLE SAYFASI -->
     <div id="couponAddPage" class="hidden">
         <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
+            <button type="button" class="coupon-page-back" onclick="backFromCouponPage()">‹</button>
             <h2>🎟️ İndirim Kodu Ekle</h2>
         </div>
         <div class="card">
@@ -2606,7 +2606,7 @@ body{
     <!-- EKLENEN İNDİRİM KODLARI SAYFASI -->
     <div id="couponListPage" class="hidden">
         <div class="coupon-page-header">
-            <button type="button" class="coupon-page-back" onclick="closeCouponPages()">‹</button>
+            <button type="button" class="coupon-page-back" onclick="backFromCouponPage()">‹</button>
             <h2>🏷️ Eklenen İndirim Kodları</h2>
         </div>
         <div id="appliedCouponList"></div>
@@ -4289,27 +4289,69 @@ body{
         window.scrollTo(0,0);
     }
 
-    function closeCouponPages() {
-        document.getElementById("couponAddPage")?.classList.add("hidden");
-        document.getElementById("couponListPage")?.classList.add("hidden");
+    function backFromCouponPage() {
 
-        // Kupon ekranları sadece sepetten açılıyor.
-        // Direkt class değişimi yerine mevcut sepet açma akışını kullan.
-        // Böylece render, scroll ve body state aynı kalır.
-        couponPreviousPage = "cartPage";
+        // Kupon ekranlarını kapat
+        document.getElementById("couponAddPage")
+            ?.classList.add("hidden");
 
-        if (typeof openCartPage === "function") {
-            openCartPage();
-        } else {
-            const cartPage = document.getElementById("cartPage");
-            if (cartPage) {
-                cartPage.classList.remove("hidden");
-                renderCartProducts?.();
-                calculateTotal?.();
-                updateCartUi?.();
-                document.body.classList.add("cart-page-open");
+        document.getElementById("couponListPage")
+            ?.classList.add("hidden");
+
+
+        // Diğer ekranların yanlışlıkla açık kalmasını engelle
+        [
+            "orderPage",
+            "summaryPage",
+            "locationPage",
+            "reviewPage",
+            "notificationPage"
+        ].forEach(id => {
+            document.getElementById(id)
+                ?.classList.add("hidden");
+        });
+
+
+        const cartPage =
+            document.getElementById("cartPage");
+
+
+        if (cartPage) {
+
+            cartPage.classList.remove("hidden");
+
+            document.body.classList.add(
+                "cart-page-open"
+            );
+
+            cartPage.scrollTop = 0;
+
+            if (typeof renderCartProducts === "function") {
+                renderCartProducts();
             }
+
+            if (typeof calculateTotal === "function") {
+                calculateTotal();
+            }
+
+            if (typeof updateCartUi === "function") {
+                updateCartUi();
+            }
+
+        } else {
+
+            console.error(
+                "cartPage bulunamadı"
+            );
+
+            document.getElementById("orderPage")
+                ?.classList.remove("hidden");
         }
+    }
+
+
+    function closeCouponPages() {
+        backFromCouponPage();
     }
 
     async function addCouponCode() {
