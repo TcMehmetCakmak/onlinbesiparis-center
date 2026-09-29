@@ -1590,6 +1590,265 @@
             }
         }
 
+
+        /* =========================================
+           YENİ ÜRÜN + SEPET AKIŞI
+        ========================================= */
+
+        .product {
+            align-items: center;
+        }
+
+        .product-add-button {
+            flex: 0 0 auto;
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 15px;
+            min-height: 42px;
+            background: #1f7a4d;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 12px #1f7a4d26;
+            transition: transform .15s ease, opacity .15s ease;
+        }
+
+        .product-add-button:active {
+            transform: scale(.97);
+        }
+
+        .product-add-button.added {
+            background: #185f3d;
+        }
+
+        .cart-open-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            border: 0;
+            border-radius: 13px;
+            padding: 10px 14px;
+            min-height: 42px;
+            background: #1f7a4d;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 14px #1f7a4d30;
+        }
+
+        .cart-item-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #fff;
+            color: #1f7a4d;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .cart-page {
+            position: fixed;
+            inset: 0;
+            z-index: 4900;
+            background: var(--app-background, #f5f5f5);
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+        }
+
+        .cart-page-inner {
+            width: min(720px, 100%);
+            min-height: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+            padding: 12px 12px calc(36px + env(safe-area-inset-bottom));
+        }
+
+        .cart-page-header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: calc(8px + env(safe-area-inset-top)) 2px 12px;
+            background: var(--app-background, #f5f5f5);
+        }
+
+        .cart-page-header h2 {
+            margin: 0 0 2px;
+        }
+
+        .cart-page-back {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 44px;
+            border: 0;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 3px 12px #0002;
+            font-size: 32px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .cart-products-card {
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .cart-empty {
+            padding: 28px 12px;
+            text-align: center;
+            color: #777;
+            font-weight: 700;
+        }
+
+        .cart-product-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #ececec;
+        }
+
+        .cart-product-row:last-child {
+            border-bottom: 0;
+        }
+
+        .cart-product-image,
+        .cart-product-no-image {
+            width: 64px;
+            height: 64px;
+            flex: 0 0 64px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #f1f1f1;
+        }
+
+        .cart-product-no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+
+        .cart-product-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cart-product-name {
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .cart-product-price {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .cart-quantity {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            border: 1px solid #e3e3e3;
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .cart-quantity button {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 9px;
+            background: #f1f1f1;
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .cart-quantity span {
+            min-width: 24px;
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .cart-line-total {
+            font-weight: 900;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .cart-coupon-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .cart-secondary-button {
+            min-height: 46px;
+            border: 1px solid #e1e1e1;
+            border-radius: 12px;
+            background: #fff;
+            color: #222;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .cart-discount-summary {
+            margin-top: 0;
+        }
+
+        body.cart-page-open {
+            overflow: hidden !important;
+        }
+
+        @media (max-width: 600px) {
+            .product {
+                gap: 10px;
+            }
+
+            .product-add-button {
+                padding: 10px 11px;
+                font-size: 13px;
+            }
+
+            .cart-page-inner {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
+            .cart-product-row {
+                align-items: flex-start;
+            }
+
+            .cart-product-image,
+            .cart-product-no-image {
+                width: 56px;
+                height: 56px;
+                flex-basis: 56px;
+            }
+
+            .cart-line-total {
+                font-size: 13px;
+            }
+
+            .cart-coupon-tools {
+                grid-template-columns: 1fr;
+            }
+        }
+
 </style>
 
 </head>
@@ -1686,7 +1945,7 @@
             <a id="tenantAdminLink" href="#" class="admin-link">⚙️ İşletme Girişi</a>
             <button id="installAppButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="installPwaApp()">📲 Uygulamayı Yükle</button>
             <button id="franchiseButton" type="button" class="admin-link" style="border:0;background:transparent;cursor:pointer" onclick="openFranchisePage()">🏪 Bayilik Aç</button>
-            <a id="instagramProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="admin-link hidden" style="font-size:14px;font-weight:700">@instagram</a>
+            <a id="instagramProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="admin-link hidden" style="font-size:14px;font-weight:700">📷 @instagram</a>
 
         </div>
 
@@ -1730,32 +1989,95 @@
         <div id="orderItemsCard" class="card hidden">
 
             <div class="order-heading-row">
-                <h2>Siparişiniz</h2>
-                <div class="coupon-tools">
-                    <button type="button" class="coupon-tool" onclick="openCouponAddPage()" title="İndirim kodu ekle" aria-label="İndirim kodu ekle">🎟️</button>
-                    <button type="button" class="coupon-tool" onclick="openCouponListPage()" title="Eklenen indirim kodları" aria-label="Eklenen indirim kodları">🏷️<span id="couponCount" class="coupon-count hidden">0</span></button>
-                </div>
+                <h2>Ürünler</h2>
+
+                <button
+                    type="button"
+                    id="openCartButton"
+                    class="cart-open-button"
+                    onclick="openCartPage()"
+                    title="Sepeti Aç"
+                    aria-label="Sepeti Aç"
+                >
+                    🛒 Sepet
+                    <span id="cartItemCount" class="cart-item-count hidden">0</span>
+                </button>
             </div>
 
             <div id="productList">
-                <!-- Ürünler sunucudaki products.json/API üzerinden yüklenir -->
-            </div>
-
-            <!-- TOPLAM -->
-
-            <div class="discount-summary">
-                <div class="discount-line"><span>Ara Toplam</span><strong id="subtotalPrice">0 TL</strong></div>
-                <div id="discountLine" class="discount-line saving hidden"><span>İndirim</span><strong id="discountPrice">-0 TL</strong></div>
-                <div class="total"><span>Ödenecek Toplam</span><span id="totalPrice">0 TL</span></div>
+                <!-- Ürünler Supabase üzerinden yüklenir -->
             </div>
 
         </div>
 
         <!-- =========================================
-             MÜŞTERİ BİLGİLERİ
+             SEPET / MÜŞTERİ BİLGİLERİ TAM EKRAN SAYFASI
         ========================================= -->
 
-        <div id="customerInfoCard" class="card hidden">
+        <div id="cartPage" class="cart-page hidden">
+            <div class="cart-page-inner">
+
+                <div class="cart-page-header">
+                    <button
+                        type="button"
+                        class="cart-page-back"
+                        onclick="closeCartPage()"
+                        aria-label="Sepeti kapat"
+                    >‹</button>
+
+                    <div>
+                        <h2>🛒 Sepetim</h2>
+                        <div class="small">Ürünlerinizi ve sipariş bilgilerinizi kontrol edin.</div>
+                    </div>
+                </div>
+
+                <div class="card cart-products-card">
+                    <div id="cartEmptyState" class="cart-empty hidden">
+                        Sepetiniz henüz boş.
+                    </div>
+
+                    <div id="cartProductList"></div>
+                </div>
+
+                <div class="card">
+                    <div class="cart-coupon-tools">
+                        <button
+                            type="button"
+                            class="cart-secondary-button"
+                            onclick="openCouponAddPage()"
+                        >
+                            🎟️ İndirim Kodu Ekle
+                        </button>
+
+                        <button
+                            type="button"
+                            class="cart-secondary-button"
+                            onclick="openCouponListPage()"
+                        >
+                            🏷️ Kodları Listele
+                            <span id="couponCount" class="coupon-count hidden">0</span>
+                        </button>
+                    </div>
+
+                    <div class="discount-summary cart-discount-summary">
+                        <div class="discount-line">
+                            <span>Ara Toplam</span>
+                            <strong id="subtotalPrice">0 TL</strong>
+                        </div>
+
+                        <div id="discountLine" class="discount-line saving hidden">
+                            <span>İndirim</span>
+                            <strong id="discountPrice">-0 TL</strong>
+                        </div>
+
+                        <div class="total">
+                            <span>Ödenecek Toplam</span>
+                            <span id="totalPrice">0 TL</span>
+                        </div>
+                    </div>
+                </div>
+
+<div id="customerInfoCard" class="card hidden">
 
             <h2>
                 Müşteri Bilgileri
@@ -1859,6 +2181,10 @@
             </div>
 
         </div>
+                <div style="height:18px"></div>
+            </div>
+        </div>
+
 
     </div>
 
@@ -3031,29 +3357,24 @@
                 info.appendChild(price);
                 left.appendChild(info);
 
-                const quantity = document.createElement("div");
-                quantity.className = "quantity";
+                const addButton = document.createElement("button");
+                addButton.type = "button";
+                addButton.className = "product-add-button";
+                addButton.id = `add-cart-${product.id}`;
 
-                const minus = document.createElement("button");
-                minus.type = "button";
-                minus.textContent = "−";
-                minus.onclick = () => changeQuantity(product.id, -1);
+                const qty = getItemQuantity(product.id);
+                addButton.textContent = qty > 0
+                    ? `Sepette (${qty})`
+                    : "Sepete Ekle";
 
-                const count = document.createElement("span");
-                count.id = `quantity-${product.id}`;
-                count.textContent = getItemQuantity(product.id);
+                if (qty > 0) {
+                    addButton.classList.add("added");
+                }
 
-                const plus = document.createElement("button");
-                plus.type = "button";
-                plus.textContent = "+";
-                plus.onclick = () => changeQuantity(product.id, 1);
-
-                quantity.appendChild(minus);
-                quantity.appendChild(count);
-                quantity.appendChild(plus);
+                addButton.onclick = () => addProductToCart(product.id);
 
                 row.appendChild(left);
-                row.appendChild(quantity);
+                row.appendChild(addButton);
 
                 list.appendChild(row);
             });
@@ -3068,6 +3389,8 @@
         );
 
         saveOrder();
+        updateCartUi();
+        renderCartProducts();
     }
 
     let galleryProduct = null;
@@ -3280,11 +3603,170 @@
             item.quantity = 0;
         }
 
-        const quantityElement = document.getElementById(`quantity-${productId}`);
-        if (quantityElement) quantityElement.textContent = item.quantity;
+        calculateTotal();
+        saveOrder();
+        updateCartUi();
+        renderCartProducts();
+        updateProductAddButton(productId);
+    }
+
+    function addProductToCart(productId) {
+        const product = products.find(
+            p => String(p.id) === String(productId)
+        );
+
+        if (!product) return;
+
+        let item = order.items.find(
+            x => String(x.productId) === String(productId)
+        );
+
+        if (!item) {
+            item = {
+                productId: product.id,
+                quantity: 0
+            };
+            order.items.push(item);
+        }
+
+        item.quantity += 1;
 
         calculateTotal();
         saveOrder();
+        updateCartUi();
+        renderCartProducts();
+        updateProductAddButton(productId);
+    }
+
+    function updateProductAddButton(productId) {
+        const button =
+            document.getElementById(`add-cart-${productId}`);
+
+        if (!button) return;
+
+        const qty = getItemQuantity(productId);
+
+        button.textContent =
+            qty > 0 ? `Sepette (${qty})` : "Sepete Ekle";
+
+        button.classList.toggle("added", qty > 0);
+    }
+
+    function getCartQuantity() {
+        return order.items.reduce(
+            (sum, item) =>
+                sum + Number(item.quantity || 0),
+            0
+        );
+    }
+
+    function updateCartUi() {
+        const count = getCartQuantity();
+        const badge = document.getElementById("cartItemCount");
+
+        if (badge) {
+            badge.textContent = String(count);
+            badge.classList.toggle("hidden", count <= 0);
+        }
+
+        products.forEach(product => {
+            updateProductAddButton(product.id);
+        });
+    }
+
+    function renderCartProducts() {
+        const list = document.getElementById("cartProductList");
+        const empty = document.getElementById("cartEmptyState");
+
+        if (!list) return;
+
+        const items = order.items
+            .map(item => ({
+                item,
+                product: products.find(
+                    product =>
+                        String(product.id) ===
+                        String(item.productId)
+                )
+            }))
+            .filter(entry =>
+                entry.product &&
+                entry.product.active !== false &&
+                Number(entry.item.quantity || 0) > 0
+            );
+
+        if (!items.length) {
+            list.innerHTML = "";
+            empty?.classList.remove("hidden");
+            return;
+        }
+
+        empty?.classList.add("hidden");
+
+        list.innerHTML = items.map(({ item, product }) => {
+            const mainImage = getProductMainImage(product);
+            const imageHtml = mainImage
+                ? `<img class="cart-product-image" src="${productImagePublicUrl(mainImage.storage_path)}" alt="${escapeHtml(product.name)}">`
+                : `<div class="cart-product-no-image">📷</div>`;
+
+            const lineTotal =
+                Number(product.price || 0) *
+                Number(item.quantity || 0);
+
+            return `
+                <div class="cart-product-row">
+                    ${imageHtml}
+
+                    <div class="cart-product-info">
+                        <div class="cart-product-name">
+                            ${escapeHtml(product.name)}
+                        </div>
+
+                        <div class="cart-product-price">
+                            ${Number(product.price || 0).toLocaleString("tr-TR")} TL
+                        </div>
+
+                        <div class="cart-quantity">
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', -1)">−</button>
+                            <span>${Number(item.quantity || 0)}</span>
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="cart-line-total">
+                        ${lineTotal.toLocaleString("tr-TR")} TL
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    let cartPageSavedScrollY = 0;
+
+    function openCartPage() {
+        cartPageSavedScrollY =
+            window.scrollY || window.pageYOffset || 0;
+
+        renderCartProducts();
+        calculateTotal();
+        updateCartUi();
+
+        const page = document.getElementById("cartPage");
+
+        if (!page) return;
+
+        page.classList.remove("hidden");
+        page.scrollTop = 0;
+        document.body.classList.add("cart-page-open");
+    }
+
+    function closeCartPage() {
+        document.getElementById("cartPage")
+            ?.classList.add("hidden");
+
+        document.body.classList.remove("cart-page-open");
+
+        window.scrollTo(0, cartPageSavedScrollY);
     }
 
     function getSubtotal() {
@@ -3347,6 +3829,7 @@
         }
 
         updateCouponCount();
+        updateCartUi();
         return total;
     }
 
@@ -3355,10 +3838,12 @@
     }
 
     function hideMainPagesForCoupon() {
-        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     function openCouponAddPage() {
+        document.body.classList.remove("cart-page-open");
+
         hideMainPagesForCoupon();
         const page = document.getElementById("couponAddPage");
         page?.classList.remove("hidden");
@@ -3370,6 +3855,8 @@
     }
 
     function openCouponListPage() {
+        document.body.classList.remove("cart-page-open");
+
         renderAppliedCoupons();
         hideMainPagesForCoupon();
         document.getElementById("couponListPage")?.classList.remove("hidden");
@@ -3379,8 +3866,20 @@
     function closeCouponPages() {
         document.getElementById("couponAddPage")?.classList.add("hidden");
         document.getElementById("couponListPage")?.classList.add("hidden");
-        document.getElementById("orderPage")?.classList.remove("hidden");
-        window.scrollTo(0,0);
+
+        const cartPage = document.getElementById("cartPage");
+
+        if (cartPage) {
+            cartPage.classList.remove("hidden");
+            cartPage.scrollTop = 0;
+            document.body.classList.add("cart-page-open");
+            renderCartProducts();
+            calculateTotal();
+            updateCartUi();
+        } else {
+            document.getElementById("orderPage")?.classList.remove("hidden");
+            window.scrollTo(0, 0);
+        }
     }
 
     async function addCouponCode() {
