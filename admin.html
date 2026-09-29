@@ -2044,5 +2044,39 @@ function renderProductVariantRows(){
  </div>`).join("");
 }
 </script>
+
+<script>
+async function loadProductVariantsForEdit(productId){
+  productVariantsDraft=[];
+
+  if(!productId) return;
+
+  const {data,error}=await supabaseClient
+    .from("product_variants")
+    .select("*")
+    .eq("product_id",productId)
+    .order("created_at");
+
+  if(error){
+    console.error("Variant load error",error);
+    return;
+  }
+
+  if(data && data.length){
+    productVariantsDraft=data.map(v=>({
+      variant_name:v.variant_name,
+      price:v.price
+    }));
+
+    const type=document.getElementById("productType");
+    if(type){
+      type.value="SIZE";
+      toggleProductVariantFields();
+    }
+
+    renderProductVariantRows();
+  }
+}
+</script>
 </body>
 </html>
