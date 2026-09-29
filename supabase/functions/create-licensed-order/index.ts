@@ -39,19 +39,38 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const PLATFORM_CONTROL_URL = Deno.env.get("PLATFORM_CONTROL_URL");
     const PLATFORM_CONTROL_PUBLISHABLE_KEY = Deno.env.get("PLATFORM_CONTROL_PUBLISHABLE_KEY");
-    const PLATFORM_BUSINESS_KEY = Deno.env.get("PLATFORM_BUSINESS_KEY");
-
     if (
       !SUPABASE_URL ||
       !SUPABASE_SERVICE_ROLE_KEY ||
       !PLATFORM_CONTROL_URL ||
-      !PLATFORM_CONTROL_PUBLISHABLE_KEY ||
-      !PLATFORM_BUSINESS_KEY
+      !PLATFORM_CONTROL_PUBLISHABLE_KEY
     ) {
       return json({
         ok: false,
         error: "Sunucu yapılandırması eksik. Edge Function secret ayarlarını kontrol edin.",
       }, 500);
+    }
+
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body !== "object") {
+      return json({ ok: false, error: "Geçersiz sipariş isteği." }, 400);
+    }
+
+    /*
+     * MULTI-TENANT:
+     * İşletme artık tek bir Edge Function secret'ından seçilmez.
+     * Müşteri uygulamasının merkezi business_public kaydından aldığı
+     * browser-safe public_key gönderilir.
+     */
+    const requestedBusinessKey =
+      String(body.p_business_key ?? "").trim();
+
+    if (!requestedBusinessKey) {
+      return json({
+        ok: false,
+        error: "İşletme anahtarı eksik. Sayfayı yenileyip tekrar deneyin.",
+      }, 400);
     }
 
     const platform = createClient(
@@ -63,7 +82,7 @@ Deno.serve(async (req) => {
     const { data: business, error: businessError } = await platform
       .from("business_public")
       .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active")
-      .eq("public_key", PLATFORM_BUSINESS_KEY)
+      .eq("public_key", requestedBusinessKey)
       .maybeSingle();
 
     if (businessError) {
@@ -80,12 +99,6 @@ Deno.serve(async (req) => {
         ok: false,
         error: "Bu işletmenin online sipariş sistemi aktif değildir.",
       }, 403);
-    }
-
-    const body = await req.json().catch(() => null);
-
-    if (!body || typeof body !== "object") {
-      return json({ ok: false, error: "Geçersiz sipariş isteği." }, 400);
     }
 
     const tenant = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -165,6 +178,54 @@ Deno.serve(async (req) => {
       p_items: items,
       p_coupon_codes: Array.isArray(body.p_coupon_codes) ? body.p_coupon_codes : [],
     };
+
+    // Tanı / güvenlik: RPC'den önce ürünlerin bu tenant'a ait olduğunu doğrula.
+    const requestedProductIds = [
+      ...new Set(
+        items
+          .filter((item: any) => Number(item?.quantity || 0) > 0)
+          .map((item: any) => String(item?.productId ?? ""))
+          .filter(Boolean),
+      ),
+    ];
+
+    if (!requestedProductIds.length) {
+      return json({ ok: false, error: "Siparişte geçerli ürün bulunmuyor." }, 400);
+    }
+
+    const { data: matchedProducts, error: productCheckError } = await tenant
+      .from("products")
+      .select("id,business_id,active")
+      .eq("business_id", business.business_id)
+      .eq("active", true)
+      .in("id", requestedProductIds);
+
+    if (productCheckError) {
+      console.error("Sipariş ürün doğrulama hatası:", productCheckError);
+      return json({ ok: false, error: "Ürünler doğrulanamadı." }, 500);
+    }
+
+    const matchedIds = new Set(
+      (matchedProducts || []).map((product: any) => String(product.id)),
+    );
+
+    const invalidProductIds =
+      requestedProductIds.filter((id) => !matchedIds.has(id));
+
+    if (invalidProductIds.length) {
+      console.error("Tenant ürün uyuşmazlığı:", {
+        business_id: business.business_id,
+        slug: business.slug,
+        requestedProductIds,
+        invalidProductIds,
+      });
+
+      return json({
+        ok: false,
+        error:
+          "Sepetteki ürün bilgileri güncel değil. Sepeti temizleyip ürünleri yeniden ekleyin.",
+      }, 409);
+    }
 
     const { data: orderResult, error: orderError } = await tenant.rpc(
       "create_pending_whatsapp_order_with_coupons",
