@@ -1778,26 +1778,96 @@ function subscribeAdminRealtime(){
   const businessFilter=`business_id=eq.${currentBusinessId}`;
   adminRealtimeChannel = supabaseClient
     .channel(`admin-live-${currentBusinessId}`)
-    .on("postgres_changes",{event:"*",schema:"public",table:"products",filter:businessFilter},()=>loadAdminProducts())
-    .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},()=>loadAdminProducts())
-    .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},()=>loadAdminOrders())
-    .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},()=>loadAdminNotifications())
-    .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},()=>loadAdminSettings())
-    .subscribe();
+    .on("postgres_changes",{event:"*",schema:"public",table:"products",filter:businessFilter},async()=>{await loadAdminProducts();loadDashboard();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},async()=>{await loadAdminProducts();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},async()=>{await loadAdminOrders();loadDashboard();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
+    .subscribe(status=>{
+      console.log("Admin Realtime bağlantısı:",status);
+      if(status==="SUBSCRIBED")refreshAdminLiveData(true);
+    });
 }
 
-setInterval(()=>{
+/*
+ * ============================================================
+ * ADMIN CANLI SENKRONİZASYON
+ * ============================================================
+ * Realtime ana mekanizmadır.
+ * 4 saniyelik sessiz fallback, websocket kısa süreli koparsa ekranı
+ * güncel tutar. Kullanıcı form/input yazarken mevcut alanları bozmaz.
+ */
+let adminLiveSyncRunning=false;
+
+function adminIsTyping(){
   const active=document.activeElement;
-  const typingWhatsappCode=active && active.matches && active.matches('input[id^="wa-code-"]');
-  if(!document.hidden&&navigator.onLine&&!typingWhatsappCode){loadAdminOrders();}
-},5000);
+  if(!active)return false;
+
+  if(
+    active.matches?.('input[id^="wa-code-"]') ||
+    active.matches?.('input,textarea,select')
+  ){
+    return true;
+  }
+
+  return false;
+}
+
+async function refreshAdminLiveData(force=false){
+  if(
+    adminLiveSyncRunning ||
+    !currentBusinessId ||
+    document.hidden ||
+    !navigator.onLine
+  )return;
+
+  // Kullanıcı bir form üzerinde yazarken fallback refresh yapma.
+  // Realtime eventleri yine çalışmaya devam eder.
+  if(!force && adminIsTyping())return;
+
+  adminLiveSyncRunning=true;
+
+  try{
+    await Promise.allSettled([
+      loadAdminProducts(),
+      loadAdminOrders(),
+      loadAdminNotifications(),
+      loadAdminSettings(),
+      loadSupportTickets(),
+      loadPlatformBusiness()
+    ]);
+    loadDashboard();
+  }finally{
+    adminLiveSyncRunning=false;
+  }
+}
+
+const adminLiveSyncTimer=setInterval(()=>{
+  refreshAdminLiveData(false);
+},4000);
 
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
-  if(!session){document.getElementById("loginPage").classList.remove("hidden");document.getElementById("app").classList.add("hidden");}
+  if(!session){
+    document.getElementById("loginPage").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+  }
 });
+
 document.addEventListener("visibilitychange",()=>{
-  if(!document.hidden && currentBusinessId)loadSupportTickets();
+  if(!document.hidden && currentBusinessId){
+    // Telefon başka uygulamadan / kilit ekranından dönünce her şeyi tazele.
+    refreshAdminLiveData(true);
+  }
 });
+
+window.addEventListener("online",()=>{
+  refreshAdminLiveData(true);
+});
+
+window.addEventListener("focus",()=>{
+  if(currentBusinessId)refreshAdminLiveData(false);
+});
+
 checkSession();
 
 
