@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- UNIVERSAL ECOMMERCE V3 CUSTOMER UI
 <!-- CANONICAL CUSTOMER APP: edit this root file only. Tenant copies are generated automatically. -->
 
 <html lang="tr">
@@ -1850,6 +1849,118 @@
             }
         }
 
+
+/* ===== Universal E-Commerce Customer UI Upgrade ===== */
+body {
+    background:#f7f7f7;
+}
+
+.container {
+    max-width:none !important;
+    width:100% !important;
+    padding:16px 24px !important;
+}
+
+#orderItemsCard {
+    width:100%;
+}
+
+#productList {
+    display:grid;
+    grid-template-columns:repeat(6,minmax(180px,1fr));
+    gap:16px;
+}
+
+#productList .product {
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    background:#fff;
+    border:1px solid #e8e8e8;
+    border-radius:16px;
+    padding:12px;
+    min-height:360px;
+    box-shadow:0 4px 14px rgba(0,0,0,.06);
+    position:relative;
+}
+
+#productList .product-main {
+    display:block;
+}
+
+#productList .product-main-image,
+#productList .product-no-image {
+    width:100%;
+    height:220px;
+    max-width:none;
+    border-radius:12px;
+}
+
+.favorite-button {
+    position:absolute;
+    right:12px;
+    top:12px;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:0;
+    background:white;
+    box-shadow:0 3px 10px #0002;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.product-add-button {
+    background:#ff6b00 !important;
+    border-radius:12px !important;
+}
+
+.customer-toast {
+    position:fixed;
+    right:24px;
+    bottom:24px;
+    z-index:20000;
+    background:white;
+    padding:16px 22px;
+    border-radius:14px;
+    box-shadow:0 10px 35px rgba(0,0,0,.18);
+    display:flex;
+    gap:10px;
+    align-items:center;
+    font-weight:700;
+    animation:toastIn .25s ease;
+}
+
+.customer-toast.success:before {
+    content:"✓";
+    background:#16a34a;
+    color:#fff;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+@keyframes toastIn {
+ from {transform:translateY(30px);opacity:0}
+ to {transform:translateY(0);opacity:1}
+}
+
+.coupon-page-header,
+.cart-page-header {
+    max-width:none !important;
+}
+
+@media(max-width:1200px){
+ #productList{grid-template-columns:repeat(4,1fr);}
+}
+@media(max-width:700px){
+ #productList{grid-template-columns:repeat(2,1fr);}
+ .container{padding:10px !important;}
+}
+
 </style>
 
 </head>
@@ -2772,7 +2883,58 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+/* ===== UI fixes ===== */
+(function(){
+    window.showCustomerToast = function(message){
+        let old=document.querySelector(".customer-toast");
+        if(old) old.remove();
+
+        const toast=document.createElement("div");
+        toast.className="customer-toast success";
+        toast.textContent=message;
+        document.body.appendChild(toast);
+
+        setTimeout(()=>toast.remove(),3000);
+    };
+
+    window.addEventListener("click",function(e){
+        const btn=e.target.closest(".product-add-button");
+        if(btn){
+            setTimeout(()=>{
+                showCustomerToast("Sepete başarılı bir şekilde eklendi");
+            },100);
+        }
+    });
+
+    /* İndirim ekranından geri dönüşte boş sayfa problemini düzelt */
+    window.fixedCloseCouponPages = function(){
+        document.getElementById("couponAddPage")?.classList.add("hidden");
+        document.getElementById("couponListPage")?.classList.add("hidden");
+
+        document.getElementById("cartPage")?.classList.add("hidden");
+        document.body.classList.remove("cart-page-open");
+
+        const orderPage=document.getElementById("orderPage");
+        if(orderPage){
+            orderPage.classList.remove("hidden");
+        }
+
+        const orderItems=document.getElementById("orderItemsCard");
+        if(orderItems){
+            orderItems.classList.remove("hidden");
+        }
+
+        window.scrollTo(0,0);
+    };
+
+    const oldClose=window.closeCouponPages;
+    window.closeCouponPages=function(){
+        fixedCloseCouponPages();
+    };
+})();
+
+</script>
 <script src="supabase-config.js"></script>
 <script src="platform-config.js"></script>
 <script>
