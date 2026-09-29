@@ -3787,8 +3787,9 @@ body{
                     image.decoding = "async";
                     image.title = "Tüm fotoğrafları görüntüle";
 
-                    image.onclick = () => {
-                        openProductGallery(product.id);
+                    image.onclick = (event) => {
+                        event.stopPropagation();
+                        openProductDetail(product.id);
                     };
 
                     left.appendChild(image);
@@ -4070,7 +4071,7 @@ body{
         updateProductAddButton(productId);
     }
 
-    function addProductToCart(productId) {
+    function addProductToCart(productId, variantId = null) {
         const product = products.find(
             p => String(p.id) === String(productId)
         );
@@ -4078,15 +4079,32 @@ body{
         if (!product) return;
 
         let item = order.items.find(
-            x => String(x.productId) === String(productId)
+            x =>
+                String(x.productId) === String(productId) &&
+                String(x.variantId || "") === String(variantId || "")
         );
 
         if (!item) {
+            const variant = (product.variants || [])
+                .find(v => String(v.id) === String(variantId));
+
             item = {
                 productId: product.id,
+                variantId: variantId,
+                variantName: variant?.variant_name || null,
+                price: Number(variant?.price ?? product.price ?? 0),
                 quantity: 0
             };
             order.items.push(item);
+        }
+
+        if (!item.price) {
+            const variant = (product.variants || [])
+                .find(v => String(v.id) === String(variantId));
+
+            item.price = Number(variant?.price ?? product.price ?? 0);
+            item.variantName = variant?.variant_name || null;
+            item.variantId = variantId;
         }
 
         item.quantity += 1;
@@ -4170,7 +4188,7 @@ body{
                 : `<div class="cart-product-no-image">📷</div>`;
 
             const lineTotal =
-                Number(product.price || 0) *
+                Number(item.price ?? product.price ?? 0) *
                 Number(item.quantity || 0);
 
             return `
@@ -7065,6 +7083,7 @@ function openProductDetail(productId){
 
 function closeProductDetail(){
  document.getElementById("productDetailModal").classList.add("hidden");
+ document.getElementById("productGalleryModal")?.classList.add("hidden");
  detailProduct=null;
  detailSelectedVariant=null;
 }
