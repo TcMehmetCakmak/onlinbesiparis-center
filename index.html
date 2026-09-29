@@ -3677,7 +3677,7 @@ body{
         try {
             const productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,active,created_at,business_id")
+                .select("id,name,icon,price,active,created_at,business_id,product_type")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -3692,6 +3692,27 @@ body{
                 .order("created_at", { ascending: true });
 
             if (imageResult.error) throw imageResult.error;
+
+            const variantResult = await supabaseClient
+                .from("product_variants")
+                .select("id,product_id,variant_name,price")
+                .in(
+                    "product_id",
+                    (productResult.data || []).map(p => p.id)
+                )
+                .order("variant_name");
+
+            if (variantResult.error) throw variantResult.error;
+
+            const variantsByProduct = new Map();
+
+            (variantResult.data || []).forEach(v => {
+                const key = String(v.product_id);
+                if (!variantsByProduct.has(key)) {
+                    variantsByProduct.set(key, []);
+                }
+                variantsByProduct.get(key).push(v);
+            });
 
             const imagesByProduct = new Map();
 
@@ -3708,7 +3729,8 @@ body{
             products = (Array.isArray(productResult.data) ? productResult.data : [])
                 .map(product => ({
                     ...product,
-                    images: imagesByProduct.get(String(product.id)) || []
+                    images: imagesByProduct.get(String(product.id)) || [],
+                    variants: variantsByProduct.get(String(product.id)) || []
                 }));
 
             renderProducts();
@@ -3780,8 +3802,9 @@ body{
 
                 const price = document.createElement("div");
                 price.className = "price";
-                price.textContent =
-                    `${Number(product.price).toLocaleString("tr-TR")} TL`;
+                price.textContent = product.product_type === "SIZE"
+                    ? `${Math.min(...product.variants.map(v => Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
+                    : `${Number(product.price).toLocaleString("tr-TR")} TL`;
 
                 info.appendChild(name);
                 info.appendChild(price);
@@ -7005,6 +7028,16 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    document.getElementById('couponListPage')?.classList.add('hidden');
  };
 })();
+</script>
+
+<script>
+function getProductPrice(product, variantId=null){
+    if(product && product.product_type==="SIZE" && variantId){
+        const v=(product.variants||[]).find(x=>String(x.id)===String(variantId));
+        return Number(v?.price||0);
+    }
+    return Number(product?.price||0);
+}
 </script>
 </body>
 
