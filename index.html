@@ -2268,7 +2268,36 @@ body{
 .detail-gallery-v15 button{position:absolute;top:45%;border:0;background:#fff;border-radius:50%;font-size:28px;width:40px;height:40px;}
 .detail-gallery-v15 button:first-of-type{left:5px;}
 .detail-gallery-v15 button:last-of-type{right:5px;}
-</style></head>
+</style>
+<style id="mobile-product-card-compact-v16">
+@media (max-width:768px){
+  .product-card,
+  .product-item,
+  .product{
+      padding:10px !important;
+  }
+
+  .product-card .product-price,
+  .product-item .product-price,
+  .product .product-price{
+      margin-top:4px !important;
+      margin-bottom:8px !important;
+  }
+
+  .product-card button,
+  .product-item button,
+  .product button{
+      margin-top:4px !important;
+  }
+
+  .product-card .product-info,
+  .product-item .product-info,
+  .product .product-info{
+      gap:6px !important;
+  }
+}
+</style>
+</head>
 
 <body>
 
