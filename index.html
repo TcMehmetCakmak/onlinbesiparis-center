@@ -3164,29 +3164,38 @@ body{
         }
     });
 
-    /* İndirim ekranından geri dönüşte boş sayfa problemini düzelt */
+    /* İndirim ekranından geri dönüş düzeltmesi */
     window.fixedCloseCouponPages = function(){
+        // Kupon ekranlarını kapat
         document.getElementById("couponAddPage")?.classList.add("hidden");
         document.getElementById("couponListPage")?.classList.add("hidden");
 
-        document.getElementById("cartPage")?.classList.add("hidden");
-        document.body.classList.remove("cart-page-open");
+        // Geri dönülecek doğru ekran: Sepet
+        const cartPage = document.getElementById("cartPage");
 
-        const orderPage=document.getElementById("orderPage");
-        if(orderPage){
-            orderPage.classList.remove("hidden");
+        if (cartPage) {
+            cartPage.classList.remove("hidden");
+            cartPage.scrollTop = 0;
+
+            // Sepet tam ekran olduğu için body kilidini tekrar aktif et
+            document.body.classList.add("cart-page-open");
+
+            // Sepet içeriğini ve indirim toplamını güncelle
+            renderCartProducts();
+            calculateTotal();
+            updateCartUi();
+        } else {
+            // Herhangi bir nedenle sepet DOM'da yoksa ana sipariş ekranına dön
+            document.getElementById("orderPage")?.classList.remove("hidden");
+            document.getElementById("orderItemsCard")?.classList.remove("hidden");
+            document.body.classList.remove("cart-page-open");
         }
 
-        const orderItems=document.getElementById("orderItemsCard");
-        if(orderItems){
-            orderItems.classList.remove("hidden");
-        }
-
-        window.scrollTo(0,0);
+        window.scrollTo(0, 0);
     };
 
-    const oldClose=window.closeCouponPages;
-    window.closeCouponPages=function(){
+    // Mevcut closeCouponPages çağrılarını güvenli şekilde düzelt
+    window.closeCouponPages = function(){
         fixedCloseCouponPages();
     };
 })();
@@ -4258,17 +4267,7 @@ body{
     }
 
     function hideMainPagesForCoupon() {
-        // orderPage cartPage'in parent'ı olduğu için gizlenmez.
-        // Sadece açık ekranlar ve kupon ekranları kontrol edilir.
-        [
-            "summaryPage",
-            "locationPage",
-            "reviewPage",
-            "notificationPage",
-            "couponAddPage",
-            "couponListPage",
-            "cartPage"
-        ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+        ["orderPage","summaryPage","locationPage","reviewPage","notificationPage","couponAddPage","couponListPage","cartPage"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
     }
 
     let couponPreviousPage = "cartPage";
