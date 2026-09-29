@@ -7194,8 +7194,9 @@ function openCouponModalReal(type){
    `;
    if(typeof renderAppliedCoupons==="function"){
       renderAppliedCoupons();
-      const old=document.getElementById("couponList");
-      if(old) document.getElementById("realCouponList").innerHTML=old.innerHTML;
+      const source=document.getElementById("appliedCouponList");
+      const target=document.getElementById("realCouponList");
+      if(source && target) target.innerHTML=source.innerHTML;
    }
  }
  modal.classList.remove("hidden");
