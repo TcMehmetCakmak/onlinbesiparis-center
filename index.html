@@ -2239,6 +2239,21 @@ body{
  padding:12px;border:1px solid #ddd;border-radius:12px;margin:8px 0;
 }
 </style>
+
+<style>
+.coupon-modal-v12{
+ position:fixed;inset:0;background:#0008;z-index:50000;
+ display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.coupon-modal-v12.hidden{display:none!important;}
+.coupon-modal-card-v12{
+ background:#fff;border-radius:20px;padding:20px;
+ width:min(420px,100%);max-height:90vh;overflow:auto;
+}
+.coupon-close-v12{
+ float:right;border:0;background:none;font-size:28px;cursor:pointer;
+}
+</style>
 </head>
 
 <body>
@@ -7095,6 +7110,49 @@ function closeProductDetail(){
  document.getElementById("productGalleryModal")?.classList.add("hidden");
  detailProduct=null;
  detailSelectedVariant=null;
+}
+</script>
+
+<div id="couponModalV12" class="coupon-modal-v12 hidden">
+ <div class="coupon-modal-card-v12">
+   <button class="coupon-close-v12" onclick="closeCouponModalV12()">×</button>
+   <h2 id="couponModalTitleV12">İndirim Kodu</h2>
+   <div id="couponModalContentV12"></div>
+ </div>
+</div>
+
+<script>
+function openCouponModalV12(type){
+ const modal=document.getElementById("couponModalV12");
+ const title=document.getElementById("couponModalTitleV12");
+ const content=document.getElementById("couponModalContentV12");
+
+ if(type==="add"){
+   title.textContent="İndirim Kodu Ekle";
+   content.innerHTML=`
+    <input id="couponCodeInputV12" placeholder="İndirim kodu"
+     style="width:100%;padding:12px;margin:10px 0">
+    <button onclick="applyCouponV12()">Uygula</button>`;
+ }else{
+   title.textContent="İndirim Kodu Listesi";
+   content.innerHTML=`
+    <div id="couponListV12">Kuponlar yükleniyor...</div>`;
+ }
+ modal.classList.remove("hidden");
+}
+
+function closeCouponModalV12(){
+ document.getElementById("couponModalV12").classList.add("hidden");
+}
+
+function applyCouponV12(){
+ const input=document.getElementById("couponCodeInputV12");
+ if(input && input.value){
+   if(typeof applyCoupon==="function"){
+      applyCoupon(input.value);
+   }
+ }
+ closeCouponModalV12();
 }
 </script>
 </body>
