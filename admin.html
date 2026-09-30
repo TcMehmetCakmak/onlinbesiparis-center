@@ -1711,11 +1711,16 @@ function renderOrders(){
       const visual=imageUrl
         ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
+      const variantText = i.variantName || i.variant_name || i.size || i.beden || i.variant || "";
+      const itemPrice = Number(i.lineTotal || 0) > 0
+        ? Number(i.lineTotal)
+        : Number(i.variantPrice || i.variant_price || i.unitPrice || i.price || 0) * Number(i.quantity || 1);
+
       return `<div style="display:flex;align-items:center;gap:10px;margin:8px 0">
         ${visual}
         <div>
-          <div><strong>${escapeHtml(i.name)}</strong> × ${i.quantity}</div>
-          <div class="muted">${money(i.lineTotal)}</div>
+          <div><strong>${escapeHtml(i.name || "Ürün")}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong> × ${i.quantity}</div>
+          <div class="muted">${money(itemPrice)}</div>
         </div>
       </div>`;
     }).join("");
