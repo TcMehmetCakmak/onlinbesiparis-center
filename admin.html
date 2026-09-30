@@ -655,7 +655,7 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     const productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,product_type,active,created_at,business_id")
+      .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error)throw productResult.error;
@@ -674,9 +674,24 @@ async function loadAdminProducts(){
       imagesByProduct.get(key).push(img);
     });
 
+    const variantResult = await supabaseClient
+      .from("product_variants")
+      .select("id,product_id,variant_name,price")
+      .in("product_id", (productResult.data||[]).map(p=>p.id));
+
+    if(variantResult.error) throw variantResult.error;
+
+    const variantsByProduct = new Map();
+    (variantResult.data||[]).forEach(v=>{
+      const key=String(v.product_id);
+      if(!variantsByProduct.has(key)) variantsByProduct.set(key,[]);
+      variantsByProduct.get(key).push(v);
+    });
+
     products=(productResult.data||[]).map(p=>({
       ...p,
-      images:imagesByProduct.get(String(p.id))||[]
+      images:imagesByProduct.get(String(p.id))||[],
+      variants:variantsByProduct.get(String(p.id))||[]
     }));
 
     renderProducts();
@@ -1178,8 +1193,9 @@ function openProductModal(p=null){
 
   document.getElementById("productId").value=p?.id||"";
   document.getElementById("productName").value=p?.name||"";
-  document.getElementById("productPrice").value=p?.price??"";
-  document.getElementById("productDetail").value=p?.detail||"";
+  document.getElementById("productPrice").value =
+    p?.product_type === "SIZE" ? "" : (p?.price ?? "");
+  document.getElementById("productDetail").value=p?.detail || "";
 
   // Düzenle ekranında ürün tipi ve varyantları geri yükle
   const productTypeEl = document.getElementById("productType");
@@ -1215,8 +1231,42 @@ function closeProductModal(force=false){
   document.getElementById("productModal").classList.add("hidden");
 }
 
-function editProduct(id){
-  openProductModal(products.find(p=>String(p.id)===String(id)));
+async function editProduct(id){
+  let product = products.find(p=>String(p.id)===String(id));
+
+  if(!product){
+    toast("Ürün bulunamadı");
+    return;
+  }
+
+  // Düzenleme için detay ve varyantları tekrar garanti çek
+  const {data:detailProduct,error:detailError}=await supabaseClient
+    .from("products")
+    .select("id,name,icon,price,detail,product_type,active,business_id")
+    .eq("id",id)
+    .maybeSingle();
+
+  if(detailError){
+    console.error(detailError);
+  }
+
+  const {data:variants,error:variantError}=await supabaseClient
+    .from("product_variants")
+    .select("id,product_id,variant_name,price")
+    .eq("product_id",id)
+    .order("created_at",{ascending:true});
+
+  if(variantError){
+    console.error(variantError);
+  }
+
+  product = {
+    ...product,
+    ...(detailProduct||{}),
+    variants: variants || product.variants || []
+  };
+
+  openProductModal(product);
 }
 
 function handleProductImageSelection(fileList){
@@ -1524,7 +1574,7 @@ async function saveProduct(){
         .update(payload)
         .eq("id",id)
         .eq("business_id",currentBusinessId)
-        .select("id,name,icon,price,product_type,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
@@ -1532,7 +1582,7 @@ async function saveProduct(){
       const newId=crypto.randomUUID();
       const {data,error}=await supabaseClient.from("products")
         .insert({...payload,id:newId,business_id:currentBusinessId})
-        .select("id,name,icon,price,product_type,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
