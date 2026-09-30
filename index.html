@@ -7391,7 +7391,28 @@ function openProductDetail(productId){
  document.getElementById("detailProductName").textContent=product.name;
  document.getElementById("detailProductText").textContent=product.detail || "";
 
- detailGalleryImages = (product.images || []).length ? product.images : [];
+ // Ürün modalı açılırken ilk gösterilecek foto ana foto olsun
+ const galleryImages = Array.isArray(product.images) ? [...product.images] : [];
+
+ const mainImage = product.main_image || product.mainImage || product.image_url || product.image;
+
+ if(mainImage){
+   const mainExists = galleryImages.some(x =>
+     (x.url || x.storage_path || x) === mainImage
+   );
+
+   if(!mainExists){
+     galleryImages.unshift({ url: mainImage });
+   } else {
+     galleryImages.sort((a,b)=>{
+       const aUrl = a.url || a.storage_path || a;
+       const bUrl = b.url || b.storage_path || b;
+       return aUrl === mainImage ? -1 : bUrl === mainImage ? 1 : 0;
+     });
+   }
+ }
+
+ detailGalleryImages = galleryImages;
  detailGalleryIndex = 0;
  renderDetailGalleryV15();
 
