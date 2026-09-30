@@ -2629,8 +2629,18 @@ body{
 
             <div class="order-heading-row">
                 <h2>Ürünler</h2>
+            </div>
 
-
+            <div style="margin:0 0 16px">
+                <input
+                    id="productSearchInput"
+                    type="search"
+                    placeholder="🔎 Ürün adına göre ara..."
+                    autocomplete="off"
+                    aria-label="Ürün adına göre ara"
+                    oninput="renderProducts()"
+                    style="width:100%;margin:0;padding:13px 15px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:15px"
+                >
             </div>
 
             <div id="productList">
@@ -4041,10 +4051,30 @@ body{
 
     function renderProducts() {
         const list = document.getElementById("productList");
+        const searchInput = document.getElementById("productSearchInput");
+        const searchText = String(searchInput?.value || "")
+            .trim()
+            .toLocaleLowerCase("tr-TR");
+
         list.innerHTML = "";
 
-        products
+        const visibleProducts = products
             .filter(product => product.active !== false)
+            .filter(product => {
+                if (!searchText) return true;
+
+                return String(product.name || "")
+                    .toLocaleLowerCase("tr-TR")
+                    .includes(searchText);
+            });
+
+        if (!visibleProducts.length) {
+            list.innerHTML = searchText
+                ? '<div class="small" style="grid-column:1/-1;padding:24px 10px">Aramanızla eşleşen ürün bulunamadı.</div>'
+                : '<div class="small" style="grid-column:1/-1;padding:24px 10px">Henüz ürün bulunmuyor.</div>';
+        }
+
+        visibleProducts
             .forEach(product => {
                 const row = document.createElement("div");
                 row.className = "product";
