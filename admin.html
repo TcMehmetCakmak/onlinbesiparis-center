@@ -1180,11 +1180,29 @@ function openProductModal(p=null){
   document.getElementById("productName").value=p?.name||"";
   document.getElementById("productPrice").value=p?.price??"";
   document.getElementById("productDetail").value=p?.detail||"";
+
+  // Düzenle ekranında ürün tipi ve varyantları geri yükle
+  const productTypeEl = document.getElementById("productType");
+  if(productTypeEl){
+    productTypeEl.value = p?.product_type || "";
+  }
+
+  if(typeof productVariantsDraft !== "undefined"){
+    productVariantsDraft = Array.isArray(p?.variants)
+      ? p.variants.map(v=>({
+          variant_name: v.variant_name || v.name || "",
+          price: v.price ?? ""
+        }))
+      : [];
+    renderProductVariantRows();
+  }
+
   document.getElementById("productActive").checked=p?.active!==false;
   document.getElementById("productImageFiles").value="";
   document.getElementById("modalTitle").textContent=p?"Ürünü Düzenle":"Yeni Ürün";
   setProductGalleryStatus("");
   renderProductImageEditor();
+  toggleProductVariantFields();
   document.getElementById("productModal").classList.remove("hidden");
 }
 
