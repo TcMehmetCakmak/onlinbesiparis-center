@@ -2627,11 +2627,9 @@ body{
 
         <div id="orderItemsCard" class="card hidden">
 
-            <div class="order-heading-row">
-                <h2>Ürünler</h2>
-            </div>
+            <div class="order-heading-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <h2 style="margin:0">Ürünler</h2>
 
-            <div style="margin:0 0 16px">
                 <input
                     id="productSearchInput"
                     type="search"
@@ -2639,7 +2637,7 @@ body{
                     autocomplete="off"
                     aria-label="Ürün adına göre ara"
                     oninput="renderProducts()"
-                    style="width:100%;margin:0;padding:13px 15px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:15px"
+                    style="width:220px;max-width:58vw;margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                 >
             </div>
 
