@@ -7377,6 +7377,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <p id="detailProductText"></p>
    <div id="detailVariants"></div>
    <div id="detailPrice"></div>
+   <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
    <div id="productReviewAreaV28"></div>
    <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
    <button onclick="closeProductDetail()" class="product-add-button">Kapat</button>
@@ -7398,6 +7399,7 @@ function openProductDetail(productId){
 
  document.getElementById("detailProductName").textContent=product.name;
  document.getElementById("detailProductText").textContent=product.detail || "";
+ document.getElementById("detailProductDetail").textContent=product.detail || "";
 
  // Ürün modalı açılırken ilk gösterilecek foto ana foto olsun
  const galleryImages = Array.isArray(product.images) ? [...product.images] : [];
