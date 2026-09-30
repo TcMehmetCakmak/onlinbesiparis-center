@@ -2476,7 +2476,11 @@ body{
 .product-card-rating-v29{color:#f5a623;font-size:14px;margin-top:6px;font-weight:700;}
 .product-review-write-btn-v29{background:#1f7a4d;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:10px;}
 </style>
-</head>
+<style id="product-review-v30-css">
+.product-review-stars-v27 button.active,
+.product-review-stars-v27 button.selected{color:#f5a623}
+#productReviewSendButtonV30:disabled{opacity:.5;cursor:not-allowed}
+</style></head>
 
 <body>
 
@@ -7608,35 +7612,71 @@ document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
 })();
 </script>
 
-<script id="productReviewV27">
-let selectedProductRatingV27 = 0;
+<script id="productReviewV30">
+let selectedProductRatingV30 = 0;
 
-function setProductRatingV27(rate){
-    selectedProductRatingV27 = rate;
+function setProductRatingV30(rate){
+    selectedProductRatingV30 = rate;
+
     document.querySelectorAll(".product-review-stars-v27 button")
-        .forEach((b,i)=>b.classList.toggle("active", i < rate));
+        .forEach((b,i)=>{
+            b.classList.toggle("active", i < rate);
+            b.classList.toggle("selected", i < rate);
+        });
+
+    const btn = document.getElementById("productReviewSendButtonV30");
+    if(btn){
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
+    }
 }
 
-function saveProductReviewV27(productId){
-    const comment = document.getElementById("productReviewTextV27")?.value || "";
+async function saveProductReviewV30(productId){
 
-    if(!selectedProductRatingV27){
-        alert("Lütfen yıldız verin");
+    const comment =
+        document.getElementById("productReviewTextV27")?.value?.trim() || "";
+
+    if(!selectedProductRatingV30){
+        alert("Lütfen yıldız seçin");
         return;
     }
 
-    const reviews = JSON.parse(localStorage.getItem("product_reviews") || "[]");
+    if(!currentBusinessId){
+        alert("İşletme bilgisi bulunamadı");
+        return;
+    }
 
-    reviews.push({
-        productId,
-        rating:selectedProductRatingV27,
-        comment,
-        date:new Date().toISOString()
-    });
+    const payload = {
+        business_id: currentBusinessId,
+        product_id: productId,
+        rating: selectedProductRatingV30,
+        comment: comment.substring(0,500)
+    };
 
-    localStorage.setItem("product_reviews", JSON.stringify(reviews));
+    const { error } = await supabaseClient
+        .from("product_reviews")
+        .insert(payload);
 
-    alert("Ürün yorumunuz eklendi");
+    if(error){
+        console.error(error);
+        alert("Ürün yorumu kaydedilemedi: " + error.message);
+        return;
+    }
+
+    alert("Ürün yorumunuz kaydedildi");
+
+    selectedProductRatingV30 = 0;
+
+    const textarea=document.getElementById("productReviewTextV27");
+    if(textarea) textarea.value="";
+
+    document.querySelectorAll(".product-review-stars-v27 button")
+        .forEach(b=>b.classList.remove("active","selected"));
+
+    if(typeof loadProductReviews === "function"){
+        await loadProductReviews(productId);
+    }
 }
 </script>
 
@@ -7644,14 +7684,14 @@ function saveProductReviewV27(productId){
 <div class="product-review-box-v27">
 <h3>Ürün Yorumu</h3>
 <div class="product-review-stars-v27">
-<button onclick="setProductRatingV27(1)">★</button>
-<button onclick="setProductRatingV27(2)">★</button>
-<button onclick="setProductRatingV27(3)">★</button>
-<button onclick="setProductRatingV27(4)">★</button>
-<button onclick="setProductRatingV27(5)">★</button>
+<button onclick="setProductRatingV30(1)">★</button>
+<button onclick="setProductRatingV30(2)">★</button>
+<button onclick="setProductRatingV30(3)">★</button>
+<button onclick="setProductRatingV30(4)">★</button>
+<button onclick="setProductRatingV30(5)">★</button>
 </div>
 <textarea id="productReviewTextV27" class="product-review-comment-v27" placeholder="Ürün hakkında yorumunuz"></textarea>
-<button class="main-button" onclick="saveProductReviewV27(currentProductId)">Yorumu Gönder</button>
+<button id="productReviewSendButtonV30" class="main-button" onclick="saveProductReviewV30(currentProductId)">Yorumu Gönder</button>
 </div>
 </div>
 
