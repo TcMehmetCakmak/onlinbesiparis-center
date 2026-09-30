@@ -3980,6 +3980,25 @@ body{
                     images: imagesByProduct.get(String(product.id)) || []
                 }));
 
+            const reviewResult = await supabaseClient
+                .from("product_reviews")
+                .select("product_id,rating")
+                .eq("business_id", currentBusinessId);
+
+            productReviewsCacheV32 = {};
+
+            if (!reviewResult.error) {
+                (reviewResult.data || []).forEach(review => {
+                    const key = String(review.product_id);
+
+                    if (!productReviewsCacheV32[key]) {
+                        productReviewsCacheV32[key] = [];
+                    }
+
+                    productReviewsCacheV32[key].push(review);
+                });
+            }
+
             renderProducts();
             calculateTotal();
 
@@ -4002,11 +4021,22 @@ body{
         return images.find(image => image.is_main) || images[0] || null;
     }
 
+    let productReviewsCacheV32 = {};
+
     function getProductAverageRatingV29(productId){
-        const reviews = getProductReviewsV28 ? getProductReviewsV28(productId) : [];
+        const reviews = productReviewsCacheV32[String(productId)] || [];
+
         if(!reviews.length) return null;
-        const avg = reviews.reduce((a,r)=>a+Number(r.rating||0),0)/reviews.length;
-        return { avg: avg.toFixed(1), count: reviews.length };
+
+        const avg = reviews.reduce(
+            (a,r)=>a + Number(r.rating || 0),
+            0
+        ) / reviews.length;
+
+        return {
+            avg: avg.toFixed(1),
+            count: reviews.length
+        };
     }
 
     function renderProducts() {
