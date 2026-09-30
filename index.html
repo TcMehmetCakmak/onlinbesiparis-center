@@ -4104,6 +4104,21 @@ body{
                 info.appendChild(price);
 
                 if(product.detail){
+                    const detail = document.createElement("div");
+                    detail.className = "product-detail-short";
+                    detail.style.marginTop = "8px";
+                    detail.style.fontSize = "13px";
+                    detail.style.color = "#555";
+                    detail.style.lineHeight = "1.4";
+                    detail.style.display = "-webkit-box";
+                    detail.style.webkitLineClamp = "3";
+                    detail.style.webkitBoxOrient = "vertical";
+                    detail.style.overflow = "hidden";
+                    detail.textContent = product.detail;
+                    info.appendChild(detail);
+                }
+
+                if(product.detail){
                     const detail=document.createElement("div");
                     detail.className="price";
                     detail.style.color="#555";
