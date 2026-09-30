@@ -4403,6 +4403,8 @@ body{
 
             item = {
                 productId: product.id,
+                name: product.name,
+                icon: product.icon || "🍽️",
                 variantId: variantId,
                 variantName: variant?.variant_name || null,
                 price: Number(variant?.price ?? product.price ?? 0),
@@ -6111,7 +6113,13 @@ body{
             p_latitude: order.latitude,
             p_longitude: order.longitude,
             p_google_maps_url: order.googleMapsUrl || "",
-            p_items: order.items.map(item => ({ productId: item.productId, quantity: Number(item.quantity) })).filter(item => item.quantity > 0),
+            p_items: order.items.map(item => ({
+                productId: item.productId,
+                variantId: item.variantId || null,
+                variantName: item.variantName || null,
+                price: Number(item.price || 0),
+                quantity: Number(item.quantity)
+            })).filter(item => item.quantity > 0),
             p_coupon_codes: order.couponCodes || []
         };
     }
