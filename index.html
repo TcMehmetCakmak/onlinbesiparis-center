@@ -4102,6 +4102,14 @@ body{
 
                 info.appendChild(name);
                 info.appendChild(price);
+
+                if(product.detail){
+                    const detail=document.createElement("div");
+                    detail.className="price";
+                    detail.style.color="#555";
+                    detail.textContent=product.detail;
+                    info.appendChild(detail);
+                }
                 left.appendChild(info);
 
                 const addButton = document.createElement("button");

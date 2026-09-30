@@ -331,6 +331,12 @@ body.modal-open{
 
     <label>Fiyat (TL)</label>
     <input id="productPrice" type="number" min="0" step="0.01" placeholder="150">
+
+    <label>Ürün Detayı</label>
+    <textarea id="productDetail" maxlength="2000"
+      style="width:100%;min-height:100px;padding:12px;border:1px solid #ddd;border-radius:10px"
+      placeholder="Ürün açıklaması, kumaş bilgisi, kullanım bilgisi vb."></textarea>
+
 <label>Ürün Tipi</label>
 <select id="productType" onchange="toggleProductVariantFields()">
   <option value="">Normal Ürün</option>
@@ -1173,6 +1179,7 @@ function openProductModal(p=null){
   document.getElementById("productId").value=p?.id||"";
   document.getElementById("productName").value=p?.name||"";
   document.getElementById("productPrice").value=p?.price??"";
+  document.getElementById("productDetail").value=p?.detail||"";
   document.getElementById("productActive").checked=p?.active!==false;
   document.getElementById("productImageFiles").value="";
   document.getElementById("modalTitle").textContent=p?"Ürünü Düzenle":"Yeni Ürün";
@@ -1456,6 +1463,7 @@ async function saveProduct(){
     name:document.getElementById("productName").value.trim(),
     icon:"🍽️",
     price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
+    detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
     active:document.getElementById("productActive").checked
   };
