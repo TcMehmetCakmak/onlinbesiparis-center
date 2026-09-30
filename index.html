@@ -2471,6 +2471,11 @@ body{
  color:#777;
 }
 </style>
+
+<style id="product-rating-v29-css">
+.product-card-rating-v29{color:#f5a623;font-size:14px;margin-top:6px;font-weight:700;}
+.product-review-write-btn-v29{background:#1f7a4d;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:10px;}
+</style>
 </head>
 
 <body>
@@ -3993,6 +3998,13 @@ body{
         return images.find(image => image.is_main) || images[0] || null;
     }
 
+    function getProductAverageRatingV29(productId){
+        const reviews = getProductReviewsV28 ? getProductReviewsV28(productId) : [];
+        if(!reviews.length) return null;
+        const avg = reviews.reduce((a,r)=>a+Number(r.rating||0),0)/reviews.length;
+        return { avg: avg.toFixed(1), count: reviews.length };
+    }
+
     function renderProducts() {
         const list = document.getElementById("productList");
         list.innerHTML = "";
@@ -4045,6 +4057,14 @@ body{
                 price.textContent = product.product_type === "SIZE" && product.variants?.length
                     ? `${Math.min(...product.variants.map(v=>Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
                     : `${Number(product.price).toLocaleString("tr-TR")} TL`;
+
+                const rating = getProductAverageRatingV29(product.id);
+                if(rating){
+                    const star = document.createElement("div");
+                    star.className = "product-card-rating-v29";
+                    star.textContent = `★★★★★ ${rating.avg} (${rating.count})`;
+                    info.appendChild(star);
+                }
 
                 info.appendChild(name);
                 info.appendChild(price);
@@ -7692,6 +7712,10 @@ function saveProductReviewV28(productId){
  renderProductReviewsV28(productId);
  alert("Ürün yorumunuz eklendi.");
 }
+</script>
+<script id="product-rating-refresh-v29">
+// Ürün yorumundan sonra liste yıldızlarını yenile
+const oldSaveProductReviewV29 = window.saveProductReviewV28;
 </script>
 </body>
 
