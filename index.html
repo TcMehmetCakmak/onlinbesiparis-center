@@ -2400,6 +2400,37 @@ body{
     user-select:none;
 }
 </style>
+
+<style id="productReviewV27">
+.product-review-box-v27{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px solid #eee;
+}
+.product-review-stars-v27{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    margin:10px 0;
+}
+.product-review-stars-v27 button{
+    border:0;
+    background:none;
+    font-size:30px;
+    color:#ccc;
+    cursor:pointer;
+}
+.product-review-stars-v27 button.active{
+    color:#f5a623;
+}
+.product-review-comment-v27{
+    width:100%;
+    min-height:80px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:10px;
+}
+</style>
 </head>
 
 <body>
@@ -7513,6 +7544,54 @@ document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
     });
 })();
 </script>
+
+<script id="productReviewV27">
+let selectedProductRatingV27 = 0;
+
+function setProductRatingV27(rate){
+    selectedProductRatingV27 = rate;
+    document.querySelectorAll(".product-review-stars-v27 button")
+        .forEach((b,i)=>b.classList.toggle("active", i < rate));
+}
+
+function saveProductReviewV27(productId){
+    const comment = document.getElementById("productReviewTextV27")?.value || "";
+
+    if(!selectedProductRatingV27){
+        alert("Lütfen yıldız verin");
+        return;
+    }
+
+    const reviews = JSON.parse(localStorage.getItem("product_reviews") || "[]");
+
+    reviews.push({
+        productId,
+        rating:selectedProductRatingV27,
+        comment,
+        date:new Date().toISOString()
+    });
+
+    localStorage.setItem("product_reviews", JSON.stringify(reviews));
+
+    alert("Ürün yorumunuz eklendi");
+}
+</script>
+
+<div id="productReviewTemplateV27" style="display:none">
+<div class="product-review-box-v27">
+<h3>Ürün Yorumu</h3>
+<div class="product-review-stars-v27">
+<button onclick="setProductRatingV27(1)">★</button>
+<button onclick="setProductRatingV27(2)">★</button>
+<button onclick="setProductRatingV27(3)">★</button>
+<button onclick="setProductRatingV27(4)">★</button>
+<button onclick="setProductRatingV27(5)">★</button>
+</div>
+<textarea id="productReviewTextV27" class="product-review-comment-v27" placeholder="Ürün hakkında yorumunuz"></textarea>
+<button class="main-button" onclick="saveProductReviewV27(currentProductId)">Yorumu Gönder</button>
+</div>
+</div>
 </body>
+
 
 </html>
