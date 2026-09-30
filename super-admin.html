@@ -7,6 +7,44 @@
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
 </style>
+<style>
+/* =========================================================
+   SABİT MODAL KAPATMA (X) BUTONU
+   - Modal içeriği scroll olsa bile görünür kalır.
+   - Kapat/Vazgeç butonlarının yerine kullanılır.
+========================================================= */
+.modal-x-anchor{
+  position:sticky;
+  top:0;
+  z-index:99999;
+  height:0;
+  display:flex;
+  justify-content:flex-end;
+  pointer-events:none;
+}
+.modal-persistent-x{
+  pointer-events:auto;
+  width:40px;
+  height:40px;
+  min-width:40px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#222;
+  box-shadow:0 4px 16px rgba(0,0,0,.22);
+  font-size:28px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  transform:translate(4px,-4px);
+}
+.modal-persistent-x:hover{background:#f2f2f2}
+.modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
+</style>
 </head>
 <body>
 <div id="loginPage" class="login">
@@ -36,14 +74,14 @@
   <section id="supportTab" class="hidden"><div class="card"><div class="header"><div><h2>Destek Talepleri</h2><div class="muted">İşletme adminlerinin açtığı hata ve geliştirme talepleri.</div></div></div><div id="supportTicketList"></div></div></section>
 </div>
 
-<div id="createModal" class="modal hidden"><div class="modal-card"><div class="header"><h2>Yeni İşletme</h2><button class="btn btn-light" onclick="closeCreateBusiness()">✕</button></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Ahmet Çaçure"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Dürümcü"></div><div><label>Slug</label><input id="newSlug" placeholder="durumcu"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-light" onclick="closeCreateBusiness()">Vazgeç</button><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
+<div id="createModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCreateBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div><div class="header"><h2>Yeni İşletme</h2></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Ahmet Çaçure"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Dürümcü"></div><div><label>Slug</label><input id="newSlug" placeholder="durumcu"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
 
 
 <div id="editBusinessModal" class="modal hidden">
   <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeEditBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <div class="header">
       <h2>İşletmeyi Düzenle</h2>
-      <button class="btn btn-light" onclick="closeEditBusiness()">✕</button>
     </div>
     <input id="editBusinessId" type="hidden">
     <div class="form-grid">
@@ -60,13 +98,12 @@
       </div>
     </div>
     <div class="actions" style="justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-light" onclick="closeEditBusiness()">Vazgeç</button>
       <button class="btn btn-primary" onclick="saveBusinessEdit()">Kaydet</button>
     </div>
   </div>
 </div>
 
-<div id="tokenModal" class="modal hidden"><div class="modal-card"><h2>✅ İşletme Oluşturuldu</h2><p>Bu bilgiler tenant bağlantısı için kullanılacak. <strong>Business Token sadece şimdi gösterilir.</strong></p><label>Business Public Key</label><div id="createdPublicKey" class="token-box"></div><label>Business Token</label><div id="createdToken" class="token-box"></div><label>Lisans sonu</label><div id="createdLicenseEnd" class="token-box"></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="document.getElementById('tokenModal').classList.add('hidden')">Tamam</button></div></div></div>
+<div id="tokenModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="document.getElementById('tokenModal').classList.add('hidden')" aria-label="Modalı kapat" title="Kapat">×</button></div><h2>✅ İşletme Oluşturuldu</h2><p>Bu bilgiler tenant bağlantısı için kullanılacak. <strong>Business Token sadece şimdi gösterilir.</strong></p><label>Business Public Key</label><div id="createdPublicKey" class="token-box"></div><label>Business Token</label><div id="createdToken" class="token-box"></div><label>Lisans sonu</label><div id="createdLicenseEnd" class="token-box"></div></div></div>
 <div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="central-config.js"></script>

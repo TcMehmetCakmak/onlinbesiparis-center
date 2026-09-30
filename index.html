@@ -2480,7 +2480,45 @@ body{
 .product-review-stars-v27 button.active,
 .product-review-stars-v27 button.selected{color:#f5a623}
 #productReviewSendButtonV30:disabled{opacity:.5;cursor:not-allowed}
-</style></head>
+</style><style>
+/* =========================================================
+   SABİT MODAL KAPATMA (X) BUTONU
+   - Modal içeriği scroll olsa bile görünür kalır.
+   - Kapat/Vazgeç butonlarının yerine kullanılır.
+========================================================= */
+.modal-x-anchor{
+  position:sticky;
+  top:0;
+  z-index:99999;
+  height:0;
+  display:flex;
+  justify-content:flex-end;
+  pointer-events:none;
+}
+.modal-persistent-x{
+  pointer-events:auto;
+  width:40px;
+  height:40px;
+  min-width:40px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#222;
+  box-shadow:0 4px 16px rgba(0,0,0,.22);
+  font-size:28px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  transform:translate(4px,-4px);
+}
+.modal-persistent-x:hover{background:#f2f2f2}
+.modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
+</style>
+</head>
 
 <body>
 
@@ -2641,7 +2679,7 @@ body{
                 >
             </div>
 
-            <hr style="border:0;border-top:5px solid #e5e5e5;box-shadow: 1px 5px 10px pink;margin:14px 0 30px">
+            <hr style="border:0;border-top:1px solid #e5e5e5;margin:14px 0 18px">
 
             <div id="productList">
                 <!-- Ürünler Supabase üzerinden yüklenir -->
@@ -2829,9 +2867,9 @@ body{
 
     <div id="addressModal" class="address-modal hidden" aria-hidden="true">
         <div class="address-modal-card" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
+            <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeAddressModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
             <div class="address-modal-head">
                 <h2 id="addressModalTitle">Teslimat Adresi</h2>
-                <button type="button" class="address-modal-close" onclick="closeAddressModal()" aria-label="Kapat">×</button>
             </div>
             <div class="small" style="margin-bottom:10px">İl, ilçe ve mahalleyi seçin; ardından sokak ve kapı bilgilerini girin.</div>
 
@@ -2853,7 +2891,6 @@ body{
             <div id="addressModalStatus" class="small" style="min-height:22px;margin-top:4px"></div>
             <div class="small" style="margin-top:4px;opacity:.72">Adres doğrulama: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:inherit">© OpenStreetMap katkıda bulunanlar</a></div>
             <div class="address-modal-actions">
-                <button type="button" class="main-button" style="background:#eee;color:#222" onclick="closeAddressModal()">Vazgeç</button>
                 <button type="button" id="confirmAddressButton" class="main-button" onclick="confirmManualAddress()" disabled>Adresi Doğrula ve Kaydet</button>
             </div>
         </div>
@@ -3392,9 +3429,9 @@ body{
 ========================================= -->
 <div id="productGalleryModal" class="product-gallery-modal hidden" aria-hidden="true">
     <div class="product-gallery-card" role="dialog" aria-modal="true" aria-labelledby="productGalleryTitle">
+        <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductGallery()" aria-label="Modalı kapat" title="Kapat">×</button></div>
         <div class="product-gallery-head">
             <div id="productGalleryTitle" class="product-gallery-title">Ürün Fotoğrafları</div>
-            <button type="button" class="product-gallery-close" onclick="closeProductGallery()" aria-label="Kapat">×</button>
         </div>
 
         <div id="productGalleryStage" class="product-gallery-stage">
@@ -7420,6 +7457,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
+   <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button></div>
    <div class="detail-gallery-v15">
 <img id="detailProductImage">
 <button type="button" onclick="changeDetailGallery(-1)">‹</button>
@@ -7433,7 +7471,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
    <div id="productReviewAreaV28"></div>
    <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
-   <button onclick="closeProductDetail()" class="product-add-button">Kapat</button>
  </div>
 </div>
 
@@ -7534,7 +7571,7 @@ function closeProductDetail(){
 
 <div id="couponModalV12" class="coupon-modal-v12 hidden">
  <div class="coupon-modal-card-v12">
-   <button class="coupon-close-v12" onclick="closeCouponModalV12()">×</button>
+   <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCouponModalV12()" aria-label="Modalı kapat" title="Kapat">×</button></div>
    <h2 id="couponModalTitleV12">İndirim Kodu</h2>
    <div id="couponModalContentV12"></div>
  </div>
@@ -7577,9 +7614,9 @@ function applyCouponV12(){
 
 <div id="couponRealModal" class="coupon-real-modal hidden">
  <div class="coupon-real-card">
+  <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCouponRealModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
   <div class="coupon-real-head">
    <h2 id="couponRealTitle"></h2>
-   <button class="coupon-real-x" onclick="closeCouponRealModal()">×</button>
   </div>
   <div id="couponRealBody"></div>
  </div>

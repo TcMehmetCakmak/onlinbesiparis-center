@@ -148,6 +148,44 @@ body.modal-open{
 }
 
 </style>
+<style>
+/* =========================================================
+   SABİT MODAL KAPATMA (X) BUTONU
+   - Modal içeriği scroll olsa bile görünür kalır.
+   - Kapat/Vazgeç butonlarının yerine kullanılır.
+========================================================= */
+.modal-x-anchor{
+  position:sticky;
+  top:0;
+  z-index:99999;
+  height:0;
+  display:flex;
+  justify-content:flex-end;
+  pointer-events:none;
+}
+.modal-persistent-x{
+  pointer-events:auto;
+  width:40px;
+  height:40px;
+  min-width:40px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#222;
+  box-shadow:0 4px 16px rgba(0,0,0,.22);
+  font-size:28px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  transform:translate(4px,-4px);
+}
+.modal-persistent-x:hover{background:#f2f2f2}
+.modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
+</style>
 </head>
 <body>
 
@@ -285,6 +323,7 @@ body.modal-open{
 
 <div id="shopNameModal" class="modal hidden">
   <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeShopNameModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2>Dükkan Adını Değiştir</h2>
     <div class="muted" style="margin-bottom:12px">Yeni ad süper admin onayına gönderilecektir.</div>
 
@@ -298,7 +337,6 @@ body.modal-open{
          style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11;white-space:pre-wrap"></div>
 
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-light" onclick="closeShopNameModal()">Vazgeç</button>
       <button id="shopNameRequestButton" class="btn btn-primary" onclick="requestShopNameChange()">Güncelleme Talebi Gönder</button>
     </div>
   </div>
@@ -307,6 +345,7 @@ body.modal-open{
 
 <div id="supportTicketModal" class="modal hidden">
   <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeSupportTicketModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2>Yeni Destek Talebi</h2>
     <div class="muted" style="margin-bottom:12px">Talebinizi mümkün olduğunca açık şekilde yazın.</div>
     <label>Talep Başlığı</label>
@@ -315,7 +354,6 @@ body.modal-open{
     <textarea id="supportTicketDetail" maxlength="5000" style="width:100%;min-height:180px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Talebinizin detaylarını, hangi ekranda olduğunu ve beklediğiniz sonucu yazın."></textarea>
     <div id="supportTicketError" class="hidden" style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11"></div>
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-light" onclick="closeSupportTicketModal()">Vazgeç</button>
       <button id="supportTicketSubmitButton" class="btn btn-primary" onclick="createSupportTicket()">Talebi Gönder</button>
     </div>
   </div>
@@ -323,6 +361,7 @@ body.modal-open{
 
 <div id="productModal" class="modal hidden">
   <div class="modal-card" style="max-width:760px">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2 id="modalTitle">Yeni Ürün</h2>
     <input id="productId" type="hidden">
 
@@ -374,7 +413,6 @@ body.modal-open{
     </label>
 
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-light" onclick="closeProductModal()">Vazgeç</button>
       <button id="saveProductButton" class="btn btn-primary" onclick="saveProduct()">Kaydet</button>
     </div>
   </div>
@@ -383,6 +421,7 @@ body.modal-open{
 
 <div id="notificationModal" class="modal hidden">
   <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeNotificationModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2 id="notificationModalTitle">Yeni Bildirim</h2>
     <input id="notificationId" type="hidden">
     <label>Başlık</label><input id="notificationTitle" maxlength="120" placeholder="Örn. Hafta sonu kampanyası">
@@ -403,7 +442,6 @@ body.modal-open{
       <div><label>Durum</label><select id="notificationActive"><option value="true">Aktif</option><option value="false">Pasif</option></select></div>
     </div>
     <div class="actions" style="justify-content:flex-end;margin-top:18px">
-      <button class="btn btn-light" onclick="closeNotificationModal()">Vazgeç</button>
       <button class="btn btn-primary" onclick="saveNotification()">Kaydet</button>
     </div>
   </div>
@@ -411,7 +449,8 @@ body.modal-open{
 
 <div id="revenueModal" class="modal hidden">
   <div class="modal-card">
-    <div class="header"><div><h2>💰 Dönemsel Ciro</h2><div class="muted">Yalnızca tamamlanan siparişlerin ödenen toplamı.</div></div><button class="btn btn-light" onclick="closeRevenueModal()">✕</button></div>
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeRevenueModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+    <div class="header"><div><h2>💰 Dönemsel Ciro</h2><div class="muted">Yalnızca tamamlanan siparişlerin ödenen toplamı.</div></div></div>
     <div class="revenue-grid">
       <div class="revenue-box"><span>Son 1 Ay</span><strong id="revenue1m">0 TL</strong></div>
       <div class="revenue-box"><span>Son 3 Ay</span><strong id="revenue3m">0 TL</strong></div>
