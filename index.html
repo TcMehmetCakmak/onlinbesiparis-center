@@ -2431,6 +2431,46 @@ body{
     padding:10px;
 }
 </style>
+
+<style id="product-review-v28-css">
+.product-review-box-v28{
+ margin-top:18px;
+ padding-top:16px;
+ border-top:1px solid #eee;
+}
+.product-review-box-v28 h3{
+ margin:0 0 10px;
+}
+.product-review-stars-v28{
+ display:flex;
+ gap:6px;
+ margin:8px 0 12px;
+}
+.product-review-stars-v28 button{
+ border:0;
+ background:none;
+ font-size:30px;
+ color:#ccc;
+ padding:0;
+ cursor:pointer;
+}
+.product-review-stars-v28 button.active{
+ color:#f5a623;
+}
+.product-review-list-v28{
+ margin-top:12px;
+}
+.product-review-item-v28{
+ background:#f8f8f8;
+ border-radius:12px;
+ padding:10px;
+ margin-top:8px;
+}
+.product-review-meta-v28{
+ font-size:13px;
+ color:#777;
+}
+</style>
 </head>
 
 <body>
@@ -7275,6 +7315,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <p id="detailProductText"></p>
    <div id="detailVariants"></div>
    <div id="detailPrice"></div>
+   <div id="productReviewAreaV28"></div>
    <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
    <button onclick="closeProductDetail()" class="product-add-button">Kapat</button>
  </div>
@@ -7314,6 +7355,8 @@ function openProductDetail(productId){
    area.innerHTML="";
    detailSelectedVariant=null;
  }
+
+ renderProductReviewsV28(product.id);
 
  document.getElementById("detailAddButton").onclick=()=>{
    if(product.product_type==="SIZE" && !detailSelectedVariant){
@@ -7591,6 +7634,65 @@ function saveProductReviewV27(productId){
 <button class="main-button" onclick="saveProductReviewV27(currentProductId)">Yorumu Gönder</button>
 </div>
 </div>
+
+<script id="product-review-v28-js">
+let detailProductRatingV28 = 0;
+
+function getProductReviewsV28(productId){
+ const all=JSON.parse(localStorage.getItem("product_reviews_v28")||"[]");
+ return all.filter(x=>String(x.productId)===String(productId));
+}
+
+function selectProductStarV28(rate){
+ detailProductRatingV28=rate;
+ document.querySelectorAll(".product-review-stars-v28 button")
+ .forEach((b,i)=>b.classList.toggle("active",i<rate));
+}
+
+function renderProductReviewsV28(productId){
+ const area=document.getElementById("productReviewAreaV28");
+ if(!area)return;
+
+ const reviews=getProductReviewsV28(productId);
+
+ area.innerHTML=`
+ <div class="product-review-box-v28">
+  <h3>Ürün Değerlendirmesi</h3>
+  <div class="product-review-stars-v28">
+   ${[1,2,3,4,5].map(i=>`<button onclick="selectProductStarV28(${i})">★</button>`).join("")}
+  </div>
+  <textarea id="productReviewTextV28" placeholder="Ürün hakkında yorumunuz"></textarea>
+  <button class="main-button" onclick="saveProductReviewV28('${productId}')">Yorumu Gönder</button>
+  <div class="product-review-list-v28">
+   ${reviews.length ? reviews.map(r=>`
+    <div class="product-review-item-v28">
+     <div>${"★".repeat(r.rating)}${"☆".repeat(5-r.rating)}</div>
+     <div>${r.comment||""}</div>
+     <div class="product-review-meta-v28">${new Date(r.date).toLocaleDateString("tr-TR")}</div>
+    </div>`).join("") : "<div class='small'>Henüz yorum yapılmamış.</div>"}
+  </div>
+ </div>`;
+}
+
+function saveProductReviewV28(productId){
+ if(!detailProductRatingV28){
+   alert("Lütfen yıldız veriniz.");
+   return;
+ }
+ const text=document.getElementById("productReviewTextV28")?.value||"";
+ const all=JSON.parse(localStorage.getItem("product_reviews_v28")||"[]");
+ all.push({
+   productId,
+   rating:detailProductRatingV28,
+   comment:text,
+   date:new Date().toISOString()
+ });
+ localStorage.setItem("product_reviews_v28",JSON.stringify(all));
+ detailProductRatingV28=0;
+ renderProductReviewsV28(productId);
+ alert("Ürün yorumunuz eklendi.");
+}
+</script>
 </body>
 
 
