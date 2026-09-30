@@ -7612,32 +7612,31 @@ document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
 })();
 </script>
 
-<script id="productReviewV30">
-let selectedProductRatingV30 = 0;
 
-function setProductRatingV30(rate){
-    selectedProductRatingV30 = rate;
+<script id="productReviewV31">
+let selectedProductRatingV31 = 0;
 
-    document.querySelectorAll(".product-review-stars-v27 button")
-        .forEach((b,i)=>{
-            b.classList.toggle("active", i < rate);
-            b.classList.toggle("selected", i < rate);
-        });
+function setProductRatingV31(rate){
+    selectedProductRatingV31 = rate;
 
-    const btn = document.getElementById("productReviewSendButtonV30");
+    document.querySelectorAll(".product-review-stars-v31 button")
+    .forEach((b,i)=>{
+        b.classList.toggle("active", i < rate);
+        b.classList.toggle("selected", i < rate);
+    });
+
+    const btn=document.getElementById("productReviewSendButtonV31");
     if(btn){
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
+        btn.disabled=false;
+        btn.style.opacity="1";
     }
 }
 
-async function saveProductReviewV30(productId){
+async function saveProductReviewV31(productId){
 
-    const comment =
-        document.getElementById("productReviewTextV27")?.value?.trim() || "";
+    const comment=document.getElementById("productReviewTextV31")?.value?.trim() || "";
 
-    if(!selectedProductRatingV30){
+    if(!selectedProductRatingV31){
         alert("Lütfen yıldız seçin");
         return;
     }
@@ -7647,111 +7646,114 @@ async function saveProductReviewV30(productId){
         return;
     }
 
-    const payload = {
-        business_id: currentBusinessId,
-        product_id: productId,
-        rating: selectedProductRatingV30,
-        comment: comment.substring(0,500)
-    };
-
-    const { error } = await supabaseClient
+    const {error}=await supabaseClient
         .from("product_reviews")
-        .insert(payload);
+        .insert({
+            business_id: currentBusinessId,
+            product_id: productId,
+            rating: selectedProductRatingV31,
+            comment: comment.substring(0,500)
+        });
 
     if(error){
         console.error(error);
-        alert("Ürün yorumu kaydedilemedi: " + error.message);
+        alert("Ürün yorumu kaydedilemedi: "+error.message);
         return;
     }
 
-    alert("Ürün yorumunuz kaydedildi");
+    selectedProductRatingV31=0;
 
-    selectedProductRatingV30 = 0;
+    const t=document.getElementById("productReviewTextV31");
+    if(t) t.value="";
 
-    const textarea=document.getElementById("productReviewTextV27");
-    if(textarea) textarea.value="";
+    await loadProductReviewsV31(productId);
 
-    document.querySelectorAll(".product-review-stars-v27 button")
-        .forEach(b=>b.classList.remove("active","selected"));
-
-    if(typeof loadProductReviews === "function"){
-        await loadProductReviews(productId);
-    }
+    alert("Ürün yorumunuz eklendi");
 }
+
+
+async function loadProductReviewsV31(productId){
+
+    const area=document.getElementById("productReviewAreaV28");
+    if(!area) return;
+
+    const {data,error}=await supabaseClient
+        .from("product_reviews")
+        .select("*")
+        .eq("product_id", productId)
+        .order("created_at",{ascending:false});
+
+    if(error){
+        console.error(error);
+        return;
+    }
+
+    const reviews=data || [];
+
+    area.innerHTML=`
+    <div class="product-review-box-v31">
+        <h3>Ürün Değerlendirmesi</h3>
+
+        <div class="product-review-stars-v31">
+            ${[1,2,3,4,5].map(i=>`
+            <button onclick="setProductRatingV31(${i})">★</button>
+            `).join("")}
+        </div>
+
+        <textarea id="productReviewTextV31"
+        placeholder="Ürün hakkında yorumunuz"></textarea>
+
+        <button id="productReviewSendButtonV31"
+        class="main-button"
+        disabled
+        onclick="saveProductReviewV31('${productId}')">
+        Yorumu Gönder
+        </button>
+
+        <div class="product-review-list-v31">
+        ${
+        reviews.length
+        ? reviews.map(r=>`
+            <div class="product-review-item-v31">
+                <div>${"★".repeat(r.rating)}${"☆".repeat(5-r.rating)}</div>
+                <div>${r.comment || ""}</div>
+            </div>
+        `).join("")
+        : "<div class='small'>Henüz yorum yapılmamış.</div>"
+        }
+        </div>
+    </div>`;
+}
+
 </script>
 
-<div id="productReviewTemplateV27" style="display:none">
-<div class="product-review-box-v27">
-<h3>Ürün Yorumu</h3>
-<div class="product-review-stars-v27">
-<button onclick="setProductRatingV30(1)">★</button>
-<button onclick="setProductRatingV30(2)">★</button>
-<button onclick="setProductRatingV30(3)">★</button>
-<button onclick="setProductRatingV30(4)">★</button>
-<button onclick="setProductRatingV30(5)">★</button>
-</div>
-<textarea id="productReviewTextV27" class="product-review-comment-v27" placeholder="Ürün hakkında yorumunuz"></textarea>
-<button id="productReviewSendButtonV30" class="main-button" onclick="saveProductReviewV30(currentProductId)">Yorumu Gönder</button>
-</div>
-</div>
-
-<script id="product-review-v28-js">
-let detailProductRatingV28 = 0;
-
-function getProductReviewsV28(productId){
- const all=JSON.parse(localStorage.getItem("product_reviews_v28")||"[]");
- return all.filter(x=>String(x.productId)===String(productId));
+<style id="productReviewStyleV31">
+.product-review-stars-v31{
+ display:flex;
+ gap:6px;
+ justify-content:center;
+ margin:12px 0;
 }
-
-function selectProductStarV28(rate){
- detailProductRatingV28=rate;
- document.querySelectorAll(".product-review-stars-v28 button")
- .forEach((b,i)=>b.classList.toggle("active",i<rate));
+.product-review-stars-v31 button{
+ border:0;
+ background:none;
+ font-size:32px;
+ color:#ccc;
+ cursor:pointer;
 }
-
-function renderProductReviewsV28(productId){
- const area=document.getElementById("productReviewAreaV28");
- if(!area)return;
-
- const reviews=getProductReviewsV28(productId);
-
- area.innerHTML=`
- <div class="product-review-box-v28">
-  <h3>Ürün Değerlendirmesi</h3>
-  <div class="product-review-stars-v28">
-   ${[1,2,3,4,5].map(i=>`<button onclick="selectProductStarV28(${i})">★</button>`).join("")}
-  </div>
-  <textarea id="productReviewTextV28" placeholder="Ürün hakkında yorumunuz"></textarea>
-  <button class="main-button" onclick="saveProductReviewV28('${productId}')">Yorumu Gönder</button>
-  <div class="product-review-list-v28">
-   ${reviews.length ? reviews.map(r=>`
-    <div class="product-review-item-v28">
-     <div>${"★".repeat(r.rating)}${"☆".repeat(5-r.rating)}</div>
-     <div>${r.comment||""}</div>
-     <div class="product-review-meta-v28">${new Date(r.date).toLocaleDateString("tr-TR")}</div>
-    </div>`).join("") : "<div class='small'>Henüz yorum yapılmamış.</div>"}
-  </div>
- </div>`;
+.product-review-stars-v31 button.active{
+ color:#f5a623;
 }
-
-function saveProductReviewV28(productId){
- if(!detailProductRatingV28){
-   alert("Lütfen yıldız veriniz.");
-   return;
- }
- const text=document.getElementById("productReviewTextV28")?.value||"";
- const all=JSON.parse(localStorage.getItem("product_reviews_v28")||"[]");
- all.push({
-   productId,
-   rating:detailProductRatingV28,
-   comment:text,
-   date:new Date().toISOString()
- });
- localStorage.setItem("product_reviews_v28",JSON.stringify(all));
- detailProductRatingV28=0;
- renderProductReviewsV28(productId);
- alert("Ürün yorumunuz eklendi.");
+.product-review-item-v31{
+ background:#f8f8f8;
+ border-radius:12px;
+ padding:12px;
+ margin-top:10px;
 }
+</style>
+
+<script id="product-review-refresh-v29">
+// eski localStorage ürün yorum sistemi kaldırıldı
 </script>
 <script id="product-rating-refresh-v29">
 // Ürün yorumundan sonra liste yıldızlarını yenile
