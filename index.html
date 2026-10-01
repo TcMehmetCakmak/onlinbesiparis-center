@@ -7346,20 +7346,30 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             `#advertisementStoryProgress .ad-story-progress-fill[data-index="${advertisementStoryImageIndex}"]`
         );
 
-        if (progress) {
-            progress.style.transition = "none";
-            progress.style.width = "0";
-
-            advertisementStoryProgressTimer = setTimeout(() => {
-                progress.style.transition =
-                    `width ${ADVERTISEMENT_STORY_DURATION_MS}ms linear`;
-                progress.style.width = "100%";
-            }, 40);
+        if (!progress) {
+            advertisementStoryTimer = setTimeout(() => {
+                nextAdvertisementStory();
+            }, ADVERTISEMENT_STORY_DURATION_MS);
+            return;
         }
 
-        advertisementStoryTimer = setTimeout(() => {
-            nextAdvertisementStory();
-        }, ADVERTISEMENT_STORY_DURATION_MS);
+        // Aktif fotoğrafın barını sıfırdan başlat.
+        progress.style.transition = "none";
+        progress.style.width = "0";
+
+        // Tarayıcıya 0% durumunu çizdir; ardından bar ve fotoğraf süresini
+        // aynı anda başlat. Böylece bar tam dolduğu anda fotoğraf değişir.
+        void progress.offsetWidth;
+
+        advertisementStoryProgressTimer = setTimeout(() => {
+            progress.style.transition =
+                `width ${ADVERTISEMENT_STORY_DURATION_MS}ms linear`;
+            progress.style.width = "100%";
+
+            advertisementStoryTimer = setTimeout(() => {
+                nextAdvertisementStory();
+            }, ADVERTISEMENT_STORY_DURATION_MS);
+        }, 20);
     }
 
     function openAdvertisementStory(adId, imageIndex = 0) {
@@ -7422,7 +7432,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             progressEl.innerHTML = ad.images.map((_, index) => `
                 <span class="ad-story-progress-track">
                     <span
-                        class="ad-story-progress-fill ${index < advertisementStoryImageIndex ? "completed" : ""}"
+                        class="ad-story-progress-fill ${
+                            index < advertisementStoryImageIndex
+                                ? "completed"
+                                : index === advertisementStoryImageIndex
+                                    ? "active"
+                                    : ""
+                        }"
                         data-index="${index}"
                     ></span>
                 </span>
