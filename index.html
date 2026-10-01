@@ -2787,11 +2787,7 @@ body{
         </div>
 
         
-<div id="advertisementHighlightsWrap" class="card ad-highlights-wrap hidden">
-            <div id="advertisementHighlights" class="ad-highlights" aria-label="Reklamlar"></div>
-        </div>
-
-        <div id="franchisePage" class="franchise-page hidden">
+<div id="franchisePage" class="franchise-page hidden">
   <div class="franchise-page-inner">
     <div class="franchise-page-header">
       <button type="button" class="franchise-back" onclick="closeFranchisePage()" aria-label="Geri">‹</button>
@@ -2828,6 +2824,10 @@ body{
         ========================================= -->
 
         <div id="orderItemsCard" class="card hidden">
+
+            <div id="advertisementHighlightsWrap" class="ad-highlights-wrap hidden">
+                <div id="advertisementHighlights" class="ad-highlights" aria-label="Reklamlar"></div>
+            </div>
 
             <div class="order-heading-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                 <h2 style="margin:0">Ürünler</h2>
@@ -7356,7 +7356,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
         advertisementStoryTimer = setTimeout(() => {
             nextAdvertisementStory();
-        }, 5050);
+        }, 5000);
     }
 
     function openAdvertisementStory(adId, imageIndex = 0) {
