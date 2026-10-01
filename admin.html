@@ -531,6 +531,26 @@ body.modal-open{
   </div>
 </div>
 
+<div id="reprepareOrderModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeReprepareOrderModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+    <h2>Siparişi Tekrar Hazırla</h2>
+    <div id="reprepareOrderModalInfo" class="muted" style="margin-bottom:12px"></div>
+
+    <label>Tekrar hazırlanma nedeni</label>
+    <textarea
+      id="reprepareOrderReason"
+      maxlength="500"
+      placeholder="Örneğin: Ürün yeniden stoklara geldi."
+      style="width:100%;min-height:110px;padding:12px;border:1px solid #ddd;border-radius:10px;resize:vertical"
+    ></textarea>
+
+    <div class="actions" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-success" onclick="confirmReprepareOrder()">Tekrar Hazırla ve WhatsApp Mesajını Aç</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -1887,7 +1907,7 @@ function renderOrders(){
            <br>💳 ${escapeHtml(order.payment)}
            ${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}
          </div>`
-      : `<div class="muted" style="margin-top:7px">📍 ${order.google_maps_url?`<a href="${escapeAttr(order.google_maps_url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;cursor:pointer">${escapeHtml(order.address)}</a>`:escapeHtml(order.address)}<br>💳 ${escapeHtml(order.payment)}${order.phone_number?`<br>📱 <a href="tel:+${escapeAttr(order.phone_number)}" style="color:inherit">+${escapeHtml(order.phone_number)}</a>`:""}${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}${order.delivery_code?`<br>🔐 Teslimat güvenlik kodu: <strong>${escapeHtml(order.delivery_code)}</strong>`:""}${order.rejection_reason?`<br>❌ Red nedeni: ${escapeHtml(order.rejection_reason)}`:""}</div>`;
+      : `<div class="muted" style="margin-top:7px">📍 ${order.google_maps_url?`<a href="${escapeAttr(order.google_maps_url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;cursor:pointer">${escapeHtml(order.address)}</a>`:escapeHtml(order.address)}<br>💳 ${escapeHtml(order.payment)}${order.phone_number?`<br>📱 <a href="tel:+${escapeAttr(order.phone_number)}" style="color:inherit">+${escapeHtml(order.phone_number)}</a>`:""}${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}${order.delivery_code?`<br>🔐 Teslimat güvenlik kodu: <strong>${escapeHtml(order.delivery_code)}</strong>`:""}${order.rejection_reason?`<br>❌ Red nedeni: ${escapeHtml(order.rejection_reason)}`:""}${order.reprepare_reason?`<br>🔄 Tekrar hazırlanma nedeni: ${escapeHtml(order.reprepare_reason)}`:""}</div>`;
 
     return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${customerTitle}<div class="muted">${date}</div></div>${badge}</div>
       <div class="order-items">${items}</div>
@@ -1898,7 +1918,11 @@ function renderOrders(){
         ${!hideCustomerInfo?`<button class="btn pdf-btn" onclick="downloadOrderPdf(${order.id})">🧾 Çıktı Al (PDF)</button>`:""}
         ${!needsWhatsappVerification&&order.status!=="tamamlandi"&&order.status!=="iptal-edildi"&&!(isWhatsapp&&!whatsappVerified)?`<button class="btn btn-success" onclick="completeOrder(${order.id})">✓ Tamamlandı</button>`:""}
         ${!needsWhatsappVerification&&order.status!=="iptal-edildi"&&order.status!=="tamamlandi"?`<button class="btn btn-danger" onclick="openRejectOrderModal(${order.id})">✕ Reddet</button>`:""}
-        ${isWhatsapp&&!whatsappVerified&&order.status==="iptal-edildi"?`<button class="btn btn-light" onclick="resumeWhatsappVerification(${order.id})">↻ Devam ediyor</button>`:(!needsWhatsappVerification&&order.status!=="devam-ediyor"&&!(isWhatsapp&&!whatsappVerified)?`<button class="btn btn-light" onclick="setStatus(${order.id},'devam-ediyor')">↻ Devam ediyor</button>`:"")}
+        ${order.status==="iptal-edildi"
+          ? `<button class="btn btn-light" onclick="openReprepareOrderModal(${order.id})">↻ Tekrar Hazırla</button>`
+          : (!needsWhatsappVerification&&order.status!=="devam-ediyor"&&!(isWhatsapp&&!whatsappVerified)
+              ? `<button class="btn btn-light" onclick="setStatus(${order.id},'devam-ediyor')">↻ Devam ediyor</button>`
+              : "")}
       </div></div>`;
   }).join("");
 }
@@ -2093,6 +2117,7 @@ async function confirmRejectOrder(){
       .update({
         status:"iptal-edildi",
         rejection_reason:reason,
+        reprepare_reason:null,
         delivery_code:null
       })
       .eq("id",id)
@@ -2118,6 +2143,126 @@ async function confirmRejectOrder(){
     toast(e.message);
   }
 }
+
+
+let reprepareOrderId=null;
+
+function openReprepareOrderModal(id){
+  const order=orders.find(o=>String(o.id)===String(id));
+
+  if(!order){
+    toast("Sipariş bulunamadı.");
+    return;
+  }
+
+  if(order.status!=="iptal-edildi"){
+    toast("Yalnızca iptal edilmiş siparişler tekrar hazırlanabilir.");
+    return;
+  }
+
+  reprepareOrderId=id;
+
+  const reasonInput=document.getElementById("reprepareOrderReason");
+  reasonInput.value="";
+
+  document.getElementById("reprepareOrderModalInfo").textContent=
+    `#${id} nolu siparişin neden tekrar hazırlandığını yazın.`;
+
+  document.getElementById("reprepareOrderModal").classList.remove("hidden");
+
+  setTimeout(()=>{
+    reasonInput?.focus();
+  },0);
+}
+
+function closeReprepareOrderModal(){
+  reprepareOrderId=null;
+  document.getElementById("reprepareOrderModal").classList.add("hidden");
+}
+
+async function confirmReprepareOrder(){
+  const id=reprepareOrderId;
+  const reason=document.getElementById("reprepareOrderReason").value.trim();
+
+  if(!id)return;
+
+  if(!reason){
+    toast("Tekrar hazırlanma nedeni zorunludur.");
+    return;
+  }
+
+  const order=orders.find(o=>String(o.id)===String(id));
+
+  if(!order){
+    toast("Sipariş bulunamadı.");
+    return;
+  }
+
+  if(order.status!=="iptal-edildi"){
+    toast("Bu sipariş artık iptal durumunda değil.");
+    closeReprepareOrderModal();
+    return;
+  }
+
+  const needsVerification=
+    order.verification_method==="whatsapp-business" &&
+    !order.verified_at;
+
+  // Daha önce doğrulanmış sipariş doğrudan yeniden hazırlanmaya alınır.
+  // Hiç doğrulanmamış siparişte güvenlik akışını bozmamak için önce
+  // tekrar "onay-bekliyor" durumuna döndürülür.
+  const nextStatus=needsVerification
+    ? "onay-bekliyor"
+    : "devam-ediyor";
+
+  const waWindow=order.phone_number
+    ? reserveWhatsAppWindow()
+    : null;
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("orders")
+      .update({
+        status:nextStatus,
+        reprepare_reason:reason,
+        rejection_reason:null,
+        delivery_code:null
+      })
+      .eq("id",id)
+      .eq("business_id",currentBusinessId)
+      .eq("status","iptal-edildi")
+      .select("*")
+      .single();
+
+    if(error)throw error;
+
+    orders=orders.map(o=>String(o.id)===String(id)?data:o);
+
+    closeReprepareOrderModal();
+    renderOrders();
+    loadDashboard();
+
+    const message=needsVerification
+      ? `#${id} nolu siparişiniz tekrar işleme alındı. `+
+        `Tekrar hazırlanma nedeni: ${reason}. `+
+        `Güvenlik kodunuz doğrulandıktan sonra ürününüz tekrar hazırlanmaya başlayacaktır.`
+      : `#${id} nolu siparişiniz tekrar hazırlanmaya başlandı. `+
+        `Tekrar hazırlanma nedeni: ${reason}. `+
+        `Ürününüz tekrar hazırlanmaya başlandı.`;
+
+    openCustomerWhatsApp(data,message,waWindow);
+
+    toast(
+      needsVerification
+        ? "Sipariş tekrar doğrulama bekliyor."
+        : "Sipariş tekrar hazırlanmaya alındı."
+    );
+  }catch(e){
+    try{waWindow?.close();}catch{}
+    toast(e.message||"Sipariş tekrar hazırlanmaya alınamadı.");
+  }
+}
+
 
 async function setStatus(id,status){
   try{
@@ -2179,7 +2324,7 @@ function downloadOrderPdf(id){
   y+=3; const subtotal=Number(order.subtotal||Number(order.total||0)+Number(order.discount_amount||0)); line(`Ara Toplam: ${money(subtotal)}`,11,true);
   if(Number(order.discount_amount||0)>0){line(`Indirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` (Kodlar: ${order.coupon_codes.join(", ")})`:(order.coupon_code?` (Kod: ${order.coupon_code})`:"")}`);}
   line(`Odenecek Toplam: ${money(order.total)}`,13,true); y+=3;
-  line(`Musteri: ${order.name}`); if(order.phone_number)line(`Telefon: +${order.phone_number}`); line(`Adres: ${order.address}`); line(`Odeme: ${order.payment}`); if(order.note)line(`Not: ${order.note}`); if(order.delivery_code)line(`Teslimat Kodu: ${order.delivery_code}`); if(order.rejection_reason)line(`Red Nedeni: ${order.rejection_reason}`); if(order.google_maps_url)line(`Harita: ${order.google_maps_url}`);
+  line(`Musteri: ${order.name}`); if(order.phone_number)line(`Telefon: +${order.phone_number}`); line(`Adres: ${order.address}`); line(`Odeme: ${order.payment}`); if(order.note)line(`Not: ${order.note}`); if(order.delivery_code)line(`Teslimat Kodu: ${order.delivery_code}`); if(order.rejection_reason)line(`Red Nedeni: ${order.rejection_reason}`); if(order.reprepare_reason)line(`Tekrar Hazirlanma Nedeni: ${order.reprepare_reason}`); if(order.google_maps_url)line(`Harita: ${order.google_maps_url}`);
   doc.save(`siparis-${order.id}.pdf`);
 }
 
