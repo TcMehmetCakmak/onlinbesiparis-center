@@ -2322,7 +2322,12 @@ function downloadOrderPdf(id){
   if(!window.jspdf?.jsPDF){toast("PDF kutuphanesi yuklenemedi.");return;}
   const {jsPDF}=window.jspdf; const doc=new jsPDF(); let y=18;
   const line=(text,size=11,bold=false)=>{doc.setFontSize(size);doc.setFont("helvetica",bold?"bold":"normal");const lines=doc.splitTextToSize(pdfSafe(text),175);doc.text(lines,18,y);y+=lines.length*(size*0.45)+4;if(y>275){doc.addPage();y=18;}};
-  line(`Durumcu - Siparis #${order.id}`,18,true); line(`Tarih: ${new Date(order.created_at).toLocaleString("tr-TR")}`); line(`Durum: ${order.status}`,11,true); y+=3;
+  const pdfBusinessName=String(
+    platformBusiness?.shop_name ||
+    appSettings?.shop_name ||
+    "İşletme"
+  ).trim() || "İşletme";
+  line(`${pdfBusinessName} - Siparis #${order.id}`,18,true); line(`Tarih: ${new Date(order.created_at).toLocaleString("tr-TR")}`); line(`Durum: ${order.status}`,11,true); y+=3;
   line("Siparis Detaylari",14,true); (order.items||[]).forEach(i=>line(`${i.icon||""} ${i.name} x ${i.quantity} - ${money(i.lineTotal)}`));
   y+=3; const subtotal=Number(order.subtotal||Number(order.total||0)+Number(order.discount_amount||0)); line(`Ara Toplam: ${money(subtotal)}`,11,true);
   if(Number(order.discount_amount||0)>0){line(`Indirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` (Kodlar: ${order.coupon_codes.join(", ")})`:(order.coupon_code?` (Kod: ${order.coupon_code})`:"")}`);}

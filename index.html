@@ -8562,7 +8562,7 @@ async function loadProductReviewsV31(productId){
         placeholder="Ürün hakkında yorumunuz"></textarea>
 
         <button id="productReviewSendButtonV31"
-        class="main-button"
+        class="main-button product-review-send-button-v31"
         disabled
         onclick="saveProductReviewV31('${productId}')">
         Yorumu Gönder
@@ -8607,6 +8607,22 @@ async function loadProductReviewsV31(productId){
  border-radius:12px;
  padding:12px;
  margin-top:10px;
+}
+.product-review-send-button-v31{
+ background:#ff6000;
+ color:#fff;
+ border:0;
+ font-weight:800;
+ cursor:pointer;
+}
+.product-review-send-button-v31:disabled{
+ background:#f0a36d;
+ color:#fff;
+ opacity:.65;
+ cursor:not-allowed;
+}
+.product-review-send-button-v31:not(:disabled):active{
+ transform:scale(.99);
 }
 </style>
 
