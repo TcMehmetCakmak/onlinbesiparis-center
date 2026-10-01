@@ -2770,6 +2770,15 @@ body{
 
                 <!-- BİLDİRİM → YORUM → SEPET -->
                 <div class="header-tools">
+                    <button 
+                    type="button" 
+                    class="medicine-request-launcher" 
+                    onclick="openMedicineRequestModal()"
+                    title="İlaç Talep Et"
+                    aria-label="İlaç Talep Et"
+                    >
+                        💊
+                    </button>
 
                     <button
                         type="button"
@@ -2809,15 +2818,6 @@ body{
 
             </div>
 
-        </div>
-
-        <div id="medicineRequestFeature" class="card medicine-request-card">
-            <button type="button" class="medicine-request-launcher" onclick="openMedicineRequestModal()">
-                💊 İlaç Talep Et
-            </button>
-            <div class="medicine-request-help">
-                Yalnızca Şifa Eczane için: T.C. kimlik, telefon, reçete numarası ve reçete/barkod fotoğrafı ile talep oluşturabilirsiniz.
-            </div>
         </div>
 
 <div id="franchisePage" class="franchise-page hidden">
