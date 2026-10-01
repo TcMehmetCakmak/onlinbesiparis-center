@@ -2529,6 +2529,127 @@ body{
     box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.25);
 }
 </style>
+<style>
+/* =========================================================
+   ÜRÜN ARAMA + SIRALAMA / FİLTRE BUTONU
+========================================================= */
+.product-search-tools{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-left:auto;
+}
+
+#productSearchInput{
+    width:220px !important;
+    max-width:44vw !important;
+    min-width:150px;
+}
+
+.product-filter-wrap{
+    position:relative;
+    flex:0 0 auto;
+}
+
+.product-filter-button{
+    height:40px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:0 12px;
+    background:#fff;
+    color:#222;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.product-filter-button:hover{
+    background:#f7f7f7;
+}
+
+.product-filter-button.active{
+    border-color:#222;
+    box-shadow:0 0 0 2px rgba(0,0,0,.06);
+}
+
+.product-filter-menu{
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    z-index:1500;
+    width:255px;
+    padding:8px;
+    border:1px solid #e4e4e4;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 12px 35px rgba(0,0,0,.16);
+}
+
+.product-filter-menu.hidden{
+    display:none !important;
+}
+
+.product-filter-menu-title{
+    padding:8px 10px 6px;
+    color:#777;
+    font-size:12px;
+    font-weight:700;
+}
+
+.product-filter-option{
+    width:100%;
+    border:0;
+    border-radius:9px;
+    background:transparent;
+    color:#222;
+    padding:10px 11px;
+    text-align:left;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.product-filter-option:hover{
+    background:#f5f5f5;
+}
+
+.product-filter-option.selected{
+    background:#f1f1f1;
+    font-weight:800;
+}
+
+@media(max-width:600px){
+    #orderItemsCard .order-heading-row{
+        gap:8px !important;
+    }
+
+    #productSearchInput{
+        width:165px !important;
+        max-width:46vw !important;
+        min-width:120px;
+        padding-left:9px !important;
+        padding-right:9px !important;
+        font-size:13px !important;
+    }
+
+    .product-filter-button{
+        width:40px;
+        padding:0;
+    }
+
+    .product-filter-button .filter-label{
+        display:none;
+    }
+
+    .product-filter-menu{
+        width:min(255px, calc(100vw - 28px));
+    }
+}
+</style>
 </head>
 
 <body>
@@ -2679,15 +2800,42 @@ body{
             <div class="order-heading-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                 <h2 style="margin:0">Ürünler</h2>
 
-                <input
-                    id="productSearchInput"
-                    type="search"
-                    placeholder="🔎 Ürün adına göre ara..."
-                    autocomplete="off"
-                    aria-label="Ürün adına göre ara"
-                    oninput="renderProducts()"
-                    style="width:220px;max-width:58vw;margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
-                >
+                <div class="product-search-tools">
+                    <input
+                        id="productSearchInput"
+                        type="search"
+                        placeholder="🔎 Ürün adına göre ara..."
+                        autocomplete="off"
+                        aria-label="Ürün adına göre ara"
+                        oninput="renderProducts()"
+                        style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
+                    >
+
+                    <div class="product-filter-wrap">
+                        <button
+                            id="productFilterButton"
+                            type="button"
+                            class="product-filter-button"
+                            onclick="toggleProductFilterMenu(event)"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            title="Ürünleri sırala"
+                        >
+                            ↕️ <span class="filter-label">Filtrele</span>
+                        </button>
+
+                        <div id="productFilterMenu" class="product-filter-menu hidden">
+                            <div class="product-filter-menu-title">Sıralama</div>
+                            <button type="button" class="product-filter-option selected" data-sort="default" onclick="setProductSort('default')">Varsayılan</button>
+                            <button type="button" class="product-filter-option" data-sort="price_desc" onclick="setProductSort('price_desc')">Fiyat: Artandan azalana</button>
+                            <button type="button" class="product-filter-option" data-sort="price_asc" onclick="setProductSort('price_asc')">Fiyat: Azalandan artana</button>
+                            <button type="button" class="product-filter-option" data-sort="date_asc" onclick="setProductSort('date_asc')">Oluşturulma: Eskiden yeniye</button>
+                            <button type="button" class="product-filter-option" data-sort="date_desc" onclick="setProductSort('date_desc')">Oluşturulma: Yeniden eskiye</button>
+                            <button type="button" class="product-filter-option" data-sort="name_asc" onclick="setProductSort('name_asc')">İsim: A'dan Z'ye</button>
+                            <button type="button" class="product-filter-option" data-sort="name_desc" onclick="setProductSort('name_desc')">İsim: Z'den A'ya</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <hr style="border:0;border-top:1px solid #e5e5e5;margin:14px 0 18px">
@@ -4097,6 +4245,125 @@ body{
         };
     }
 
+    let productSortMode = "default";
+
+    function getProductSortPrice(product){
+        if(
+            product?.product_type === "SIZE" &&
+            Array.isArray(product?.variants) &&
+            product.variants.length
+        ){
+            const prices = product.variants
+                .map(v => Number(v?.price))
+                .filter(Number.isFinite);
+
+            if(prices.length){
+                return Math.min(...prices);
+            }
+        }
+
+        const price = Number(product?.price ?? 0);
+        return Number.isFinite(price) ? price : 0;
+    }
+
+    function toggleProductFilterMenu(event){
+        event?.stopPropagation();
+
+        const menu = document.getElementById("productFilterMenu");
+        const button = document.getElementById("productFilterButton");
+
+        if(!menu || !button) return;
+
+        const willOpen = menu.classList.contains("hidden");
+        menu.classList.toggle("hidden", !willOpen);
+        button.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    }
+
+    function closeProductFilterMenu(){
+        const menu = document.getElementById("productFilterMenu");
+        const button = document.getElementById("productFilterButton");
+
+        menu?.classList.add("hidden");
+        button?.setAttribute("aria-expanded", "false");
+    }
+
+    function setProductSort(mode){
+        productSortMode = String(mode || "default");
+
+        document.querySelectorAll(".product-filter-option").forEach(option => {
+            option.classList.toggle(
+                "selected",
+                option.dataset.sort === productSortMode
+            );
+        });
+
+        const button = document.getElementById("productFilterButton");
+        button?.classList.toggle("active", productSortMode !== "default");
+
+        closeProductFilterMenu();
+        renderProducts();
+    }
+
+    function sortVisibleProducts(productList){
+        const sorted = [...productList];
+
+        switch(productSortMode){
+            case "price_desc":
+                sorted.sort((a,b) =>
+                    getProductSortPrice(b) - getProductSortPrice(a)
+                );
+                break;
+
+            case "price_asc":
+                sorted.sort((a,b) =>
+                    getProductSortPrice(a) - getProductSortPrice(b)
+                );
+                break;
+
+            case "date_asc":
+                sorted.sort((a,b) =>
+                    new Date(a?.created_at || 0) -
+                    new Date(b?.created_at || 0)
+                );
+                break;
+
+            case "date_desc":
+                sorted.sort((a,b) =>
+                    new Date(b?.created_at || 0) -
+                    new Date(a?.created_at || 0)
+                );
+                break;
+
+            case "name_asc":
+                sorted.sort((a,b) =>
+                    String(a?.name || "").localeCompare(
+                        String(b?.name || ""),
+                        "tr",
+                        {sensitivity:"base"}
+                    )
+                );
+                break;
+
+            case "name_desc":
+                sorted.sort((a,b) =>
+                    String(b?.name || "").localeCompare(
+                        String(a?.name || ""),
+                        "tr",
+                        {sensitivity:"base"}
+                    )
+                );
+                break;
+        }
+
+        return sorted;
+    }
+
+    document.addEventListener("click", event => {
+        if(!event.target.closest(".product-filter-wrap")){
+            closeProductFilterMenu();
+        }
+    });
+
     function renderProducts() {
         const list = document.getElementById("productList");
         const searchInput = document.getElementById("productSearchInput");
@@ -4106,7 +4373,7 @@ body{
 
         list.innerHTML = "";
 
-        const visibleProducts = products
+        let visibleProducts = products
             .filter(product => product.active !== false)
             .filter(product => {
                 if (!searchText) return true;
@@ -4115,6 +4382,8 @@ body{
                     .toLocaleLowerCase("tr-TR")
                     .includes(searchText);
             });
+
+        visibleProducts = sortVisibleProducts(visibleProducts);
 
         if (!visibleProducts.length) {
             list.innerHTML = searchText
