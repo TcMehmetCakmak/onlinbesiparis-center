@@ -209,7 +209,28 @@ body.modal-open{
 .medicine-request-admin-card{border:1px solid #e6e6e6;border-radius:14px;padding:15px;background:#fff}
 .medicine-request-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
 .medicine-request-admin-meta{font-size:13px;color:#555;line-height:1.65;word-break:break-word}
-.medicine-request-admin-photo{display:block;width:100%;max-height:360px;object-fit:contain;background:#f6f6f6;border:1px solid #eee;border-radius:12px;margin-top:12px;cursor:pointer}
+.medicine-request-prescription-link{
+  border:0;
+  background:transparent;
+  color:#1565c0;
+  padding:0;
+  margin:0;
+  font:inherit;
+  font-weight:800;
+  text-decoration:underline;
+  cursor:pointer;
+}
+.medicine-request-prescription-link:hover{opacity:.8}
+.medicine-request-photo-modal-image{
+  display:block;
+  width:100%;
+  max-height:70vh;
+  object-fit:contain;
+  background:#f6f6f6;
+  border:1px solid #eee;
+  border-radius:12px;
+  margin-top:12px;
+}
 .medicine-request-admin-note{margin-top:10px;padding:10px;background:#f6f8fb;border-radius:10px;font-size:13px;white-space:pre-wrap}
 .medicine-request-admin-status-new{background:#fff2cc;color:#8a5a00}
 .medicine-request-admin-status-informed{background:#dff5e3;color:#176b2c}
@@ -591,6 +612,30 @@ body.modal-open{
     <div class="actions" style="justify-content:flex-end;margin-top:16px">
       <button class="btn btn-success" onclick="confirmReprepareOrder()">Tekrar Hazırla ve WhatsApp Mesajını Aç</button>
     </div>
+  </div>
+</div>
+
+<div id="medicinePrescriptionPhotoModal" class="modal hidden">
+  <div class="modal-card" style="max-width:760px">
+    <div class="modal-x-anchor">
+      <button
+        type="button"
+        class="modal-persistent-x"
+        onclick="closeMedicinePrescriptionPhotoModal()"
+        aria-label="Modalı kapat"
+        title="Kapat"
+      >×</button>
+    </div>
+
+    <h2>🧾 Reçete / Barkod Fotoğrafı</h2>
+    <div id="medicinePrescriptionPhotoInfo" class="muted" style="margin-bottom:10px"></div>
+
+    <img
+      id="medicinePrescriptionPhotoImage"
+      class="medicine-request-photo-modal-image"
+      src=""
+      alt="Reçete / barkod fotoğrafı"
+    >
   </div>
 </div>
 
@@ -1356,18 +1401,9 @@ async function loadMedicineRequests(){
 
     if(error)throw error;
 
-    medicineRequests=await Promise.all((data||[]).map(async request=>{
-      let signedImageUrl="";
-      if(request.storage_path){
-        try{
-          const {data:signed,error:signedError}=await supabaseClient.storage
-            .from("prescription-requests")
-            .createSignedUrl(request.storage_path,600);
-          if(!signedError)signedImageUrl=signed?.signedUrl||"";
-        }catch{}
-      }
-      return {...request,signedImageUrl};
-    }));
+    // Reçete fotoğrafı burada yüklenmez / signed URL oluşturulmaz.
+    // Fotoğraf yalnızca Reçete No'ya tıklanınca ayrı modal için alınır.
+    medicineRequests=data||[];
 
     renderMedicineRequests();
   }catch(error){
@@ -1392,15 +1428,22 @@ function renderMedicineRequests(){
     return;
   }
 
-  list.innerHTML=medicineRequests.map(request=>{
-    const photo=request.signedImageUrl
-      ? `<a href="${escapeAttr(request.signedImageUrl)}" target="_blank" rel="noopener noreferrer"><img class="medicine-request-admin-photo" src="${escapeAttr(request.signedImageUrl)}" alt="Reçete / barkod fotoğrafı"></a>`
-      : '<div class="muted" style="margin-top:10px">Reçete fotoğrafı için geçici bağlantı oluşturulamadı.</div>';
+  list.innerHTML=medicineRequests.map((request,index)=>{
+    const requestNo=medicineRequests.length-index;
+    const prescriptionDisplay=request.storage_path
+      ? `<button
+           type="button"
+           class="medicine-request-prescription-link"
+           onclick="openMedicinePrescriptionPhotoModal('${escapeAttr(request.id)}')"
+           title="Reçete / barkod fotoğrafını görüntüle"
+         >${escapeHtml(request.prescription_number)}</button>`
+      : `${escapeHtml(request.prescription_number)}
+         <span class="muted"> (fotoğraf yok)</span>`;
 
     return `<div class="medicine-request-admin-card">
       <div class="medicine-request-admin-head">
         <div>
-          <strong>Talep #${escapeHtml(request.id)}</strong>
+          <strong>Talep #${requestNo}</strong>
           <div class="muted">${formatDateTime(request.created_at)}</div>
         </div>
         <span class="badge ${medicineRequestStatusClass(request.status)}">${medicineRequestStatusText(request.status)}</span>
@@ -1408,15 +1451,63 @@ function renderMedicineRequests(){
       <div class="medicine-request-admin-meta">
         <div><strong>Hasta T.C.:</strong> ${escapeHtml(request.tc_identity_number)}</div>
         <div><strong>Telefon:</strong> ${escapeHtml(formatMedicineRequestPhone(request.phone_number))}</div>
-        <div><strong>Reçete No:</strong> ${escapeHtml(request.prescription_number)}</div>
+        <div><strong>Reçete No:</strong> ${prescriptionDisplay}</div>
       </div>
-      ${photo}
       ${request.last_information_text?`<div class="medicine-request-admin-note"><strong>Son bilgilendirme:</strong><br>${escapeHtml(request.last_information_text)}</div>`:""}
       <div class="actions" style="margin-top:12px;justify-content:flex-end">
         <button class="btn btn-success" onclick="openMedicineInformModal('${escapeAttr(request.id)}')">💬 Bilgilendir</button>
       </div>
     </div>`;
   }).join("");
+}
+
+
+async function openMedicinePrescriptionPhotoModal(id){
+  const request=medicineRequests.find(x=>String(x.id)===String(id));
+  if(!request){
+    toast("İlaç talebi bulunamadı.");
+    return;
+  }
+
+  if(!request.storage_path){
+    toast("Bu talepte reçete fotoğrafı bulunmuyor.");
+    return;
+  }
+
+  const modal=document.getElementById("medicinePrescriptionPhotoModal");
+  const info=document.getElementById("medicinePrescriptionPhotoInfo");
+  const image=document.getElementById("medicinePrescriptionPhotoImage");
+
+  info.textContent=`Reçete No: ${request.prescription_number || "-"} · Fotoğraf yükleniyor...`;
+  image.src="";
+  modal.classList.remove("hidden");
+
+  try{
+    const {data,error}=await supabaseClient.storage
+      .from("prescription-requests")
+      .createSignedUrl(request.storage_path,600);
+
+    if(error)throw error;
+
+    const signedUrl=data?.signedUrl||"";
+    if(!signedUrl)throw new Error("Reçete fotoğrafı için bağlantı oluşturulamadı.");
+
+    image.src=signedUrl;
+    image.alt=`Reçete ${request.prescription_number || ""}`;
+    info.textContent=`Reçete No: ${request.prescription_number || "-"}`;
+  }catch(error){
+    console.error("Reçete fotoğrafı açılamadı:",error);
+    info.textContent="Reçete fotoğrafı açılamadı.";
+    toast(error?.message || "Reçete fotoğrafı açılamadı.");
+  }
+}
+
+function closeMedicinePrescriptionPhotoModal(){
+  const modal=document.getElementById("medicinePrescriptionPhotoModal");
+  const image=document.getElementById("medicinePrescriptionPhotoImage");
+
+  modal?.classList.add("hidden");
+  if(image)image.src="";
 }
 
 function openMedicineInformModal(id){
