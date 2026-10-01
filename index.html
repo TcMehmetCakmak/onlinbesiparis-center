@@ -7314,6 +7314,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         }).join("");
     }
 
+    const ADVERTISEMENT_STORY_DURATION_MS = 3000;
+
     let advertisementStoryAdId = null;
     let advertisementStoryImageIndex = 0;
     let advertisementStoryTimer = null;
@@ -7349,14 +7351,15 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             progress.style.width = "0";
 
             advertisementStoryProgressTimer = setTimeout(() => {
-                progress.style.transition = "width 5s linear";
+                progress.style.transition =
+                    `width ${ADVERTISEMENT_STORY_DURATION_MS}ms linear`;
                 progress.style.width = "100%";
             }, 40);
         }
 
         advertisementStoryTimer = setTimeout(() => {
             nextAdvertisementStory();
-        }, 5000);
+        }, ADVERTISEMENT_STORY_DURATION_MS);
     }
 
     function openAdvertisementStory(adId, imageIndex = 0) {
