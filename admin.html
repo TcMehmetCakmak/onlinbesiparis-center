@@ -1179,6 +1179,24 @@ function productMainImage(product){
   return images.find(x=>x.is_main)||images[0]||null;
 }
 
+function getAdminProductPriceText(product){
+  if(
+    product?.product_type === "SIZE" &&
+    Array.isArray(product?.variants) &&
+    product.variants.length
+  ){
+    const prices = product.variants
+      .map(v=>Number(v?.price))
+      .filter(Number.isFinite);
+
+    if(prices.length){
+      return `${money(Math.min(...prices))}'den başlayan`;
+    }
+  }
+
+  return money(product?.price);
+}
+
 function renderProducts(){
   const el=document.getElementById("productList");
   if(!products.length){
@@ -1192,12 +1210,14 @@ function renderProducts(){
       ? `<img class="product-admin-thumb" src="${escapeAttr(productImagePublicUrl(mainImage.storage_path))}" alt="${escapeAttr(p.name)}">`
       : `<div class="product-admin-no-image">📷</div>`;
 
+    const priceText=getAdminProductPriceText(p);
+
     return `<div class="product">
       <div class="product-left">
         ${visual}
         <div>
           <strong>${escapeHtml(p.name)}</strong>
-          <div class="muted">${money(p.price)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf</div>
+          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf</div>
         </div>
       </div>
       <div class="actions">
