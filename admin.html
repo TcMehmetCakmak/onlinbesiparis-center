@@ -1750,7 +1750,19 @@ function renderOrders(){
   const q=document.getElementById("orderSearch").value.toLowerCase().trim();
   let list=orders
     .filter(o=>status==="all"||o.status===status)
-    .filter(o=>!q||String(o.id).includes(q)||(o.name||"").toLowerCase().includes(q)||(o.address||"").toLowerCase().includes(q));
+    .filter(o=>{
+      if(!q)return true;
+      if(String(o.id).includes(q))return true;
+
+      const hideCustomerInfo =
+        o.verification_method==="whatsapp-business" &&
+        !o.verified_at;
+
+      if(hideCustomerInfo)return false;
+
+      return (o.name||"").toLowerCase().includes(q) ||
+             (o.address||"").toLowerCase().includes(q);
+    });
   list.sort((a,b)=>{
     if(sort==="oldest")return new Date(a.created_at)-new Date(b.created_at);
     if(sort==="high")return Number(b.total)-Number(a.total);
@@ -1762,7 +1774,8 @@ function renderOrders(){
   el.innerHTML=list.map(order=>{
     const isWhatsapp=order.verification_method==="whatsapp-business";
     const whatsappVerified=!!order.verified_at;
-    const needsWhatsappVerification=isWhatsapp&&!whatsappVerified&&order.status!=="iptal-edildi";
+    const hideCustomerInfo=isWhatsapp&&!whatsappVerified;
+    const needsWhatsappVerification=hideCustomerInfo&&order.status!=="iptal-edildi";
     const statusBadge=needsWhatsappVerification?'<span class="badge badge-pending">Doğrulama Bekleniyor</span>':order.status==="tamamlandi"?'<span class="badge badge-done">Tamamlandı</span>':order.status==="iptal-edildi"?'<span class="badge badge-cancel">İptal edildi</span>':'<span class="badge badge-active">Devam ediyor</span>';
     const badge=statusBadge;
     const items=(order.items||[]).map(i=>{
@@ -1784,13 +1797,25 @@ function renderOrders(){
       </div>`;
     }).join("");
     const date=new Date(order.created_at).toLocaleString("tr-TR");
-    return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${escapeHtml(order.name)}<div class="muted">${date}</div></div>${badge}</div>
+    const customerTitle=hideCustomerInfo
+      ? '<span style="color:#777">🔒 Müşteri bilgileri gizli</span>'
+      : escapeHtml(order.name);
+
+    const customerDetail=hideCustomerInfo
+      ? `<div class="muted" style="margin-top:7px;padding:10px 12px;background:#fff8e1;border:1px solid #ffe082;border-radius:10px">
+           🔒 Müşteri adı ve adresi güvenlik kodu doğrulandıktan sonra gösterilecektir.
+           <br>💳 ${escapeHtml(order.payment)}
+           ${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}
+         </div>`
+      : `<div class="muted" style="margin-top:7px">📍 ${order.google_maps_url?`<a href="${escapeAttr(order.google_maps_url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;cursor:pointer">${escapeHtml(order.address)}</a>`:escapeHtml(order.address)}<br>💳 ${escapeHtml(order.payment)}${order.phone_number?`<br>📱 <a href="tel:+${escapeAttr(order.phone_number)}" style="color:inherit">+${escapeHtml(order.phone_number)}</a>`:""}${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}</div>`;
+
+    return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${customerTitle}<div class="muted">${date}</div></div>${badge}</div>
       <div class="order-items">${items}</div>
       <div><strong>Toplam: ${money(order.total)}</strong>${Number(order.discount_amount||0)>0?`<div class="muted">Ara toplam: ${money(order.subtotal||Number(order.total)+Number(order.discount_amount||0))} · İndirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` · Kodlar: ${escapeHtml(order.coupon_codes.join(", "))}`:(order.coupon_code?` · Kod: ${escapeHtml(order.coupon_code)}`:"")}</div>`:""}</div>
-      <div class="muted" style="margin-top:7px">📍 ${order.google_maps_url?`<a href="${escapeAttr(order.google_maps_url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;cursor:pointer">${escapeHtml(order.address)}</a>`:escapeHtml(order.address)}<br>💳 ${escapeHtml(order.payment)}${order.phone_number?`<br>📱 <a href="tel:+${escapeAttr(order.phone_number)}" style="color:inherit">+${escapeHtml(order.phone_number)}</a>`:""}${order.note?`<br>📝 ${escapeHtml(order.note)}`:""}</div>
+      ${customerDetail}
       <div class="actions" style="margin-top:12px">
         ${needsWhatsappVerification?`<input id="wa-code-${order.id}" maxlength="6" inputmode="numeric" placeholder="Güvenlik kodu" value="${escapeAttr(whatsappCodeDrafts.get(String(order.id))||"")}" oninput="whatsappCodeDrafts.set('${order.id}', this.value.replace(/\D/g,'').slice(0,6)); this.value=whatsappCodeDrafts.get('${order.id}')" style="max-width:150px;padding:9px;border:1px solid #ddd;border-radius:9px"><button class="btn btn-success" onclick="verifyWhatsappOrder(${order.id})">✓ Kodu Doğrula</button><button class="btn btn-danger" onclick="setStatus(${order.id},'iptal-edildi')">✕ İptal</button>`:""}
-        <button class="btn pdf-btn" onclick="downloadOrderPdf(${order.id})">🧾 Çıktı Al (PDF)</button>
+        ${!hideCustomerInfo?`<button class="btn pdf-btn" onclick="downloadOrderPdf(${order.id})">🧾 Çıktı Al (PDF)</button>`:""}
         ${!needsWhatsappVerification&&order.status!=="tamamlandi"&&!(isWhatsapp&&!whatsappVerified)?`<button class="btn btn-success" onclick="setStatus(${order.id},'tamamlandi')">✓ Tamamlandı</button>`:""}
         ${!needsWhatsappVerification&&order.status!=="iptal-edildi"?`<button class="btn btn-danger" onclick="setStatus(${order.id},'iptal-edildi')">✕ İptal</button>`:""}
         ${isWhatsapp&&!whatsappVerified&&order.status==="iptal-edildi"?`<button class="btn btn-light" onclick="resumeWhatsappVerification(${order.id})">↻ Devam ediyor</button>`:(!needsWhatsappVerification&&order.status!=="devam-ediyor"&&!(isWhatsapp&&!whatsappVerified)?`<button class="btn btn-light" onclick="setStatus(${order.id},'devam-ediyor')">↻ Devam ediyor</button>`:"")}
@@ -1850,6 +1875,15 @@ function closeRevenueModal(){document.getElementById("revenueModal").classList.a
 function pdfSafe(v){return String(v??"").replace(/[çÇğĞıİöÖşŞüÜ]/g,c=>({"ç":"c","Ç":"C","ğ":"g","Ğ":"G","ı":"i","İ":"I","ö":"o","Ö":"O","ş":"s","Ş":"S","ü":"u","Ü":"U"}[c]||c));}
 function downloadOrderPdf(id){
   const order=orders.find(o=>String(o.id)===String(id)); if(!order)return;
+
+  if(
+    order.verification_method==="whatsapp-business" &&
+    !order.verified_at
+  ){
+    toast("Müşteri bilgileri güvenlik kodu doğrulanmadan görüntülenemez.");
+    return;
+  }
+
   if(!window.jspdf?.jsPDF){toast("PDF kutuphanesi yuklenemedi.");return;}
   const {jsPDF}=window.jspdf; const doc=new jsPDF(); let y=18;
   const line=(text,size=11,bold=false)=>{doc.setFontSize(size);doc.setFont("helvetica",bold?"bold":"normal");const lines=doc.splitTextToSize(pdfSafe(text),175);doc.text(lines,18,y);y+=lines.length*(size*0.45)+4;if(y>275){doc.addPage();y=18;}};
