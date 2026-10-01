@@ -203,6 +203,19 @@ body.modal-open{
 @media(max-width:800px){.advertisement-admin-list{grid-template-columns:1fr}.advertisement-admin-card{align-items:flex-start}}
 </style>
 
+
+<style id="sifa-medicine-admin-style">
+.medicine-request-admin-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.medicine-request-admin-card{border:1px solid #e6e6e6;border-radius:14px;padding:15px;background:#fff}
+.medicine-request-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.medicine-request-admin-meta{font-size:13px;color:#555;line-height:1.65;word-break:break-word}
+.medicine-request-admin-photo{display:block;width:100%;max-height:360px;object-fit:contain;background:#f6f6f6;border:1px solid #eee;border-radius:12px;margin-top:12px;cursor:pointer}
+.medicine-request-admin-note{margin-top:10px;padding:10px;background:#f6f8fb;border-radius:10px;font-size:13px;white-space:pre-wrap}
+.medicine-request-admin-status-new{background:#fff2cc;color:#8a5a00}
+.medicine-request-admin-status-informed{background:#dff5e3;color:#176b2c}
+@media(max-width:800px){.medicine-request-admin-list{grid-template-columns:1fr}}
+</style>
+
 </head>
 <body>
 
@@ -239,6 +252,7 @@ body.modal-open{
   <div class="tabs">
     <button class="tab active" onclick="showTab('products',this)">🍽️ Ürünler</button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
+    <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
     <button class="tab" onclick="showTab('advertisements',this)">📣 Reklamlar</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️ Genel Ayarlar</button>
@@ -275,6 +289,21 @@ body.modal-open{
         <input id="orderSearch" oninput="renderOrders()" placeholder="Müşteri / sipariş no / telefon / adres ara">
       </div>
       <div id="ordersList"></div>
+    </div>
+  </section>
+
+
+  <section id="medicineRequestsTab" class="hidden">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h2>💊 İlaç Talepleri</h2>
+          <div class="muted">Şifa Eczane müşterilerinin reçete/barkod talepleri. Bu bölüm yalnızca Şifa Eczane'de görünür.</div>
+        </div>
+      </div>
+      <div id="medicineRequestAdminList" class="medicine-request-admin-list">
+        <div class="empty" style="grid-column:1/-1">İlaç talepleri yükleniyor...</div>
+      </div>
     </div>
   </section>
 
@@ -518,6 +547,20 @@ body.modal-open{
 </div>
 
 
+
+<div id="medicineInformModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeMedicineInformModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+    <h2>💬 Hastayı Bilgilendir</h2>
+    <div id="medicineInformModalInfo" class="muted" style="margin-bottom:12px"></div>
+    <label>Detay</label>
+    <textarea id="medicineInformText" maxlength="1500" style="width:100%;min-height:150px;padding:12px;border:1px solid #ddd;border-radius:10px;resize:vertical" placeholder="Hastaya WhatsApp üzerinden gönderilecek bilgilendirme metnini yazın."></textarea>
+    <div class="actions" style="justify-content:flex-end;margin-top:16px">
+      <button id="medicineInformSendButton" class="btn btn-success" onclick="confirmMedicineInform()">WhatsApp'tan Bilgilendir</button>
+    </div>
+  </div>
+</div>
+
 <div id="rejectOrderModal" class="modal hidden">
   <div class="modal-card">
     <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeRejectOrderModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
@@ -563,6 +606,8 @@ const TENANT_SLUG = String(
   new URLSearchParams(location.search).get("tenant") || ""
 ).trim().toLowerCase();
 
+const PHARMACY_FEATURE_TENANT_SLUG = "sifa-eczane";
+
 if(!TENANT_SLUG){
   location.replace(APP_ROOT_URL.href);
 }
@@ -603,6 +648,8 @@ let pendingAdvertisementFiles = [];
 let currentAdvertisementImages = [];
 let advertisementImageBusy = false;
 let supportTickets = [];
+let medicineRequests = [];
+let medicineRequestInformId = null;
 let appSettings = {id:null,shop_name:"İşletme",shop_icon:"🍽️",background_color:"#f5f5f5",phone:""};
 let platformBusiness = null;
 let currentBusinessId = null;
@@ -749,6 +796,7 @@ function showApp(){
 
   document.getElementById("loginPage").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
+  configureMedicineRequestAdminFeature();
   subscribeAdminRealtime();
   subscribeSupportTicketRealtime();
   loadAll();
@@ -768,14 +816,18 @@ async function loadAll(){
       throw new Error("Admin hesabı ile URL'deki işletme eşleşmiyor.");
     }
 
-    await Promise.all([
+    const loadTasks=[
       loadAdminProducts(),
       loadAdminOrders(),
       loadAdminNotifications(),
       loadAdminAdvertisements(),
       loadAdminSettings(),
       loadSupportTickets()
-    ]);
+    ];
+    if(TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG){
+      loadTasks.push(loadMedicineRequests());
+    }
+    await Promise.all(loadTasks);
 
     renderProducts();
     renderOrders();
@@ -1259,14 +1311,182 @@ function loadDashboard(){
 function showTab(name,button){
   document.getElementById("productsTab").classList.toggle("hidden",name!=="products");
   document.getElementById("ordersTab").classList.toggle("hidden",name!=="orders");
+  document.getElementById("medicineRequestsTab")?.classList.toggle("hidden",name!=="medicineRequests");
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
   document.getElementById("advertisementsTab").classList.toggle("hidden",name!=="advertisements");
   document.getElementById("settingsTab").classList.toggle("hidden",name!=="settings");
   document.getElementById("supportTab").classList.toggle("hidden",name!=="support");
   if(name==="support")loadSupportTickets();
   if(name==="advertisements")loadAdminAdvertisements();
+  if(name==="medicineRequests")loadMedicineRequests();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
 }
+
+function configureMedicineRequestAdminFeature(){
+  const enabled=TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG;
+  document.getElementById("medicineRequestsTabButton")?.classList.toggle("hidden",!enabled);
+  if(!enabled){
+    document.getElementById("medicineRequestsTab")?.classList.add("hidden");
+  }
+}
+
+function medicineRequestStatusText(status){
+  return status==="informed"?"Bilgilendirildi":"Yeni Talep";
+}
+
+function medicineRequestStatusClass(status){
+  return status==="informed"?"medicine-request-admin-status-informed":"medicine-request-admin-status-new";
+}
+
+function formatMedicineRequestPhone(value){
+  const digits=String(value||"").replace(/\D/g,"");
+  return digits?`+${digits}`:"-";
+}
+
+async function loadMedicineRequests(){
+  if(TENANT_SLUG!==PHARMACY_FEATURE_TENANT_SLUG || !currentBusinessId)return;
+
+  const list=document.getElementById("medicineRequestAdminList");
+  try{
+    const {data,error}=await supabaseClient
+      .from("medicine_requests")
+      .select("id,business_id,tc_identity_number,phone_number,prescription_number,storage_path,status,last_information_text,informed_at,created_at")
+      .eq("business_id",currentBusinessId)
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+
+    medicineRequests=await Promise.all((data||[]).map(async request=>{
+      let signedImageUrl="";
+      if(request.storage_path){
+        try{
+          const {data:signed,error:signedError}=await supabaseClient.storage
+            .from("prescription-requests")
+            .createSignedUrl(request.storage_path,600);
+          if(!signedError)signedImageUrl=signed?.signedUrl||"";
+        }catch{}
+      }
+      return {...request,signedImageUrl};
+    }));
+
+    renderMedicineRequests();
+  }catch(error){
+    console.error("İlaç talepleri yüklenemedi:",error);
+    if(list)list.innerHTML=`<div class="empty" style="grid-column:1/-1">İlaç talepleri yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
+  }
+}
+
+function renderMedicineRequests(){
+  const list=document.getElementById("medicineRequestAdminList");
+  if(!list)return;
+
+  const pending=medicineRequests.filter(x=>x.status!=="informed").length;
+  const badge=document.getElementById("medicineRequestPendingCount");
+  if(badge){
+    badge.textContent=String(pending);
+    badge.classList.toggle("hidden",pending===0);
+  }
+
+  if(!medicineRequests.length){
+    list.innerHTML='<div class="empty" style="grid-column:1/-1">Henüz ilaç talebi yok.</div>';
+    return;
+  }
+
+  list.innerHTML=medicineRequests.map(request=>{
+    const photo=request.signedImageUrl
+      ? `<a href="${escapeAttr(request.signedImageUrl)}" target="_blank" rel="noopener noreferrer"><img class="medicine-request-admin-photo" src="${escapeAttr(request.signedImageUrl)}" alt="Reçete / barkod fotoğrafı"></a>`
+      : '<div class="muted" style="margin-top:10px">Reçete fotoğrafı için geçici bağlantı oluşturulamadı.</div>';
+
+    return `<div class="medicine-request-admin-card">
+      <div class="medicine-request-admin-head">
+        <div>
+          <strong>Talep #${escapeHtml(request.id)}</strong>
+          <div class="muted">${formatDateTime(request.created_at)}</div>
+        </div>
+        <span class="badge ${medicineRequestStatusClass(request.status)}">${medicineRequestStatusText(request.status)}</span>
+      </div>
+      <div class="medicine-request-admin-meta">
+        <div><strong>Hasta T.C.:</strong> ${escapeHtml(request.tc_identity_number)}</div>
+        <div><strong>Telefon:</strong> ${escapeHtml(formatMedicineRequestPhone(request.phone_number))}</div>
+        <div><strong>Reçete No:</strong> ${escapeHtml(request.prescription_number)}</div>
+      </div>
+      ${photo}
+      ${request.last_information_text?`<div class="medicine-request-admin-note"><strong>Son bilgilendirme:</strong><br>${escapeHtml(request.last_information_text)}</div>`:""}
+      <div class="actions" style="margin-top:12px;justify-content:flex-end">
+        <button class="btn btn-success" onclick="openMedicineInformModal('${escapeAttr(request.id)}')">💬 Bilgilendir</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function openMedicineInformModal(id){
+  const request=medicineRequests.find(x=>String(x.id)===String(id));
+  if(!request){toast("İlaç talebi bulunamadı.");return;}
+
+  medicineRequestInformId=id;
+  document.getElementById("medicineInformText").value="";
+  document.getElementById("medicineInformModalInfo").textContent=
+    `${formatMedicineRequestPhone(request.phone_number)} numaralı hastaya gönderilecek mesajı yazın.`;
+  document.getElementById("medicineInformModal").classList.remove("hidden");
+  setTimeout(()=>document.getElementById("medicineInformText")?.focus(),50);
+}
+
+function closeMedicineInformModal(){
+  medicineRequestInformId=null;
+  document.getElementById("medicineInformModal").classList.add("hidden");
+}
+
+async function confirmMedicineInform(){
+  const id=medicineRequestInformId;
+  const detail=String(document.getElementById("medicineInformText").value||"").trim();
+  if(!id)return;
+  if(!detail){toast("Bilgilendirme detayı zorunludur.");return;}
+
+  const request=medicineRequests.find(x=>String(x.id)===String(id));
+  if(!request){toast("İlaç talebi bulunamadı.");return;}
+
+  const phone=normalizeWhatsAppPhone(request.phone_number);
+  if(!phone){toast("Hastanın telefon numarası geçersiz.");return;}
+
+  const button=document.getElementById("medicineInformSendButton");
+  const waWindow=reserveWhatsAppWindow();
+  button.disabled=true;
+  const oldText=button.textContent;
+  button.textContent="Kaydediliyor...";
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("medicine_requests")
+      .update({
+        status:"informed",
+        last_information_text:detail,
+        informed_at:new Date().toISOString()
+      })
+      .eq("id",id)
+      .eq("business_id",currentBusinessId)
+      .select("id,business_id,tc_identity_number,phone_number,prescription_number,storage_path,status,last_information_text,informed_at,created_at")
+      .single();
+
+    if(error)throw error;
+
+    if(waWindow&&!waWindow.closed){
+      waWindow.location.href=`https://wa.me/${phone}?text=${encodeURIComponent(detail)}`;
+    }else{
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(detail)}`,"_blank");
+    }
+
+    closeMedicineInformModal();
+    toast("Bilgilendirme kaydedildi. WhatsApp mesajını göndererek işlemi tamamlayın.");
+    await loadMedicineRequests();
+  }catch(error){
+    try{waWindow?.close();}catch{}
+    toast(error?.message||"Bilgilendirme gönderilemedi.");
+  }finally{
+    button.disabled=false;
+    button.textContent=oldText;
+  }
+}
+
 function productImagePublicUrl(storagePath){
   if(!storagePath)return "";
   const {data}=supabaseClient.storage.from("product-images").getPublicUrl(storagePath);
@@ -2768,6 +2988,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"medicine_requests",filter:businessFilter},async()=>{await loadMedicineRequests();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
       if(status==="SUBSCRIBED")refreshAdminLiveData(true);
@@ -2820,7 +3041,8 @@ async function refreshAdminLiveData(force=false){
       loadAdminAdvertisements(),
       loadAdminSettings(),
       loadSupportTickets(),
-      loadPlatformBusiness()
+      loadPlatformBusiness(),
+      TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG ? loadMedicineRequests() : Promise.resolve()
     ]);
     loadDashboard();
   }finally{

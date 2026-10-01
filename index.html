@@ -2678,6 +2678,31 @@ body{
 @media(min-width:700px){.ad-story-shell{height:min(92vh,900px);border-radius:16px}}
 </style>
 
+
+<style id="sifa-pharmacy-feature-style">
+#medicineRequestFeature{display:none}
+#medicineRequestFeature.sifa-visible{display:block}
+.medicine-request-card{padding:16px 18px;text-align:center;border:1px solid #d7eadf;background:#f4fbf7}
+.medicine-request-launcher{width:100%;border:0;border-radius:13px;padding:15px 18px;background:#16803a;color:#fff;font-size:17px;font-weight:800;cursor:pointer}
+.medicine-request-launcher:active{transform:scale(.99)}
+.medicine-request-help{font-size:12px;color:#567064;line-height:1.45;margin-top:9px}
+.medicine-request-modal{position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.medicine-request-modal.hidden{display:none!important}
+.medicine-request-modal-card{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.medicine-request-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.medicine-request-modal-head h2{margin:0}
+.medicine-request-close{width:40px;height:40px;min-width:40px;border:0;border-radius:50%;background:#eee;font-size:26px;cursor:pointer}
+.medicine-request-modal label{display:block;font-weight:700;margin:13px 0 6px}
+.medicine-request-modal input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:16px;margin:0}
+.medicine-request-privacy{padding:11px 12px;border-radius:11px;background:#fff7e6;border:1px solid #ffd58a;color:#6f531d;font-size:12px;line-height:1.5}
+.medicine-request-preview{display:none;margin-top:10px;border:1px solid #eee;border-radius:12px;padding:8px;background:#fafafa}
+.medicine-request-preview.visible{display:block}
+.medicine-request-preview img{display:block;max-width:100%;max-height:300px;margin:auto;border-radius:9px;object-fit:contain;background:#fff}
+.medicine-request-submit{width:100%;border:0;border-radius:12px;padding:14px 16px;margin-top:16px;background:#16803a;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+.medicine-request-submit:disabled{opacity:.6;cursor:not-allowed}
+.medicine-request-status{min-height:18px;margin-top:9px;font-size:13px;color:#666}
+</style>
+
 </head>
 
 <body>
@@ -2786,7 +2811,15 @@ body{
 
         </div>
 
-        
+        <div id="medicineRequestFeature" class="card medicine-request-card">
+            <button type="button" class="medicine-request-launcher" onclick="openMedicineRequestModal()">
+                💊 İlaç Talep Et
+            </button>
+            <div class="medicine-request-help">
+                Yalnızca Şifa Eczane için: T.C. kimlik, telefon, reçete numarası ve reçete/barkod fotoğrafı ile talep oluşturabilirsiniz.
+            </div>
+        </div>
+
 <div id="franchisePage" class="franchise-page hidden">
   <div class="franchise-page-inner">
     <div class="franchise-page-header">
@@ -3636,6 +3669,42 @@ body{
 
 
 
+
+<div id="medicineRequestModal" class="medicine-request-modal hidden" aria-hidden="true">
+    <div class="medicine-request-modal-card" role="dialog" aria-modal="true" aria-labelledby="medicineRequestModalTitle">
+        <div class="medicine-request-modal-head">
+            <h2 id="medicineRequestModalTitle">💊 İlaç Talep Et</h2>
+            <button type="button" class="medicine-request-close" onclick="closeMedicineRequestModal()" aria-label="Kapat">×</button>
+        </div>
+
+        <div class="medicine-request-privacy">
+            T.C. kimlik numarası ve reçete/barkod fotoğrafı hassas kişisel veridir. Bu formu gönderdiğinizde bilgiler yalnızca Şifa Eczane işletmesinin yönetim ekranına iletilir.
+        </div>
+
+        <label>Hastanın T.C. Kimlik Numarası</label>
+        <input id="medicinePatientTc" type="text" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="11 haneli T.C. kimlik numarası">
+
+        <label>Telefon</label>
+        <input id="medicinePatientPhone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05xx xxx xx xx">
+
+        <label>Reçete No</label>
+        <input id="medicinePrescriptionNo" type="text" maxlength="100" autocomplete="off" placeholder="Reçete numarası">
+
+        <label>Reçete / Barkod Fotoğrafı</label>
+        <input id="medicinePrescriptionImage" type="file" accept="image/jpeg,image/png,image/webp" onchange="handleMedicinePrescriptionImage(this.files)">
+
+        <div id="medicinePrescriptionPreview" class="medicine-request-preview">
+            <img id="medicinePrescriptionPreviewImage" alt="Reçete / barkod önizleme">
+        </div>
+
+        <div id="medicineRequestStatus" class="medicine-request-status"></div>
+
+        <button id="medicineRequestSubmitButton" type="button" class="medicine-request-submit" onclick="submitMedicineRequest()">
+            Talebi Oluştur ve WhatsApp'ı Aç
+        </button>
+    </div>
+</div>
+
 <!-- =========================================
      ÜRÜN FOTOĞRAF GALERİSİ
 ========================================= -->
@@ -3779,6 +3848,8 @@ body{
         ""
     ).trim().toLowerCase();
 
+    const PHARMACY_FEATURE_TENANT_SLUG = "sifa-eczane";
+
     const APP_ROOT_URL =
         (PATH_TENANT_SLUG || IS_PLATFORM_ROUTE)
             ? new URL("../", location.href)
@@ -3897,6 +3968,7 @@ body{
         const orderItemsCard = document.getElementById("orderItemsCard");
         const customerInfoCard = document.getElementById("customerInfoCard");
         const cartOpenButton = document.getElementById("cartOpenButton");
+        const medicineFeature = document.getElementById("medicineRequestFeature");
         if (!banner) return;
 
         // Merkezi lisans bilgisi gelene kadar sipariş alanlarını ve sepet butonunu göstermiyoruz.
@@ -3904,6 +3976,7 @@ body{
             orderItemsCard?.classList.add("hidden");
             customerInfoCard?.classList.add("hidden");
             cartOpenButton?.classList.add("hidden");
+            medicineFeature?.classList.remove("sifa-visible");
             banner.classList.add("hidden");
             banner.textContent = "";
             return;
@@ -3916,6 +3989,10 @@ body{
         orderItemsCard?.classList.toggle("hidden", inactive);
         customerInfoCard?.classList.toggle("hidden", inactive);
         cartOpenButton?.classList.toggle("hidden", inactive);
+        medicineFeature?.classList.toggle(
+            "sifa-visible",
+            TENANT_SLUG === PHARMACY_FEATURE_TENANT_SLUG && !inactive
+        );
 
         if (inactive) {
             const businessName = String(platformBusiness.shop_name || "işletme").trim() || "işletme";
@@ -6385,6 +6462,253 @@ body{
         return digits;
     }
 
+
+
+    /* =========================================
+       ŞİFA ECZANE - İLAÇ TALEBİ
+       Yalnızca tenant slug = sifa-eczane için görünür.
+    ========================================= */
+
+    let medicinePrescriptionFile = null;
+    let medicinePrescriptionPreviewUrl = null;
+    let medicineRequestBusy = false;
+
+    function setMedicineRequestStatus(message, isError = false) {
+        const el = document.getElementById("medicineRequestStatus");
+        if (!el) return;
+        el.textContent = message || "";
+        el.style.color = isError ? "#b42318" : "#666";
+    }
+
+    function resetMedicineRequestForm() {
+        document.getElementById("medicinePatientTc").value = "";
+        document.getElementById("medicinePatientPhone").value = "";
+        document.getElementById("medicinePrescriptionNo").value = "";
+        document.getElementById("medicinePrescriptionImage").value = "";
+        medicinePrescriptionFile = null;
+        setMedicineRequestStatus("");
+
+        if (medicinePrescriptionPreviewUrl) {
+            try { URL.revokeObjectURL(medicinePrescriptionPreviewUrl); } catch {}
+            medicinePrescriptionPreviewUrl = null;
+        }
+
+        const preview = document.getElementById("medicinePrescriptionPreview");
+        const image = document.getElementById("medicinePrescriptionPreviewImage");
+        preview?.classList.remove("visible");
+        if (image) image.removeAttribute("src");
+    }
+
+    function openMedicineRequestModal() {
+        if (TENANT_SLUG !== PHARMACY_FEATURE_TENANT_SLUG) return;
+        if (!platformBusinessActive) {
+            alert("Şifa Eczane şu anda talep kabul etmiyor.");
+            return;
+        }
+
+        resetMedicineRequestForm();
+        const modal = document.getElementById("medicineRequestModal");
+        modal?.classList.remove("hidden");
+        modal?.setAttribute("aria-hidden", "false");
+        setTimeout(() => document.getElementById("medicinePatientTc")?.focus(), 50);
+    }
+
+    function closeMedicineRequestModal() {
+        if (medicineRequestBusy) return;
+        const modal = document.getElementById("medicineRequestModal");
+        modal?.classList.add("hidden");
+        modal?.setAttribute("aria-hidden", "true");
+        resetMedicineRequestForm();
+    }
+
+    function handleMedicinePrescriptionImage(files) {
+        const file = files?.[0] || null;
+        medicinePrescriptionFile = null;
+
+        if (medicinePrescriptionPreviewUrl) {
+            try { URL.revokeObjectURL(medicinePrescriptionPreviewUrl); } catch {}
+            medicinePrescriptionPreviewUrl = null;
+        }
+
+        const preview = document.getElementById("medicinePrescriptionPreview");
+        const image = document.getElementById("medicinePrescriptionPreviewImage");
+        preview?.classList.remove("visible");
+        if (image) image.removeAttribute("src");
+
+        if (!file) return;
+
+        if (!/^image\/(jpeg|png|webp)$/i.test(file.type || "")) {
+            document.getElementById("medicinePrescriptionImage").value = "";
+            setMedicineRequestStatus("Yalnızca JPG, PNG veya WebP fotoğraf seçebilirsiniz.", true);
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            document.getElementById("medicinePrescriptionImage").value = "";
+            setMedicineRequestStatus("Fotoğraf 10 MB'dan büyük olamaz.", true);
+            return;
+        }
+
+        medicinePrescriptionFile = file;
+        medicinePrescriptionPreviewUrl = URL.createObjectURL(file);
+        if (image) image.src = medicinePrescriptionPreviewUrl;
+        preview?.classList.add("visible");
+        setMedicineRequestStatus("");
+    }
+
+    async function compressMedicinePrescriptionImage(file, maxDimension = 1600, quality = 0.82) {
+        let bitmap = null;
+        let image = null;
+        let width = 0;
+        let height = 0;
+        let objectUrl = null;
+
+        try {
+            if ("createImageBitmap" in window) {
+                bitmap = await createImageBitmap(file);
+                width = bitmap.width;
+                height = bitmap.height;
+            } else {
+                objectUrl = URL.createObjectURL(file);
+                image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error("Fotoğraf okunamadı."));
+                    img.src = objectUrl;
+                });
+                width = image.naturalWidth;
+                height = image.naturalHeight;
+            }
+
+            const scale = Math.min(1, maxDimension / Math.max(width, height));
+            const outWidth = Math.max(1, Math.round(width * scale));
+            const outHeight = Math.max(1, Math.round(height * scale));
+
+            const canvas = document.createElement("canvas");
+            canvas.width = outWidth;
+            canvas.height = outHeight;
+            const ctx = canvas.getContext("2d", { alpha: false });
+            ctx.drawImage(bitmap || image, 0, 0, outWidth, outHeight);
+
+            return await new Promise((resolve, reject) => {
+                canvas.toBlob(
+                    blob => blob ? resolve(blob) : reject(new Error("Fotoğraf sıkıştırılamadı.")),
+                    "image/webp",
+                    quality
+                );
+            });
+        } finally {
+            try { bitmap?.close?.(); } catch {}
+            if (objectUrl) {
+                try { URL.revokeObjectURL(objectUrl); } catch {}
+            }
+        }
+    }
+
+    function reserveMedicineWhatsAppWindow() {
+        try { return window.open("about:blank", "_blank"); }
+        catch { return null; }
+    }
+
+    async function submitMedicineRequest() {
+        if (medicineRequestBusy) return;
+        if (TENANT_SLUG !== PHARMACY_FEATURE_TENANT_SLUG) return;
+        if (!currentBusinessId || !platformBusinessActive) {
+            setMedicineRequestStatus("İşletme bilgisi doğrulanamadı.", true);
+            return;
+        }
+
+        const tc = String(document.getElementById("medicinePatientTc").value || "").replace(/\D/g, "");
+        const phone = normalizeCustomerPhone(document.getElementById("medicinePatientPhone").value);
+        const prescriptionNo = String(document.getElementById("medicinePrescriptionNo").value || "").trim();
+        const pharmacyPhone = normalizeCustomerPhone(appSettings.phone || "");
+
+        if (!/^[1-9]\d{10}$/.test(tc)) {
+            setMedicineRequestStatus("Hastanın T.C. kimlik numarası 11 haneli olmalıdır.", true);
+            return;
+        }
+        if (!phone) {
+            setMedicineRequestStatus("Geçerli bir telefon numarası girin. Örnek: 05xx xxx xx xx", true);
+            return;
+        }
+        if (prescriptionNo.length < 2) {
+            setMedicineRequestStatus("Reçete numarasını girin.", true);
+            return;
+        }
+        if (!medicinePrescriptionFile) {
+            setMedicineRequestStatus("Reçete / barkod fotoğrafını seçin.", true);
+            return;
+        }
+        if (!pharmacyPhone) {
+            setMedicineRequestStatus("Şifa Eczane WhatsApp numarası henüz tanımlanmamış.", true);
+            return;
+        }
+
+        const button = document.getElementById("medicineRequestSubmitButton");
+        const waWindow = reserveMedicineWhatsAppWindow();
+        const requestId = crypto.randomUUID();
+        let uploadedPath = null;
+
+        try {
+            medicineRequestBusy = true;
+            button.disabled = true;
+            button.textContent = "Talep gönderiliyor...";
+            setMedicineRequestStatus("Reçete fotoğrafı hazırlanıyor...");
+
+            const webpBlob = await compressMedicinePrescriptionImage(medicinePrescriptionFile);
+            uploadedPath = `${currentBusinessId}/${requestId}/${crypto.randomUUID()}.webp`;
+
+            const { error: uploadError } = await supabaseClient.storage
+                .from("prescription-requests")
+                .upload(uploadedPath, webpBlob, {
+                    contentType: "image/webp",
+                    cacheControl: "3600",
+                    upsert: false
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { error: insertError } = await supabaseClient
+                .from("medicine_requests")
+                .insert({
+                    id: requestId,
+                    business_id: currentBusinessId,
+                    tc_identity_number: tc,
+                    phone_number: phone,
+                    prescription_number: prescriptionNo,
+                    storage_path: uploadedPath,
+                    status: "new"
+                });
+
+            if (insertError) throw insertError;
+
+            const message =
+                `İlaç talebi\n` +
+                `Hasta T.C.: ${tc}\n` +
+                `Reçete No: ${prescriptionNo}`;
+
+            const waUrl = `https://wa.me/${pharmacyPhone}?text=${encodeURIComponent(message)}`;
+            if (waWindow && !waWindow.closed) waWindow.location.href = waUrl;
+            else window.open(waUrl, "_blank");
+
+            medicineRequestBusy = false;
+            closeMedicineRequestModal();
+
+            if (typeof window.showCustomerToast === "function") {
+                window.showCustomerToast("İlaç talebiniz Şifa Eczane'ye iletildi.");
+            } else {
+                alert("İlaç talebiniz Şifa Eczane'ye iletildi. WhatsApp mesajını göndererek işlemi tamamlayın.");
+            }
+        } catch (error) {
+            console.error("İlaç talebi gönderilemedi:", error);
+            try { waWindow?.close(); } catch {}
+            setMedicineRequestStatus(error?.message || "İlaç talebi gönderilemedi.", true);
+        } finally {
+            medicineRequestBusy = false;
+            button.disabled = false;
+            button.textContent = "Talebi Oluştur ve WhatsApp'ı Aç";
+        }
+    }
 
     /* =========================================
        SİPARİŞ OLUŞTUR
