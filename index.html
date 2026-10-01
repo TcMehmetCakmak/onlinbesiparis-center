@@ -3896,12 +3896,14 @@ body{
         const banner = document.getElementById("licenseBanner");
         const orderItemsCard = document.getElementById("orderItemsCard");
         const customerInfoCard = document.getElementById("customerInfoCard");
+        const cartOpenButton = document.getElementById("cartOpenButton");
         if (!banner) return;
 
-        // Merkezi lisans bilgisi gelene kadar sipariş alanlarını göstermiyoruz.
+        // Merkezi lisans bilgisi gelene kadar sipariş alanlarını ve sepet butonunu göstermiyoruz.
         if (!platformBusiness) {
             orderItemsCard?.classList.add("hidden");
             customerInfoCard?.classList.add("hidden");
+            cartOpenButton?.classList.add("hidden");
             banner.classList.add("hidden");
             banner.textContent = "";
             return;
@@ -3913,11 +3915,17 @@ body{
 
         orderItemsCard?.classList.toggle("hidden", inactive);
         customerInfoCard?.classList.toggle("hidden", inactive);
+        cartOpenButton?.classList.toggle("hidden", inactive);
 
         if (inactive) {
             const businessName = String(platformBusiness.shop_name || "işletme").trim() || "işletme";
             banner.classList.remove("hidden");
             banner.textContent = `Kullanım süresinin uzatılması için lütfen ${businessName} işletmesi ile iletişime geçiniz.`;
+
+            // İşletme pasifleştiği anda sepet sayfası açıksa kapat.
+            if (document.body.classList.contains("cart-page-open")) {
+                try { closeCartPage(); } catch {}
+            }
         } else {
             banner.classList.add("hidden");
             banner.textContent = "";
@@ -7346,30 +7354,20 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             `#advertisementStoryProgress .ad-story-progress-fill[data-index="${advertisementStoryImageIndex}"]`
         );
 
-        if (!progress) {
-            advertisementStoryTimer = setTimeout(() => {
-                nextAdvertisementStory();
-            }, ADVERTISEMENT_STORY_DURATION_MS);
-            return;
+        if (progress) {
+            progress.style.transition = "none";
+            progress.style.width = "0";
+
+            advertisementStoryProgressTimer = setTimeout(() => {
+                progress.style.transition =
+                    `width ${ADVERTISEMENT_STORY_DURATION_MS}ms linear`;
+                progress.style.width = "100%";
+            }, 40);
         }
 
-        // Aktif fotoğrafın barını sıfırdan başlat.
-        progress.style.transition = "none";
-        progress.style.width = "0";
-
-        // Tarayıcıya 0% durumunu çizdir; ardından bar ve fotoğraf süresini
-        // aynı anda başlat. Böylece bar tam dolduğu anda fotoğraf değişir.
-        void progress.offsetWidth;
-
-        advertisementStoryProgressTimer = setTimeout(() => {
-            progress.style.transition =
-                `width ${ADVERTISEMENT_STORY_DURATION_MS}ms linear`;
-            progress.style.width = "100%";
-
-            advertisementStoryTimer = setTimeout(() => {
-                nextAdvertisementStory();
-            }, ADVERTISEMENT_STORY_DURATION_MS);
-        }, 20);
+        advertisementStoryTimer = setTimeout(() => {
+            nextAdvertisementStory();
+        }, ADVERTISEMENT_STORY_DURATION_MS);
     }
 
     function openAdvertisementStory(adId, imageIndex = 0) {
@@ -7432,13 +7430,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             progressEl.innerHTML = ad.images.map((_, index) => `
                 <span class="ad-story-progress-track">
                     <span
-                        class="ad-story-progress-fill ${
-                            index < advertisementStoryImageIndex
-                                ? "completed"
-                                : index === advertisementStoryImageIndex
-                                    ? "active"
-                                    : ""
-                        }"
+                        class="ad-story-progress-fill ${index < advertisementStoryImageIndex ? "completed" : ""}"
                         data-index="${index}"
                     ></span>
                 </span>
