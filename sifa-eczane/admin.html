@@ -1401,18 +1401,9 @@ async function loadMedicineRequests(){
 
     if(error)throw error;
 
-    medicineRequests=await Promise.all((data||[]).map(async request=>{
-      let signedImageUrl="";
-      if(request.storage_path){
-        try{
-          const {data:signed,error:signedError}=await supabaseClient.storage
-            .from("prescription-requests")
-            .createSignedUrl(request.storage_path,600);
-          if(!signedError)signedImageUrl=signed?.signedUrl||"";
-        }catch{}
-      }
-      return {...request,signedImageUrl};
-    }));
+    // Reçete fotoğrafı burada yüklenmez / signed URL oluşturulmaz.
+    // Fotoğraf yalnızca Reçete No'ya tıklanınca ayrı modal için alınır.
+    medicineRequests=data||[];
 
     renderMedicineRequests();
   }catch(error){
@@ -1439,7 +1430,7 @@ function renderMedicineRequests(){
 
   list.innerHTML=medicineRequests.map((request,index)=>{
     const requestNo=medicineRequests.length-index;
-    const prescriptionDisplay=request.signedImageUrl
+    const prescriptionDisplay=request.storage_path
       ? `<button
            type="button"
            class="medicine-request-prescription-link"
@@ -1447,7 +1438,7 @@ function renderMedicineRequests(){
            title="Reçete / barkod fotoğrafını görüntüle"
          >${escapeHtml(request.prescription_number)}</button>`
       : `${escapeHtml(request.prescription_number)}
-         <span class="muted"> (fotoğraf açılamıyor)</span>`;
+         <span class="muted"> (fotoğraf yok)</span>`;
 
     return `<div class="medicine-request-admin-card">
       <div class="medicine-request-admin-head">
@@ -1471,15 +1462,15 @@ function renderMedicineRequests(){
 }
 
 
-function openMedicinePrescriptionPhotoModal(id){
+async function openMedicinePrescriptionPhotoModal(id){
   const request=medicineRequests.find(x=>String(x.id)===String(id));
   if(!request){
     toast("İlaç talebi bulunamadı.");
     return;
   }
 
-  if(!request.signedImageUrl){
-    toast("Reçete fotoğrafı görüntülenemiyor.");
+  if(!request.storage_path){
+    toast("Bu talepte reçete fotoğrafı bulunmuyor.");
     return;
   }
 
@@ -1487,11 +1478,28 @@ function openMedicinePrescriptionPhotoModal(id){
   const info=document.getElementById("medicinePrescriptionPhotoInfo");
   const image=document.getElementById("medicinePrescriptionPhotoImage");
 
-  info.textContent=`Reçete No: ${request.prescription_number || "-"}`;
-  image.src=request.signedImageUrl;
-  image.alt=`Reçete ${request.prescription_number || ""}`;
-
+  info.textContent=`Reçete No: ${request.prescription_number || "-"} · Fotoğraf yükleniyor...`;
+  image.src="";
   modal.classList.remove("hidden");
+
+  try{
+    const {data,error}=await supabaseClient.storage
+      .from("prescription-requests")
+      .createSignedUrl(request.storage_path,600);
+
+    if(error)throw error;
+
+    const signedUrl=data?.signedUrl||"";
+    if(!signedUrl)throw new Error("Reçete fotoğrafı için bağlantı oluşturulamadı.");
+
+    image.src=signedUrl;
+    image.alt=`Reçete ${request.prescription_number || ""}`;
+    info.textContent=`Reçete No: ${request.prescription_number || "-"}`;
+  }catch(error){
+    console.error("Reçete fotoğrafı açılamadı:",error);
+    info.textContent="Reçete fotoğrafı açılamadı.";
+    toast(error?.message || "Reçete fotoğrafı açılamadı.");
+  }
 }
 
 function closeMedicinePrescriptionPhotoModal(){
