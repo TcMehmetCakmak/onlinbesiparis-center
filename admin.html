@@ -186,6 +186,23 @@ body.modal-open{
 .modal-persistent-x:hover{background:#f2f2f2}
 .modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
 </style>
+
+<style id="advertisement-admin-style">
+.advertisement-admin-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.advertisement-admin-card{border:1px solid #eee;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.advertisement-admin-main{min-width:0;display:flex;align-items:center;gap:12px}
+.advertisement-admin-cover{width:76px;height:76px;min-width:76px;border-radius:50%;object-fit:cover;border:3px solid #fff;outline:3px solid #e63946;background:#f3f3f3}
+.advertisement-admin-empty-cover{width:76px;height:76px;min-width:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;background:#f3f3f3;border:1px dashed #bbb}
+.advertisement-admin-title{font-weight:800;word-break:break-word}
+.advertisement-image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:12px;margin-top:12px}
+.advertisement-image-card{border:1px solid #e6e6e6;border-radius:12px;padding:8px;background:#fff}
+.advertisement-image-card img{width:100%;aspect-ratio:9/16;object-fit:cover;display:block;border-radius:9px;background:#f4f4f4}
+.advertisement-image-card .actions{margin-top:8px}
+.advertisement-upload-box{margin-top:12px;padding:14px;border:1px dashed #bbb;border-radius:12px;background:#fafafa}
+.advertisement-gallery-status{min-height:20px;margin-top:8px;color:#666;font-size:13px}
+@media(max-width:800px){.advertisement-admin-list{grid-template-columns:1fr}.advertisement-admin-card{align-items:flex-start}}
+</style>
+
 </head>
 <body>
 
@@ -223,6 +240,7 @@ body.modal-open{
     <button class="tab active" onclick="showTab('products',this)">🍽️ Ürünler</button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
+    <button class="tab" onclick="showTab('advertisements',this)">📣 Reklamlar</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️ Genel Ayarlar</button>
     <button class="tab" onclick="showTab('support',this)">🛠️ Talepler <span id="supportPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
   </div>
@@ -267,6 +285,21 @@ body.modal-open{
         <button class="btn btn-primary" onclick="openNotificationModal()">+ Yeni Bildirim</button>
       </div>
       <div id="notificationAdminList"></div>
+    </div>
+  </section>
+
+  <section id="advertisementsTab" class="hidden">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h2>📣 Reklam Yönetimi</h2>
+          <div class="muted">Reklamlar müşteri ekranında Instagram öne çıkanlar görünümünde anlık olarak yayınlanır.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAdvertisementModal()">+ Reklam Ekle</button>
+      </div>
+      <div id="advertisementAdminList" class="advertisement-admin-list">
+        <div class="empty" style="grid-column:1/-1">Reklamlar yükleniyor...</div>
+      </div>
     </div>
   </section>
 
@@ -419,6 +452,30 @@ body.modal-open{
 </div>
 
 
+<div id="advertisementModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeAdvertisementModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+    <h2 id="advertisementModalTitle">Yeni Reklam</h2>
+    <input id="advertisementId" type="hidden">
+    <label>Reklam başlığı</label>
+    <input id="advertisementTitle" maxlength="120" placeholder="Örn. Yeni Sezon">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:14px">
+      <input id="advertisementActive" type="checkbox" checked style="width:auto">
+      Aktif – Müşteri ekranında göster
+    </label>
+    <div class="advertisement-upload-box">
+      <label>Reklam fotoğrafları</label>
+      <input id="advertisementImageFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="handleAdvertisementImageSelection(this.files)">
+      <div class="muted">En fazla 10 fotoğraf. İlk fotoğraf öne çıkanlar kapağı olur. Fotoğraflar yüklenmeden önce WebP formatına dönüştürülür.</div>
+      <div id="advertisementGalleryStatus" class="advertisement-gallery-status"></div>
+      <div id="advertisementImageGrid" class="advertisement-image-grid"></div>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:18px">
+      <button id="saveAdvertisementButton" class="btn btn-primary" onclick="saveAdvertisement()">Reklamı Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div id="notificationModal" class="modal hidden">
   <div class="modal-card">
     <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeNotificationModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
@@ -521,6 +578,10 @@ let currentProductImages = [];
 let productImageBusy = false;
 let orders = [];
 let notifications = [];
+let advertisements = [];
+let pendingAdvertisementFiles = [];
+let currentAdvertisementImages = [];
+let advertisementImageBusy = false;
 let supportTickets = [];
 let appSettings = {id:null,shop_name:"İşletme",shop_icon:"🍽️",background_color:"#f5f5f5",phone:""};
 let platformBusiness = null;
@@ -691,6 +752,7 @@ async function loadAll(){
       loadAdminProducts(),
       loadAdminOrders(),
       loadAdminNotifications(),
+      loadAdminAdvertisements(),
       loadAdminSettings(),
       loadSupportTickets()
     ]);
@@ -698,6 +760,7 @@ async function loadAll(){
     renderProducts();
     renderOrders();
     renderAdminNotifications();
+    renderAdminAdvertisements();
     loadDashboard();
   }catch(e){
     console.error("Admin verileri yüklenemedi:",e);
@@ -1177,9 +1240,11 @@ function showTab(name,button){
   document.getElementById("productsTab").classList.toggle("hidden",name!=="products");
   document.getElementById("ordersTab").classList.toggle("hidden",name!=="orders");
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
+  document.getElementById("advertisementsTab").classList.toggle("hidden",name!=="advertisements");
   document.getElementById("settingsTab").classList.toggle("hidden",name!=="settings");
   document.getElementById("supportTab").classList.toggle("hidden",name!=="support");
   if(name==="support")loadSupportTickets();
+  if(name==="advertisements")loadAdminAdvertisements();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
 }
 function productImagePublicUrl(storagePath){
@@ -2118,6 +2183,327 @@ function downloadOrderPdf(id){
   doc.save(`siparis-${order.id}.pdf`);
 }
 
+
+function advertisementImagePublicUrl(storagePath){
+  if(!storagePath)return "";
+  const {data}=supabaseClient.storage.from("advertisement-images").getPublicUrl(storagePath);
+  return data?.publicUrl||"";
+}
+
+async function loadAdminAdvertisements(){
+  if(!currentBusinessId)return;
+  try{
+    const adResult=await supabaseClient.from("advertisements")
+      .select("id,business_id,title,active,sort_order,created_at,updated_at")
+      .eq("business_id",currentBusinessId)
+      .order("sort_order",{ascending:true})
+      .order("created_at",{ascending:false});
+    if(adResult.error)throw adResult.error;
+
+    const imageResult=await supabaseClient.from("advertisement_images")
+      .select("id,business_id,advertisement_id,storage_path,sort_order,created_at")
+      .eq("business_id",currentBusinessId)
+      .order("sort_order",{ascending:true})
+      .order("created_at",{ascending:true});
+    if(imageResult.error)throw imageResult.error;
+
+    const byAd=new Map();
+    (imageResult.data||[]).forEach(image=>{
+      const key=String(image.advertisement_id);
+      if(!byAd.has(key))byAd.set(key,[]);
+      byAd.get(key).push(image);
+    });
+
+    advertisements=(adResult.data||[]).map(ad=>({
+      ...ad,
+      images:byAd.get(String(ad.id))||[]
+    }));
+    renderAdminAdvertisements();
+  }catch(e){
+    console.error("Reklamlar yüklenemedi:",e);
+    const el=document.getElementById("advertisementAdminList");
+    if(el)el.innerHTML=`<div class="empty" style="grid-column:1/-1">Reklamlar yüklenemedi: ${escapeHtml(e.message||String(e))}</div>`;
+  }
+}
+
+function renderAdminAdvertisements(){
+  const el=document.getElementById("advertisementAdminList");
+  if(!el)return;
+  if(!advertisements.length){
+    el.innerHTML='<div class="empty" style="grid-column:1/-1">Henüz reklam eklenmedi.</div>';
+    return;
+  }
+
+  el.innerHTML=advertisements.map(ad=>{
+    const cover=Array.isArray(ad.images)&&ad.images.length?ad.images[0]:null;
+    const coverHtml=cover
+      ? `<img class="advertisement-admin-cover" src="${escapeAttr(advertisementImagePublicUrl(cover.storage_path))}" alt="${escapeAttr(ad.title)}">`
+      : '<div class="advertisement-admin-empty-cover">📣</div>';
+
+    return `<div class="advertisement-admin-card">
+      <div class="advertisement-admin-main">
+        ${coverHtml}
+        <div style="min-width:0">
+          <div class="advertisement-admin-title">${escapeHtml(ad.title)}</div>
+          <div class="muted" style="margin-top:5px">${ad.active===false?"Pasif":"Aktif"} · ${(ad.images||[]).length} fotoğraf</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-light" onclick="editAdvertisement('${escapeAttr(ad.id)}')">Düzenle</button>
+        <button class="btn btn-danger" onclick="deleteAdvertisement('${escapeAttr(ad.id)}')">Sil</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function setAdvertisementGalleryStatus(message,isError=false){
+  const el=document.getElementById("advertisementGalleryStatus");
+  if(!el)return;
+  el.textContent=message||"";
+  el.style.color=isError?"#b42318":"#666";
+}
+
+function revokePendingAdvertisementPreviewUrls(){
+  pendingAdvertisementFiles.forEach(item=>{
+    if(item.previewUrl){
+      try{URL.revokeObjectURL(item.previewUrl);}catch{}
+    }
+  });
+}
+
+function renderAdvertisementImageEditor(){
+  const grid=document.getElementById("advertisementImageGrid");
+  if(!grid)return;
+
+  const existing=currentAdvertisementImages.map((image,index)=>`
+    <div class="advertisement-image-card">
+      <img src="${escapeAttr(advertisementImagePublicUrl(image.storage_path))}" alt="Reklam fotoğrafı ${index+1}">
+      <div class="actions">
+        <button type="button" class="btn btn-danger" style="width:100%" onclick="deleteExistingAdvertisementImage('${escapeAttr(image.id)}')">Sil</button>
+      </div>
+    </div>`).join("");
+
+  const pending=pendingAdvertisementFiles.map((item,index)=>`
+    <div class="advertisement-image-card">
+      <img src="${escapeAttr(item.previewUrl)}" alt="Yeni reklam fotoğrafı ${index+1}">
+      <div class="actions">
+        <button type="button" class="btn btn-danger" style="width:100%" onclick="removePendingAdvertisementImage(${index})">Kaldır</button>
+      </div>
+    </div>`).join("");
+
+  grid.innerHTML=(existing+pending)||
+    '<div class="muted" style="grid-column:1/-1">Henüz reklam fotoğrafı eklenmedi.</div>';
+}
+
+function openAdvertisementModal(ad=null){
+  revokePendingAdvertisementPreviewUrls();
+  pendingAdvertisementFiles=[];
+  currentAdvertisementImages=Array.isArray(ad?.images)?ad.images.map(x=>({...x})):[];
+  advertisementImageBusy=false;
+
+  document.getElementById("advertisementId").value=ad?.id||"";
+  document.getElementById("advertisementTitle").value=ad?.title||"";
+  document.getElementById("advertisementActive").checked=ad?.active!==false;
+  document.getElementById("advertisementImageFiles").value="";
+  document.getElementById("advertisementModalTitle").textContent=ad?"Reklamı Düzenle":"Yeni Reklam";
+  setAdvertisementGalleryStatus("");
+  renderAdvertisementImageEditor();
+  document.getElementById("advertisementModal").classList.remove("hidden");
+}
+
+function closeAdvertisementModal(force=false){
+  if(advertisementImageBusy&&!force)return;
+  revokePendingAdvertisementPreviewUrls();
+  pendingAdvertisementFiles=[];
+  currentAdvertisementImages=[];
+  advertisementImageBusy=false;
+  document.getElementById("advertisementModal").classList.add("hidden");
+}
+
+function editAdvertisement(id){
+  const ad=advertisements.find(x=>String(x.id)===String(id));
+  if(!ad){toast("Reklam bulunamadı.");return;}
+  openAdvertisementModal(ad);
+}
+
+function handleAdvertisementImageSelection(fileList){
+  const files=Array.from(fileList||[]);
+  const images=files.filter(file=>["image/jpeg","image/png","image/webp"].includes(file.type));
+
+  if(images.length!==files.length){
+    setAdvertisementGalleryStatus("Yalnızca JPG, PNG ve WebP fotoğraflar kabul edilir.",true);
+  }
+
+  const available=Math.max(0,10-currentAdvertisementImages.length-pendingAdvertisementFiles.length);
+  images.slice(0,available).forEach(file=>{
+    pendingAdvertisementFiles.push({file,previewUrl:URL.createObjectURL(file)});
+  });
+
+  if(images.length>available){
+    setAdvertisementGalleryStatus("Bir reklam için en fazla 10 fotoğraf eklenebilir.",true);
+  }else if(images.length){
+    setAdvertisementGalleryStatus(`${images.slice(0,available).length} fotoğraf eklendi.`);
+  }
+
+  const input=document.getElementById("advertisementImageFiles");
+  if(input)input.value="";
+  renderAdvertisementImageEditor();
+}
+
+function removePendingAdvertisementImage(index){
+  const item=pendingAdvertisementFiles[index];
+  if(item?.previewUrl){try{URL.revokeObjectURL(item.previewUrl);}catch{}}
+  pendingAdvertisementFiles.splice(index,1);
+  renderAdvertisementImageEditor();
+}
+
+async function deleteExistingAdvertisementImage(imageId){
+  const image=currentAdvertisementImages.find(x=>String(x.id)===String(imageId));
+  if(!image)return;
+  if(!confirm("Bu reklam fotoğrafı silinsin mi?"))return;
+
+  try{
+    const {error}=await supabaseClient.from("advertisement_images")
+      .delete().eq("id",image.id).eq("business_id",currentBusinessId);
+    if(error)throw error;
+
+    const {error:storageError}=await supabaseClient.storage
+      .from("advertisement-images").remove([image.storage_path]);
+    if(storageError)console.warn("Storage reklam fotoğrafı temizlenemedi:",storageError);
+
+    currentAdvertisementImages=currentAdvertisementImages
+      .filter(x=>String(x.id)!==String(imageId));
+    renderAdvertisementImageEditor();
+    await loadAdminAdvertisements();
+    toast("Reklam fotoğrafı silindi.");
+  }catch(e){
+    toast(e.message||"Reklam fotoğrafı silinemedi.");
+  }
+}
+
+async function uploadPendingAdvertisementImages(advertisementId){
+  if(!pendingAdvertisementFiles.length)return [];
+  const existingCount=currentAdvertisementImages.length;
+  const uploaded=[];
+
+  for(let i=0;i<pendingAdvertisementFiles.length;i++){
+    const item=pendingAdvertisementFiles[i];
+    setAdvertisementGalleryStatus(`Reklam fotoğrafları yükleniyor... ${i+1}/${pendingAdvertisementFiles.length}`);
+
+    const webpBlob=await compressProductImage(item.file,1600,0.82);
+    const objectPath=`${currentBusinessId}/${advertisementId}/${crypto.randomUUID()}.webp`;
+
+    const {error:uploadError}=await supabaseClient.storage
+      .from("advertisement-images")
+      .upload(objectPath,webpBlob,{contentType:"image/webp",cacheControl:"31536000",upsert:false});
+    if(uploadError)throw uploadError;
+
+    const {data:inserted,error:insertError}=await supabaseClient.from("advertisement_images")
+      .insert({
+        business_id:currentBusinessId,
+        advertisement_id:advertisementId,
+        storage_path:objectPath,
+        sort_order:existingCount+i
+      })
+      .select("id,business_id,advertisement_id,storage_path,sort_order,created_at")
+      .single();
+
+    if(insertError){
+      await supabaseClient.storage.from("advertisement-images").remove([objectPath]);
+      throw insertError;
+    }
+    uploaded.push(inserted);
+  }
+  return uploaded;
+}
+
+async function saveAdvertisement(){
+  if(advertisementImageBusy)return;
+
+  const id=document.getElementById("advertisementId").value;
+  const title=document.getElementById("advertisementTitle").value.trim();
+  const active=document.getElementById("advertisementActive").checked;
+
+  if(!title){toast("Reklam başlığı zorunludur.");return;}
+  if(currentAdvertisementImages.length+pendingAdvertisementFiles.length===0){
+    setAdvertisementGalleryStatus("Reklam için en az bir fotoğraf seçin.",true);
+    return;
+  }
+  if(currentAdvertisementImages.length+pendingAdvertisementFiles.length>10){
+    setAdvertisementGalleryStatus("Bir reklam için en fazla 10 fotoğraf eklenebilir.",true);
+    return;
+  }
+
+  const button=document.getElementById("saveAdvertisementButton");
+
+  try{
+    advertisementImageBusy=true;
+    button.disabled=true;
+    button.textContent="Kaydediliyor...";
+
+    let saved;
+    if(id){
+      const {data,error}=await supabaseClient.from("advertisements")
+        .update({title,active,updated_at:new Date().toISOString()})
+        .eq("id",id).eq("business_id",currentBusinessId)
+        .select("*").single();
+      if(error)throw error;
+      saved=data;
+    }else{
+      const {data,error}=await supabaseClient.from("advertisements")
+        .insert({business_id:currentBusinessId,title,active})
+        .select("*").single();
+      if(error)throw error;
+      saved=data;
+      document.getElementById("advertisementId").value=saved.id;
+    }
+
+    if(pendingAdvertisementFiles.length){
+      await uploadPendingAdvertisementImages(saved.id);
+    }
+
+    revokePendingAdvertisementPreviewUrls();
+    pendingAdvertisementFiles=[];
+    await loadAdminAdvertisements();
+    closeAdvertisementModal(true);
+    toast("Reklam kaydedildi ve müşteri ekranına yansıtıldı.");
+  }catch(e){
+    console.error("Reklam kaydedilemedi:",e);
+    setAdvertisementGalleryStatus(e.message||"Reklam kaydedilemedi.",true);
+    toast(e.message||"Reklam kaydedilemedi.");
+  }finally{
+    advertisementImageBusy=false;
+    if(button){button.disabled=false;button.textContent="Reklamı Kaydet";}
+  }
+}
+
+async function deleteAdvertisement(id){
+  const ad=advertisements.find(x=>String(x.id)===String(id));
+  if(!ad)return;
+  if(!confirm(`"${ad.title}" reklamı ve tüm fotoğrafları silinsin mi?`))return;
+
+  const paths=(ad.images||[]).map(x=>x.storage_path).filter(Boolean);
+
+  try{
+    const {error}=await supabaseClient.from("advertisements")
+      .delete().eq("id",id).eq("business_id",currentBusinessId);
+    if(error)throw error;
+
+    if(paths.length){
+      const {error:storageError}=await supabaseClient.storage
+        .from("advertisement-images").remove(paths);
+      if(storageError)console.warn("Bazı reklam Storage dosyaları temizlenemedi:",storageError);
+    }
+
+    advertisements=advertisements.filter(x=>String(x.id)!==String(id));
+    renderAdminAdvertisements();
+    toast("Reklam silindi.");
+  }catch(e){
+    toast(e.message||"Reklam silinemedi.");
+  }
+}
+
+
 function renderAdminNotifications(){
   const el=document.getElementById("notificationAdminList");
   if(!el)return;
@@ -2226,6 +2612,8 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},async()=>{await loadAdminProducts();})
     .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},async()=>{await loadAdminOrders();loadDashboard();})
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
@@ -2276,6 +2664,7 @@ async function refreshAdminLiveData(force=false){
       loadAdminProducts(),
       loadAdminOrders(),
       loadAdminNotifications(),
+      loadAdminAdvertisements(),
       loadAdminSettings(),
       loadSupportTickets(),
       loadPlatformBusiness()

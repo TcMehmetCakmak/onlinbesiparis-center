@@ -2650,6 +2650,34 @@ body{
     }
 }
 </style>
+
+<style id="advertisement-customer-style">
+.ad-highlights-wrap{width:100%;overflow:hidden;margin-bottom:18px}
+.ad-highlights{display:flex;gap:14px;overflow-x:auto;padding:4px 4px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ad-highlights::-webkit-scrollbar{display:none}
+.ad-highlight{width:78px;min-width:78px;border:0;background:transparent;padding:0;cursor:pointer;text-align:center;color:inherit}
+.ad-highlight-ring{width:70px;height:70px;margin:0 auto;padding:3px;border-radius:50%;background:linear-gradient(135deg,#feda75,#d62976,#4f5bd5);display:flex;align-items:center;justify-content:center;transition:transform .16s ease}
+.ad-highlight:active .ad-highlight-ring{transform:scale(.94)}
+.ad-highlight-image{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid white;background:#eee;display:block}
+.ad-highlight-title{margin-top:7px;font-size:12px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ad-story-viewer{position:fixed;inset:0;z-index:25000;background:#090909;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.ad-story-viewer.hidden{display:none!important}
+.ad-story-shell{position:relative;width:min(520px,100vw);height:100dvh;max-height:100dvh;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ad-story-image{width:100%;height:100%;object-fit:contain;background:#000;user-select:none;-webkit-user-drag:none}
+.ad-story-top{position:absolute;left:0;right:0;top:0;z-index:5;padding:10px 12px 22px;background:linear-gradient(to bottom,rgba(0,0,0,.72),rgba(0,0,0,0))}
+.ad-story-progress{display:flex;gap:4px;width:100%}
+.ad-story-progress-track{height:3px;flex:1;border-radius:999px;background:rgba(255,255,255,.35);overflow:hidden}
+.ad-story-progress-fill{width:0;height:100%;background:#fff}
+.ad-story-progress-fill.completed{width:100%}
+.ad-story-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;color:#fff}
+.ad-story-title{font-weight:800;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ad-story-close{width:38px;height:38px;min-width:38px;border:0;border-radius:50%;color:#fff;background:rgba(0,0,0,.35);font-size:27px;cursor:pointer;line-height:1}
+.ad-story-nav{position:absolute;top:0;bottom:0;width:35%;z-index:4;border:0;background:transparent;cursor:pointer}
+.ad-story-prev{left:0}.ad-story-next{right:0}
+.ad-story-count{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:5;color:white;background:rgba(0,0,0,.45);border-radius:999px;padding:6px 10px;font-size:12px}
+@media(min-width:700px){.ad-story-shell{height:min(92vh,900px);border-radius:16px}}
+</style>
+
 </head>
 
 <body>
@@ -2759,7 +2787,11 @@ body{
         </div>
 
         
-<div id="franchisePage" class="franchise-page hidden">
+<div id="advertisementHighlightsWrap" class="ad-highlights-wrap hidden">
+            <div id="advertisementHighlights" class="ad-highlights" aria-label="Reklamlar"></div>
+        </div>
+
+        <div id="franchisePage" class="franchise-page hidden">
   <div class="franchise-page-inner">
     <div class="franchise-page-header">
       <button type="button" class="franchise-back" onclick="closeFranchisePage()" aria-label="Geri">‹</button>
@@ -3816,6 +3848,7 @@ body{
     configureTenantPwa();
 
     let products = [];
+    let advertisements = [];
 
     if (!TENANT_SLUG) {
         document.title = "Online Sipariş · İşletme Seç";
@@ -7161,6 +7194,311 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         );
     }
 
+
+    function escapeAdvertisementAttr(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    function advertisementImagePublicUrl(storagePath) {
+        if (!storagePath) return "";
+        const { data } = supabaseClient.storage
+            .from("advertisement-images")
+            .getPublicUrl(storagePath);
+        return data?.publicUrl || "";
+    }
+
+    async function loadAdvertisements() {
+        if (!currentBusinessId) return;
+
+        try {
+            const adResult = await supabaseClient
+                .from("advertisements")
+                .select("id,business_id,title,active,sort_order,created_at,updated_at")
+                .eq("business_id", currentBusinessId)
+                .eq("active", true)
+                .order("sort_order", { ascending: true })
+                .order("created_at", { ascending: false });
+
+            if (adResult.error) throw adResult.error;
+
+            const imageResult = await supabaseClient
+                .from("advertisement_images")
+                .select("id,business_id,advertisement_id,storage_path,sort_order,created_at")
+                .eq("business_id", currentBusinessId)
+                .order("sort_order", { ascending: true })
+                .order("created_at", { ascending: true });
+
+            if (imageResult.error) throw imageResult.error;
+
+            const imagesByAd = new Map();
+
+            (imageResult.data || []).forEach(image => {
+                const key = String(image.advertisement_id);
+                if (!imagesByAd.has(key)) imagesByAd.set(key, []);
+                imagesByAd.get(key).push(image);
+            });
+
+            advertisements = (adResult.data || [])
+                .map(ad => ({
+                    ...ad,
+                    images: imagesByAd.get(String(ad.id)) || []
+                }))
+                .filter(ad => ad.images.length > 0);
+
+            renderAdvertisementHighlights();
+
+            const viewer = document.getElementById("advertisementStoryViewer");
+            if (viewer && !viewer.classList.contains("hidden")) {
+                const current = advertisements.find(
+                    ad => String(ad.id) === String(advertisementStoryAdId)
+                );
+
+                if (!current) {
+                    closeAdvertisementStory();
+                } else {
+                    advertisementStoryImageIndex = Math.min(
+                        advertisementStoryImageIndex,
+                        Math.max(0, current.images.length - 1)
+                    );
+                    renderAdvertisementStory();
+                }
+            }
+        } catch (error) {
+            console.error("Reklamlar yüklenemedi:", error);
+            advertisements = [];
+            renderAdvertisementHighlights();
+        }
+    }
+
+    function renderAdvertisementHighlights() {
+        const wrap = document.getElementById("advertisementHighlightsWrap");
+        const list = document.getElementById("advertisementHighlights");
+
+        if (!wrap || !list) return;
+
+        if (!advertisements.length) {
+            wrap.classList.add("hidden");
+            list.innerHTML = "";
+            return;
+        }
+
+        wrap.classList.remove("hidden");
+
+        list.innerHTML = advertisements.map(ad => {
+            const cover = ad.images?.[0];
+            if (!cover) return "";
+
+            const safeId = String(ad.id).replace(/'/g, "");
+            return `
+                <button
+                    type="button"
+                    class="ad-highlight"
+                    onclick="openAdvertisementStory('${safeId}',0)"
+                    title="${escapeAdvertisementAttr(ad.title)}"
+                >
+                    <span class="ad-highlight-ring">
+                        <img
+                            class="ad-highlight-image"
+                            src="${escapeAdvertisementAttr(advertisementImagePublicUrl(cover.storage_path))}"
+                            alt="${escapeAdvertisementAttr(ad.title)}"
+                            loading="lazy"
+                        >
+                    </span>
+                    <span class="ad-highlight-title">${escapeHtml(ad.title)}</span>
+                </button>
+            `;
+        }).join("");
+    }
+
+    let advertisementStoryAdId = null;
+    let advertisementStoryImageIndex = 0;
+    let advertisementStoryTimer = null;
+    let advertisementStoryProgressTimer = null;
+
+    function getCurrentAdvertisementStory() {
+        return advertisements.find(
+            ad => String(ad.id) === String(advertisementStoryAdId)
+        ) || null;
+    }
+
+    function clearAdvertisementStoryTimers() {
+        if (advertisementStoryTimer) {
+            clearTimeout(advertisementStoryTimer);
+            advertisementStoryTimer = null;
+        }
+
+        if (advertisementStoryProgressTimer) {
+            clearTimeout(advertisementStoryProgressTimer);
+            advertisementStoryProgressTimer = null;
+        }
+    }
+
+    function startAdvertisementStoryTimer() {
+        clearAdvertisementStoryTimers();
+
+        const progress = document.querySelector(
+            `#advertisementStoryProgress .ad-story-progress-fill[data-index="${advertisementStoryImageIndex}"]`
+        );
+
+        if (progress) {
+            progress.style.transition = "none";
+            progress.style.width = "0";
+
+            advertisementStoryProgressTimer = setTimeout(() => {
+                progress.style.transition = "width 5s linear";
+                progress.style.width = "100%";
+            }, 40);
+        }
+
+        advertisementStoryTimer = setTimeout(() => {
+            nextAdvertisementStory();
+        }, 5050);
+    }
+
+    function openAdvertisementStory(adId, imageIndex = 0) {
+        const ad = advertisements.find(
+            item => String(item.id) === String(adId)
+        );
+
+        if (!ad || !ad.images?.length) return;
+
+        advertisementStoryAdId = ad.id;
+        advertisementStoryImageIndex = Math.max(
+            0,
+            Math.min(Number(imageIndex) || 0, ad.images.length - 1)
+        );
+
+        const viewer = document.getElementById("advertisementStoryViewer");
+        viewer?.classList.remove("hidden");
+        viewer?.setAttribute("aria-hidden", "false");
+
+        document.body.style.overflow = "hidden";
+        renderAdvertisementStory();
+    }
+
+    function closeAdvertisementStory() {
+        clearAdvertisementStoryTimers();
+
+        const viewer = document.getElementById("advertisementStoryViewer");
+        viewer?.classList.add("hidden");
+        viewer?.setAttribute("aria-hidden", "true");
+
+        advertisementStoryAdId = null;
+        advertisementStoryImageIndex = 0;
+        document.body.style.overflow = "";
+    }
+
+    function renderAdvertisementStory() {
+        const ad = getCurrentAdvertisementStory();
+
+        if (!ad || !ad.images?.length) {
+            closeAdvertisementStory();
+            return;
+        }
+
+        const image = ad.images[advertisementStoryImageIndex];
+        const imageEl = document.getElementById("advertisementStoryImage");
+        const titleEl = document.getElementById("advertisementStoryTitle");
+        const countEl = document.getElementById("advertisementStoryCount");
+        const progressEl = document.getElementById("advertisementStoryProgress");
+
+        if (imageEl) {
+            imageEl.src = advertisementImagePublicUrl(image.storage_path);
+            imageEl.alt = ad.title || "Reklam";
+        }
+
+        if (titleEl) titleEl.textContent = ad.title || "Reklam";
+        if (countEl) countEl.textContent =
+            `${advertisementStoryImageIndex + 1} / ${ad.images.length}`;
+
+        if (progressEl) {
+            progressEl.innerHTML = ad.images.map((_, index) => `
+                <span class="ad-story-progress-track">
+                    <span
+                        class="ad-story-progress-fill ${index < advertisementStoryImageIndex ? "completed" : ""}"
+                        data-index="${index}"
+                    ></span>
+                </span>
+            `).join("");
+        }
+
+        startAdvertisementStoryTimer();
+    }
+
+    function nextAdvertisementStory() {
+        const ad = getCurrentAdvertisementStory();
+
+        if (!ad) {
+            closeAdvertisementStory();
+            return;
+        }
+
+        if (advertisementStoryImageIndex < ad.images.length - 1) {
+            advertisementStoryImageIndex += 1;
+            renderAdvertisementStory();
+            return;
+        }
+
+        const adIndex = advertisements.findIndex(
+            item => String(item.id) === String(ad.id)
+        );
+
+        const nextAd = advertisements[adIndex + 1];
+
+        if (nextAd?.images?.length) {
+            advertisementStoryAdId = nextAd.id;
+            advertisementStoryImageIndex = 0;
+            renderAdvertisementStory();
+        } else {
+            closeAdvertisementStory();
+        }
+    }
+
+    function previousAdvertisementStory() {
+        const ad = getCurrentAdvertisementStory();
+
+        if (!ad) {
+            closeAdvertisementStory();
+            return;
+        }
+
+        if (advertisementStoryImageIndex > 0) {
+            advertisementStoryImageIndex -= 1;
+            renderAdvertisementStory();
+            return;
+        }
+
+        const adIndex = advertisements.findIndex(
+            item => String(item.id) === String(ad.id)
+        );
+
+        const previousAd = advertisements[adIndex - 1];
+
+        if (previousAd?.images?.length) {
+            advertisementStoryAdId = previousAd.id;
+            advertisementStoryImageIndex = previousAd.images.length - 1;
+            renderAdvertisementStory();
+        }
+    }
+
+    document.addEventListener("keydown", event => {
+        const viewer = document.getElementById("advertisementStoryViewer");
+        if (!viewer || viewer.classList.contains("hidden")) return;
+
+        if (event.key === "Escape") {
+            closeAdvertisementStory();
+        } else if (event.key === "ArrowRight") {
+            nextAdvertisementStory();
+        } else if (event.key === "ArrowLeft") {
+            previousAdvertisementStory();
+        }
+    });
+
+
     async function loadNotifications() {
         if (!currentBusinessId) return;
         if (notificationSyncInProgress) return;
@@ -7425,13 +7763,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         publicUpdatesChannel = supabaseClient
             .channel(`public-updates-${currentBusinessId}`)
             .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: businessFilter }, applyRealtimeNotification)
+            .on("postgres_changes", { event: "*", schema: "public", table: "advertisements", filter: businessFilter }, () => loadAdvertisements())
+            .on("postgres_changes", { event: "*", schema: "public", table: "advertisement_images", filter: businessFilter }, () => loadAdvertisements())
             .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "product_images", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: businessFilter }, applyRealtimeReview)
             .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: businessFilter }, () => loadAppSettings())
             .subscribe(status => {
                 console.log("Realtime durumu:", status);
-                if (status === "SUBSCRIBED") loadNotifications();
+                if (status === "SUBSCRIBED") {
+                    loadNotifications();
+                    loadAdvertisements();
+                }
             });
     }
 
@@ -7466,6 +7809,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         if (TENANT_SLUG && !document.hidden && navigator.onLine) {
             loadProducts();
             loadNotifications();
+            loadAdvertisements();
             loadReviews();
         }
     }, 5000);
@@ -7482,6 +7826,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         loadAppSettings();
         loadProducts();
         loadNotifications();
+        loadAdvertisements();
         loadReviews();
     });
 
@@ -7561,7 +7906,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             loadAppSettings(),
             loadProducts(),
             loadReviews(),
-            loadNotifications()
+            loadNotifications(),
+            loadAdvertisements()
         ]);
     }
 
@@ -7594,6 +7940,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             ) {
 
                 loadNotifications();
+                loadAdvertisements();
                 loadReviews();
 
             }
@@ -8259,6 +8606,23 @@ async function loadProductReviewsV31(productId){
 // Ürün yorumları artık sadece Supabase product_reviews üzerinden yönetilir.
 // Eski localStorage/V28 referansları kaldırıldı.
 </script>
+
+<div id="advertisementStoryViewer" class="ad-story-viewer hidden" aria-hidden="true">
+  <div class="ad-story-shell">
+    <img id="advertisementStoryImage" class="ad-story-image" alt="Reklam">
+    <div class="ad-story-top">
+      <div id="advertisementStoryProgress" class="ad-story-progress"></div>
+      <div class="ad-story-header">
+        <div id="advertisementStoryTitle" class="ad-story-title"></div>
+        <button type="button" class="ad-story-close" onclick="closeAdvertisementStory()" aria-label="Reklamı kapat">×</button>
+      </div>
+    </div>
+    <button type="button" class="ad-story-nav ad-story-prev" onclick="previousAdvertisementStory()" aria-label="Önceki"></button>
+    <button type="button" class="ad-story-nav ad-story-next" onclick="nextAdvertisementStory()" aria-label="Sonraki"></button>
+    <div id="advertisementStoryCount" class="ad-story-count"></div>
+  </div>
+</div>
+
 </body>
 
 
