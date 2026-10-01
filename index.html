@@ -2931,6 +2931,21 @@ body{
                 placeholder="Örneğin: Mehmet"
             >
 
+            <!-- TELEFON -->
+
+            <label>
+                Telefon Numaranız
+            </label>
+
+            <input
+                type="tel"
+                id="customerPhone"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="20"
+                placeholder="Örneğin: 05xx xxx xx xx"
+            >
+
             <!-- ADRES -->
 
             <div class="order-title-row">
@@ -3133,6 +3148,12 @@ body{
 
                     <span id="summaryName"></span>
 
+                </p>
+
+                <p>
+                    <strong>Telefon:</strong>
+
+                    <span id="summaryPhone"></span>
                 </p>
 
                 <p>
@@ -4036,6 +4057,7 @@ body{
     let order = {
         items: [],
         name: "",
+        phone: "",
         address: "",
         payment: "",
         note: "",
@@ -4080,6 +4102,7 @@ body{
             order = {
                 items: Array.isArray(data.items) ? data.items : [],
                 name: data.name || "",
+                phone: data.phone || "",
                 address: data.address || "",
                 payment: data.payment || "",
                 note: data.note || "",
@@ -4099,6 +4122,7 @@ body{
             };
 
             document.getElementById("customerName").value = order.name;
+            document.getElementById("customerPhone").value = order.phone || "";
             document.getElementById("customerAddress").value = order.address;
             document.getElementById("addressPreview").textContent = order.address || "Adres seçiminiz burada görünecek.";
             document.getElementById("orderNote").value = order.note;
@@ -6295,16 +6319,46 @@ body{
 
 
     /* =========================================
+       TELEFON NORMALİZASYONU
+       wa.me için ülke kodlu, yalnız rakam biçimi kullanılır.
+    ========================================= */
+
+    function normalizeCustomerPhone(rawValue) {
+        let digits = String(rawValue || "").replace(/\D/g, "");
+
+        if (digits.startsWith("00")) {
+            digits = digits.slice(2);
+        }
+
+        // Türkiye: 05xx... -> 905xx...
+        if (digits.length === 11 && digits.startsWith("0")) {
+            digits = "90" + digits.slice(1);
+        } else if (digits.length === 10 && digits.startsWith("5")) {
+            digits = "90" + digits;
+        }
+
+        if (!/^\d{10,15}$/.test(digits) || digits.startsWith("0")) {
+            return "";
+        }
+
+        return digits;
+    }
+
+
+    /* =========================================
        SİPARİŞ OLUŞTUR
     ========================================= */
 
     async function createOrder() {
         const name = document.getElementById("customerName").value.trim();
+        const phoneRaw = document.getElementById("customerPhone").value.trim();
+        const phone = normalizeCustomerPhone(phoneRaw);
         const address = document.getElementById("customerAddress").value.trim();
         const note = document.getElementById("orderNote").value.trim();
         const payment = document.querySelector('input[name="payment"]:checked');
         const locationStatus = document.getElementById("locationStatus");
         if (!name) return alert("Lütfen adınızı girin.");
+        if (!phone) return alert("Lütfen geçerli bir telefon numarası girin. Örnek: 05xx xxx xx xx");
         if (!address) return alert("Lütfen il, ilçe, mahalle ve açık adres bilgilerinizi girin veya konum ikonuna tıklayın.");
         if (!order.googleMapsUrl && (!order.provinceName || !order.districtName || !order.neighborhoodName || !order.street || !order.buildingNo)) {
             return alert("Manuel adres için lütfen İl, İlçe, Mahalle, Cadde/Sokak ve Bina/Kapı No alanlarını doldurun. İsterseniz konum ikonuna da tıklayabilirsiniz.");
@@ -6340,6 +6394,7 @@ body{
         }
 
         order.name = name;
+        order.phone = phone;
         order.address = address;
         order.payment = payment.value;
         order.note = note;
@@ -6374,6 +6429,7 @@ body{
             }
         }
         document.getElementById("summaryName").textContent = order.name;
+        document.getElementById("summaryPhone").textContent = order.phone ? `+${order.phone}` : "-";
         document.getElementById("summaryAddress").textContent = order.address;
         document.getElementById("summaryPayment").textContent = order.payment;
         document.getElementById("summaryNote").textContent = order.note || "Not belirtilmedi.";
@@ -6428,9 +6484,10 @@ body{
             text: "✓ Onayla ve WhatsApp'tan Gönder"
         });
         localStorage.removeItem(STORAGE_KEY);
-        order = { items: [], name: "", address: "", payment: "", note: "", latitude: null, longitude: null, googleMapsUrl: "", couponCodes: [], provinceId:"", provinceName:"", districtId:"", districtName:"", neighborhoodName:"", street:"", buildingNo:"", apartmentNo:"", addressDetail:"" };
+        order = { items: [], name: "", phone: "", address: "", payment: "", note: "", latitude: null, longitude: null, googleMapsUrl: "", couponCodes: [], provinceId:"", provinceName:"", districtId:"", districtName:"", neighborhoodName:"", street:"", buildingNo:"", apartmentNo:"", addressDetail:"" };
         appliedCoupons = [];
         document.getElementById("customerName").value = "";
+        document.getElementById("customerPhone").value = "";
         document.getElementById("customerAddress").value = "";
         ["provinceSelect","districtSelect","neighborhoodSelect"].forEach(id => { const el=document.getElementById(id); if(el) el.value=""; });
         const preview=document.getElementById("addressPreview"); if(preview) preview.textContent="Adres seçiminiz burada görünecek.";
@@ -6454,6 +6511,7 @@ body{
         return {
             p_business_key: platformBusiness?.public_key || "",
             p_name: order.name,
+            p_phone_number: order.phone || "",
             p_address: order.address,
             p_payment: order.payment,
             p_note: order.note || "",
@@ -6858,6 +6916,17 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
             saveOrder();
 
+        }
+    );
+
+
+    document.getElementById(
+        "customerPhone"
+    ).addEventListener(
+        "input",
+        function() {
+            order.phone = this.value;
+            saveOrder();
         }
     );
 
