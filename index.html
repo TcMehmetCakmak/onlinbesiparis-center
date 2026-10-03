@@ -2707,11 +2707,22 @@ body{
 
 
 <style id="product-question-style-v1">
+.product-detail-action-row{
+  display:flex;
+  align-items:stretch;
+  gap:10px;
+  margin-top:12px;
+}
+.product-detail-action-row .product-question-button,
+.product-detail-action-row #detailAddButton{
+  flex:1 1 0;
+  width:auto;
+  min-width:0;
+  min-height:46px;
+  margin-top:0;
+}
 .product-question-button{
   position:relative;
-  width:100%;
-  min-height:46px;
-  margin-top:12px;
   border:0;
   border-radius:12px;
   background:#1565c0;
@@ -2866,6 +2877,16 @@ body{
     max-height:calc(100dvh - 16px);
     border-radius:14px;
     padding:16px;
+  }
+  .product-detail-action-row{
+    gap:8px;
+  }
+  .product-detail-action-row .product-question-button,
+  .product-detail-action-row #detailAddButton{
+    min-height:44px;
+    font-size:14px;
+    padding-left:10px;
+    padding-right:10px;
   }
 }
 </style>
@@ -8677,18 +8698,20 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
    <div id="productReviewAreaV28"></div>
 
-   <button
-     id="detailQuestionButton"
-     type="button"
-     class="product-question-button"
-     onclick="openProductQuestionModal()"
-     title="Bu ürün hakkında soru sor"
-   >
-     ❓ Soru Sor
-     <span id="detailQuestionAnswerCount" class="product-question-answer-count hidden">0</span>
-   </button>
+   <div class="product-detail-action-row">
+     <button
+       id="detailQuestionButton"
+       type="button"
+       class="product-question-button"
+       onclick="openProductQuestionModal()"
+       title="Bu ürün hakkında soru sor"
+     >
+       ❓ Soru Sor
+       <span id="detailQuestionAnswerCount" class="product-question-answer-count hidden">0</span>
+     </button>
 
-   <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
+     <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
+   </div>
  </div>
 </div>
 
