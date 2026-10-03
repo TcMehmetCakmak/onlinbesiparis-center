@@ -2714,7 +2714,7 @@ body{
   margin-top:12px;
 }
 .product-detail-action-row .product-question-button,
-.product-detail-action-row #detailAddButton{
+.product-detail-action-row .product-review-launch-button{
   flex:1 1 0;
   width:auto;
   min-width:0;
@@ -2733,6 +2733,95 @@ body{
 }
 .product-question-button:hover{opacity:.92}
 .product-question-button:active{transform:scale(.99)}
+
+.product-review-launch-button{
+  position:relative;
+  border:0;
+  border-radius:12px;
+  background:#ff6000;
+  color:#fff;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+}
+.product-review-launch-button:hover{opacity:.92}
+.product-review-launch-button:active{transform:scale(.99)}
+
+.product-review-count-badge{
+  position:absolute;
+  top:-8px;
+  right:-8px;
+  min-width:24px;
+  height:24px;
+  padding:0 7px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#e63946;
+  color:#fff;
+  border:2px solid #fff;
+  font-size:12px;
+  font-weight:900;
+  box-shadow:0 2px 7px #0002;
+}
+
+.product-detail-full-add-button{
+  display:block;
+  width:100% !important;
+  min-height:50px;
+  margin-top:10px !important;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:800;
+}
+
+.product-review-modal-v32{
+  position:fixed;
+  inset:0;
+  z-index:42000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(0,0,0,.62);
+  overflow:auto;
+}
+.product-review-modal-v32.hidden{display:none!important}
+.product-review-modal-card-v32{
+  width:min(620px,100%);
+  max-height:calc(100dvh - 32px);
+  overflow:auto;
+  background:#fff;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 20px 65px rgba(0,0,0,.32);
+}
+.product-review-modal-head-v32{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.product-review-modal-head-v32 h2{margin:0}
+.product-review-modal-product-v32{
+  margin-top:4px;
+  color:#666;
+  font-size:14px;
+  font-weight:700;
+}
+.product-review-modal-close-v32{
+  width:40px;
+  height:40px;
+  min-width:40px;
+  border:0;
+  border-radius:50%;
+  background:#eee;
+  font-size:27px;
+  line-height:1;
+  cursor:pointer;
+}
 .product-question-answer-count{
   position:absolute;
   top:-8px;
@@ -2897,11 +2986,24 @@ body{
     gap:8px;
   }
   .product-detail-action-row .product-question-button,
-  .product-detail-action-row #detailAddButton{
+  .product-detail-action-row .product-review-launch-button{
     min-height:44px;
     font-size:14px;
     padding-left:10px;
     padding-right:10px;
+  }
+  .product-detail-full-add-button{
+    min-height:48px;
+    font-size:15px;
+  }
+  .product-review-modal-v32{
+    align-items:flex-start;
+    padding:8px;
+  }
+  .product-review-modal-card-v32{
+    max-height:calc(100dvh - 16px);
+    border-radius:14px;
+    padding:16px;
   }
 }
 </style>
@@ -8711,7 +8813,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <div id="detailVariants"></div>
    <div id="detailPrice"></div>
    <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
-   <div id="productReviewAreaV28"></div>
 
    <div class="product-detail-action-row">
      <button
@@ -8721,20 +8822,53 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        onclick="openProductQuestionModal()"
        title="Bu ürün hakkında soru sor ve önceki soruları gör"
      >
-       Soru Sor
+       ❓ Soru Sor
        <span id="detailQuestionAnswerCount" class="product-question-answer-count hidden">0</span>
      </button>
 
-     <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
+     <button
+       id="detailReviewButton"
+       type="button"
+       class="product-review-launch-button"
+       onclick="openProductReviewModalV32()"
+       title="Bu ürüne yorum ekle ve yorumları gör"
+     >
+       ⭐ Yorum Ekle
+       <span id="detailReviewCount" class="product-review-count-badge hidden">0</span>
+     </button>
    </div>
+
+   <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
  </div>
 </div>
 
 
+<div id="productReviewModalV32" class="product-review-modal-v32 hidden">
+  <div class="product-review-modal-card-v32">
+    <div class="product-review-modal-head-v32">
+      <div>
+        <h2>⭐ Ürün Yorumları</h2>
+        <div id="productReviewModalProductNameV32" class="product-review-modal-product-v32"></div>
+      </div>
+      <button
+        type="button"
+        class="product-review-modal-close-v32"
+        onclick="closeProductReviewModalV32()"
+        aria-label="Yorum modalını kapat"
+        title="Kapat"
+      >×</button>
+    </div>
+
+    <div id="productReviewAreaV28">
+      <div class="small">Yorumlar yükleniyor...</div>
+    </div>
+  </div>
+</div>
+
 <div id="productQuestionModal" class="product-question-modal hidden">
   <div class="product-question-modal-card">
     <div class="product-question-modal-head">
-      <h2>Ürün Soruları</h2>
+      <h2>❓ Ürün Soruları</h2>
       <button type="button" class="product-question-close" onclick="closeProductQuestionModal()" aria-label="Kapat" title="Kapat">×</button>
     </div>
 
@@ -8991,6 +9125,15 @@ function openProductDetail(productId){
    detailSelectedVariant=null;
  }
 
+ const reviewBadge=document.getElementById("detailReviewCount");
+ const cachedReviewCount=(productReviewsCacheV32[String(product.id)] || []).length;
+ if(reviewBadge){
+   reviewBadge.textContent=String(cachedReviewCount);
+   reviewBadge.classList.toggle("hidden",cachedReviewCount===0);
+   reviewBadge.title=`${cachedReviewCount} yorum`;
+ }
+
+ // Modal açılmadan da sayaç güncel kalsın.
  loadProductReviewsV31(product.id);
 
  const questionBadge=document.getElementById("detailQuestionAnswerCount");
@@ -9030,6 +9173,7 @@ function changeDetailGallery(step){
 
 function closeProductDetail(){
  closeProductQuestionModal();
+ closeProductReviewModalV32();
  document.getElementById("productDetailModal").classList.add("hidden");
  document.getElementById("productGalleryModal")?.classList.add("hidden");
  detailProduct=null;
@@ -9235,6 +9379,43 @@ document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
 <script id="productReviewV31">
 let selectedProductRatingV31 = 0;
 
+async function openProductReviewModalV32(){
+    if(!detailProduct || !currentBusinessId) return;
+
+    const modal=document.getElementById("productReviewModalV32");
+    const name=document.getElementById("productReviewModalProductNameV32");
+    const area=document.getElementById("productReviewAreaV28");
+
+    if(name) name.textContent=detailProduct.name || "Ürün";
+    if(area) area.innerHTML='<div class="small">Yorumlar yükleniyor...</div>';
+
+    selectedProductRatingV31=0;
+    modal?.classList.remove("hidden");
+
+    await loadProductReviewsV31(detailProduct.id);
+}
+
+function closeProductReviewModalV32(){
+    document.getElementById("productReviewModalV32")?.classList.add("hidden");
+    selectedProductRatingV31=0;
+}
+
+function setProductReviewCountV32(productId,reviews){
+    const rows=Array.isArray(reviews)?reviews:[];
+    productReviewsCacheV32[String(productId)] = rows;
+
+    if(!detailProduct || String(detailProduct.id)!==String(productId)) return;
+
+    const badge=document.getElementById("detailReviewCount");
+    if(!badge) return;
+
+    const total=rows.length;
+    badge.textContent=String(total);
+    badge.classList.toggle("hidden",total===0);
+    badge.title=`${total} yorum`;
+}
+
+
 function setProductRatingV31(rate){
     selectedProductRatingV31 = rate;
 
@@ -9299,6 +9480,7 @@ async function loadProductReviewsV31(productId){
     const {data,error}=await supabaseClient
         .from("product_reviews")
         .select("*")
+        .eq("business_id", currentBusinessId)
         .eq("product_id", productId)
         .order("created_at",{ascending:false});
 
@@ -9308,6 +9490,8 @@ async function loadProductReviewsV31(productId){
     }
 
     const reviews=data || [];
+
+    setProductReviewCountV32(productId,reviews);
 
     area.innerHTML=`
     <div class="product-review-box-v31">
@@ -9347,6 +9531,22 @@ async function loadProductReviewsV31(productId){
 </script>
 
 <style id="productReviewStyleV31">
+.product-review-box-v31{
+ margin-top:4px;
+}
+.product-review-box-v31 h3{
+ margin:0 0 10px;
+}
+.product-review-box-v31 textarea{
+ width:100%;
+ min-height:100px;
+ resize:vertical;
+}
+.product-review-list-v31{
+ margin-top:16px;
+ padding-top:14px;
+ border-top:1px solid #eee;
+}
 .product-review-stars-v31{
  display:flex;
  gap:6px;
