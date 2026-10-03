@@ -2835,8 +2835,23 @@ body{
   font-size:11px;
 }
 .product-question-form{
-  border-top:1px solid #eee;
-  padding-top:16px;
+  padding-top:4px;
+}
+.product-question-history-card{
+  margin-top:18px;
+  padding:14px;
+  border:1px solid #e6e6e6;
+  border-radius:14px;
+  background:#f8f9fb;
+}
+.product-question-history-title{
+  margin-bottom:11px;
+  font-size:15px;
+  font-weight:900;
+  color:#222;
+}
+.product-question-history-card .product-question-list{
+  margin-bottom:0;
 }
 .product-question-form label{
   display:block;
@@ -8704,9 +8719,9 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        type="button"
        class="product-question-button"
        onclick="openProductQuestionModal()"
-       title="Bu ürün hakkında soru sor"
+       title="Bu ürün hakkında soru sor ve önceki soruları gör"
      >
-       ❓ Soru Sor
+       Soru Sor
        <span id="detailQuestionAnswerCount" class="product-question-answer-count hidden">0</span>
      </button>
 
@@ -8719,15 +8734,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 <div id="productQuestionModal" class="product-question-modal hidden">
   <div class="product-question-modal-card">
     <div class="product-question-modal-head">
-      <h2>❓ Ürün Soruları</h2>
+      <h2>Ürün Soruları</h2>
       <button type="button" class="product-question-close" onclick="closeProductQuestionModal()" aria-label="Kapat" title="Kapat">×</button>
     </div>
 
     <div id="productQuestionProductName" class="product-question-product-name"></div>
-
-    <div id="productQuestionList" class="product-question-list">
-      <div class="small">Sorular yükleniyor...</div>
-    </div>
 
     <div class="product-question-form">
       <label for="productQuestionText">Sorulacak soru detayı</label>
@@ -8745,6 +8756,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
       >Soruyu Gönder</button>
 
       <div id="productQuestionStatus" class="product-question-status"></div>
+    </div>
+
+    <div class="product-question-history-card">
+      <div class="product-question-history-title">Daha Önce Sorulan Sorular</div>
+      <div id="productQuestionList" class="product-question-list">
+        <div class="small">Sorular yükleniyor...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -8777,10 +8795,10 @@ function setProductQuestionAnswerCount(productId,questions){
   const badge=document.getElementById("detailQuestionAnswerCount");
   if(!badge)return;
 
-  const answered=(questions||[]).filter(q=>String(q.answer_text||"").trim()).length;
-  badge.textContent=String(answered);
-  badge.classList.toggle("hidden",answered===0);
-  badge.title=`${answered} cevaplanmış soru`;
+  const total=(questions||[]).length;
+  badge.textContent=String(total);
+  badge.classList.toggle("hidden",total===0);
+  badge.title=`${total} soru`;
 }
 
 function renderProductQuestionList(productId,questions){
@@ -8895,6 +8913,21 @@ async function submitProductQuestion(){
 
     input.value="";
     setProductQuestionStatus("Sorunuz işletmeye gönderildi.");
+
+    // Sayaç artık toplam soru sayısını gösteriyor.
+    // Yeni soru başarılı kaydedildiği anda anında 1 artır.
+    const badge=document.getElementById("detailQuestionAnswerCount");
+    if(
+      badge &&
+      detailProduct &&
+      String(detailProduct.id)===String(productQuestionModalProductId)
+    ){
+      const current=Number(badge.textContent||0) || 0;
+      badge.textContent=String(current+1);
+      badge.classList.remove("hidden");
+      badge.title=`${current+1} soru`;
+    }
+
     await loadProductQuestionsV1(productQuestionModalProductId,true);
   }catch(error){
     console.error("Ürün sorusu gönderilemedi:",error);
