@@ -254,7 +254,7 @@ body.modal-open{
 <div id="app" class="container hidden">
   <div class="header">
     <div>
-      <h1 id="tenantAdminTitle">🍽️ İşletme Yönetim Paneli</h1>
+      <h1 id="tenantAdminTitle">İşletme Yönetim Paneli</h1>
       <div class="muted">index.html üzerindeki ürünler ve siparişler merkezi olarak yönetilir.</div>
     </div>
     <div class="header-actions">
@@ -1006,8 +1006,8 @@ function renderPlatformBusiness(){
     const adminTitle=document.getElementById("tenantAdminTitle");
     const customerLink=document.getElementById("tenantCustomerLink");
 
-    if(loginTitle)loginTitle.textContent=`🍽️ ${tenantName} Girişi`;
-    if(adminTitle)adminTitle.textContent=`🍽️ ${tenantName} Yönetim Paneli`;
+    if(loginTitle)loginTitle.textContent=`${tenantName} Girişi`;
+    if(adminTitle)adminTitle.textContent=`${tenantName} Yönetim Paneli`;
     if(customerLink){
       customerLink.href=new URL(`${encodeURIComponent(TENANT_SLUG)}/`,APP_ROOT_URL).href;
     }
