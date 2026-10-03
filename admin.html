@@ -237,6 +237,63 @@ body.modal-open{
 @media(max-width:800px){.medicine-request-admin-list{grid-template-columns:1fr}}
 </style>
 
+
+<style id="product-question-admin-style-v1">
+.product-question-admin-list{display:grid;gap:12px}
+.product-question-admin-card{
+  border:1px solid #e4e7ec;
+  border-radius:14px;
+  padding:15px;
+  background:#fff;
+}
+.product-question-admin-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.product-question-admin-product{font-weight:900;font-size:16px}
+.product-question-admin-question{
+  margin-top:8px;
+  padding:12px;
+  border-radius:11px;
+  background:#f7f7f7;
+  white-space:pre-wrap;
+  word-break:break-word;
+  line-height:1.5;
+}
+.product-question-admin-answer{
+  margin-top:10px;
+  padding:12px;
+  border-radius:11px;
+  background:#eef7ef;
+  color:#235b2c;
+  white-space:pre-wrap;
+  word-break:break-word;
+  line-height:1.5;
+}
+.product-question-status-pending{background:#fff2cc;color:#8a5a00}
+.product-question-status-answered{background:#dff5e3;color:#176b2c}
+.product-question-answer-question{
+  padding:12px;
+  background:#f7f7f7;
+  border-radius:11px;
+  white-space:pre-wrap;
+  word-break:break-word;
+  line-height:1.5;
+}
+#productQuestionAnswerText{
+  width:100%;
+  min-height:140px;
+  resize:vertical;
+  padding:12px;
+  border:1px solid #ddd;
+  border-radius:10px;
+  font:inherit;
+}
+</style>
+
 </head>
 <body>
 
@@ -272,6 +329,7 @@ body.modal-open{
 
   <div class="tabs">
     <button class="tab active" onclick="showTab('products',this)">📦 Ürünler</button>
+    <button class="tab" onclick="showTab('productQuestions',this)">❓ Ürün Soruları <span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
@@ -287,6 +345,20 @@ body.modal-open{
         <button class="btn btn-primary" onclick="openProductModal()">+ Yeni Ürün</button>
       </div>
       <div id="productList" class="products"></div>
+    </div>
+  </section>
+
+  <section id="productQuestionsTab" class="hidden">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h2>❓ Ürün Soruları</h2>
+          <div class="muted">Müşterilerin ürün modalından sorduğu soruları buradan cevaplayabilirsiniz.</div>
+        </div>
+      </div>
+      <div id="productQuestionAdminList" class="product-question-admin-list">
+        <div class="empty">Ürün soruları yükleniyor...</div>
+      </div>
     </div>
   </section>
 
@@ -639,6 +711,38 @@ body.modal-open{
   </div>
 </div>
 
+
+<div id="productQuestionAnswerModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor">
+      <button
+        type="button"
+        class="modal-persistent-x"
+        onclick="closeProductQuestionAnswerModal()"
+        aria-label="Modalı kapat"
+        title="Kapat"
+      >×</button>
+    </div>
+
+    <h2>💬 Soruyu Cevapla</h2>
+    <input id="productQuestionAnswerId" type="hidden">
+
+    <div class="muted" id="productQuestionAnswerProduct" style="margin-bottom:8px"></div>
+    <div id="productQuestionAnswerQuestion" class="product-question-answer-question"></div>
+
+    <label for="productQuestionAnswerText">Cevap</label>
+    <textarea
+      id="productQuestionAnswerText"
+      maxlength="2000"
+      placeholder="Müşterinin göreceği cevabı yazın..."
+    ></textarea>
+
+    <div class="actions" style="justify-content:flex-end;margin-top:14px">
+      <button id="saveProductQuestionAnswerButton" class="btn btn-success" onclick="saveProductQuestionAnswer()">Cevabı Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -693,6 +797,8 @@ let pendingAdvertisementFiles = [];
 let currentAdvertisementImages = [];
 let advertisementImageBusy = false;
 let supportTickets = [];
+let productQuestions = [];
+let productQuestionAnswerBusy = false;
 let medicineRequests = [];
 let medicineRequestInformId = null;
 let appSettings = {id:null,shop_name:"İşletme",shop_icon:"",background_color:"#f5f5f5",phone:""};
@@ -867,7 +973,8 @@ async function loadAll(){
       loadAdminNotifications(),
       loadAdminAdvertisements(),
       loadAdminSettings(),
-      loadSupportTickets()
+      loadSupportTickets(),
+      loadAdminProductQuestions()
     ];
     if(TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG){
       loadTasks.push(loadMedicineRequests());
@@ -875,6 +982,7 @@ async function loadAll(){
     await Promise.all(loadTasks);
 
     renderProducts();
+    renderAdminProductQuestions();
     renderOrders();
     renderAdminNotifications();
     renderAdminAdvertisements();
@@ -928,10 +1036,146 @@ async function loadAdminProducts(){
     }));
 
     renderProducts();
+    renderAdminProductQuestions();
   }catch(e){
     console.error("Ürünler yüklenemedi:",e);
     const el=document.getElementById("productList");
     if(el)el.innerHTML='<div class="empty">Ürünler yüklenemedi: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+
+async function loadAdminProductQuestions(){
+  if(!currentBusinessId)return;
+
+  const list=document.getElementById("productQuestionAdminList");
+  try{
+    const {data,error}=await supabaseClient
+      .from("product_questions")
+      .select("id,business_id,product_id,question_text,answer_text,status,created_at,answered_at")
+      .eq("business_id",currentBusinessId)
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+    productQuestions=data||[];
+    renderAdminProductQuestions();
+  }catch(error){
+    console.error("Ürün soruları yüklenemedi:",error);
+    if(list){
+      list.innerHTML=`<div class="empty">Ürün soruları yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
+    }
+  }
+}
+
+function adminQuestionProductName(productId){
+  return products.find(p=>String(p.id)===String(productId))?.name || "Ürün";
+}
+
+function renderAdminProductQuestions(){
+  const list=document.getElementById("productQuestionAdminList");
+  if(!list)return;
+
+  const pending=productQuestions.filter(q=>!String(q.answer_text||"").trim()).length;
+  const badge=document.getElementById("productQuestionPendingCount");
+  if(badge){
+    badge.textContent=String(pending);
+    badge.classList.toggle("hidden",pending===0);
+  }
+
+  if(!productQuestions.length){
+    list.innerHTML='<div class="empty">Henüz ürün sorusu yok.</div>';
+    return;
+  }
+
+  list.innerHTML=productQuestions.map(q=>{
+    const answer=String(q.answer_text||"").trim();
+    const productName=adminQuestionProductName(q.product_id);
+    return `<div class="product-question-admin-card">
+      <div class="product-question-admin-head">
+        <div>
+          <div class="product-question-admin-product">${escapeHtml(productName)}</div>
+          <div class="muted">${escapeHtml(formatDateTime(q.created_at))}</div>
+        </div>
+        <span class="badge ${answer?"product-question-status-answered":"product-question-status-pending"}">
+          ${answer?"Cevaplandı":"Cevap Bekliyor"}
+        </span>
+      </div>
+
+      <div class="product-question-admin-question"><strong>Soru:</strong><br>${escapeHtml(q.question_text)}</div>
+
+      ${answer
+        ? `<div class="product-question-admin-answer"><strong>Cevap:</strong><br>${escapeHtml(answer)}</div>`
+        : ""}
+
+      <div class="actions" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn ${answer?"btn-light":"btn-success"}" onclick="openProductQuestionAnswerModal('${escapeAttr(q.id)}')">
+          ${answer?"✏️ Cevabı Düzenle":"💬 Cevapla"}
+        </button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function openProductQuestionAnswerModal(id){
+  const q=productQuestions.find(x=>String(x.id)===String(id));
+  if(!q){
+    toast("Soru bulunamadı.");
+    return;
+  }
+
+  document.getElementById("productQuestionAnswerId").value=q.id;
+  document.getElementById("productQuestionAnswerProduct").textContent=adminQuestionProductName(q.product_id);
+  document.getElementById("productQuestionAnswerQuestion").textContent=q.question_text||"";
+  document.getElementById("productQuestionAnswerText").value=q.answer_text||"";
+  document.getElementById("productQuestionAnswerModal").classList.remove("hidden");
+}
+
+function closeProductQuestionAnswerModal(){
+  document.getElementById("productQuestionAnswerModal")?.classList.add("hidden");
+  document.getElementById("productQuestionAnswerId").value="";
+  document.getElementById("productQuestionAnswerText").value="";
+}
+
+async function saveProductQuestionAnswer(){
+  if(productQuestionAnswerBusy)return;
+
+  const id=document.getElementById("productQuestionAnswerId").value;
+  const answer=document.getElementById("productQuestionAnswerText").value.trim();
+  const button=document.getElementById("saveProductQuestionAnswerButton");
+
+  if(!id)return;
+  if(answer.length<2){
+    toast("Cevap en az 2 karakter olmalı.");
+    return;
+  }
+  if(answer.length>2000){
+    toast("Cevap en fazla 2000 karakter olabilir.");
+    return;
+  }
+
+  try{
+    productQuestionAnswerBusy=true;
+    button.disabled=true;
+    button.textContent="Kaydediliyor...";
+
+    const {data,error}=await supabaseClient.rpc("answer_product_question",{
+      p_question_id:id,
+      p_answer_text:answer
+    });
+
+    if(error)throw error;
+    if(data!==true)throw new Error("Cevap kaydedilemedi.");
+
+    closeProductQuestionAnswerModal();
+    toast("Cevap kaydedildi.");
+    await loadAdminProductQuestions();
+  }catch(error){
+    console.error("Ürün sorusu cevaplanamadı:",error);
+    toast(error?.message||"Cevap kaydedilemedi.");
+  }finally{
+    productQuestionAnswerBusy=false;
+    button.disabled=false;
+    button.textContent="Cevabı Kaydet";
   }
 }
 
@@ -1355,6 +1599,7 @@ function loadDashboard(){
 }
 function showTab(name,button){
   document.getElementById("productsTab").classList.toggle("hidden",name!=="products");
+  document.getElementById("productQuestionsTab")?.classList.toggle("hidden",name!=="productQuestions");
   document.getElementById("ordersTab").classList.toggle("hidden",name!=="orders");
   document.getElementById("medicineRequestsTab")?.classList.toggle("hidden",name!=="medicineRequests");
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
@@ -1362,6 +1607,7 @@ function showTab(name,button){
   document.getElementById("settingsTab").classList.toggle("hidden",name!=="settings");
   document.getElementById("supportTab").classList.toggle("hidden",name!=="support");
   if(name==="support")loadSupportTickets();
+  if(name==="productQuestions")loadAdminProductQuestions();
   if(name==="advertisements")loadAdminAdvertisements();
   if(name==="medicineRequests")loadMedicineRequests();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
@@ -3074,6 +3320,7 @@ function subscribeAdminRealtime(){
     .channel(`admin-live-${currentBusinessId}`)
     .on("postgres_changes",{event:"*",schema:"public",table:"products",filter:businessFilter},async()=>{await loadAdminProducts();loadDashboard();})
     .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},async()=>{await loadAdminProducts();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"product_questions",filter:businessFilter},async()=>{await loadAdminProductQuestions();})
     .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},async()=>{await loadAdminOrders();loadDashboard();})
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
@@ -3132,6 +3379,7 @@ async function refreshAdminLiveData(force=false){
       loadAdminAdvertisements(),
       loadAdminSettings(),
       loadSupportTickets(),
+      loadAdminProductQuestions(),
       loadPlatformBusiness(),
       TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG ? loadMedicineRequests() : Promise.resolve()
     ]);

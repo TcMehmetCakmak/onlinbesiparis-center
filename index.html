@@ -2705,6 +2705,171 @@ body{
 .medicine-request-status{min-height:18px;margin-top:9px;font-size:13px;color:#666}
 </style>
 
+
+<style id="product-question-style-v1">
+.product-question-button{
+  position:relative;
+  width:100%;
+  min-height:46px;
+  margin-top:12px;
+  border:0;
+  border-radius:12px;
+  background:#1565c0;
+  color:#fff;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+}
+.product-question-button:hover{opacity:.92}
+.product-question-button:active{transform:scale(.99)}
+.product-question-answer-count{
+  position:absolute;
+  top:-8px;
+  right:-8px;
+  min-width:24px;
+  height:24px;
+  padding:0 7px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#e63946;
+  color:#fff;
+  border:2px solid #fff;
+  font-size:12px;
+  font-weight:900;
+  box-shadow:0 2px 7px #0002;
+}
+.product-question-modal{
+  position:fixed;
+  inset:0;
+  z-index:41000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(0,0,0,.62);
+  overflow:auto;
+}
+.product-question-modal.hidden{display:none!important}
+.product-question-modal-card{
+  width:min(620px,100%);
+  max-height:calc(100dvh - 32px);
+  overflow:auto;
+  background:#fff;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 20px 65px rgba(0,0,0,.32);
+}
+.product-question-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:8px;
+}
+.product-question-modal-head h2{margin:0}
+.product-question-close{
+  width:40px;
+  height:40px;
+  min-width:40px;
+  border:0;
+  border-radius:50%;
+  background:#eee;
+  font-size:27px;
+  cursor:pointer;
+}
+.product-question-product-name{
+  margin:4px 0 14px;
+  color:#666;
+  font-size:14px;
+  font-weight:700;
+}
+.product-question-list{
+  display:grid;
+  gap:10px;
+  margin-bottom:18px;
+}
+.product-question-item{
+  border:1px solid #e6e6e6;
+  border-radius:13px;
+  padding:13px;
+  background:#fafafa;
+}
+.product-question-q{
+  font-weight:800;
+  line-height:1.45;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.product-question-a{
+  margin-top:9px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#eef7ef;
+  color:#235b2c;
+  line-height:1.45;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.product-question-pending{
+  margin-top:9px;
+  color:#8a5a00;
+  font-size:13px;
+  font-weight:700;
+}
+.product-question-date{
+  margin-top:7px;
+  color:#999;
+  font-size:11px;
+}
+.product-question-form{
+  border-top:1px solid #eee;
+  padding-top:16px;
+}
+.product-question-form label{
+  display:block;
+  font-weight:800;
+  margin-bottom:7px;
+}
+.product-question-form textarea{
+  width:100%;
+  min-height:110px;
+  margin:0;
+  padding:12px;
+  border:1px solid #d8d8d8;
+  border-radius:11px;
+  resize:vertical;
+  font:inherit;
+}
+.product-question-submit{
+  width:100%;
+  min-height:46px;
+  margin-top:10px;
+  border:0;
+  border-radius:11px;
+  background:#1565c0;
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+.product-question-submit:disabled{opacity:.55;cursor:not-allowed}
+.product-question-status{
+  min-height:18px;
+  margin-top:8px;
+  font-size:13px;
+  color:#666;
+}
+@media(max-width:600px){
+  .product-question-modal{align-items:flex-start;padding:8px}
+  .product-question-modal-card{
+    max-height:calc(100dvh - 16px);
+    border-radius:14px;
+    padding:16px;
+  }
+}
+</style>
+
 </head>
 
 <body>
@@ -8109,6 +8274,10 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "product_images", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: businessFilter }, applyRealtimeReview)
+            .on("postgres_changes", { event: "*", schema: "public", table: "product_questions", filter: businessFilter }, payload => {
+                const productId=payload?.new?.product_id || payload?.old?.product_id || detailProduct?.id;
+                if(productId)loadProductQuestionsV1(productId,false);
+            })
             .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: businessFilter }, () => loadAppSettings())
             .subscribe(status => {
                 console.log("Realtime durumu:", status);
@@ -8507,8 +8676,54 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <div id="detailPrice"></div>
    <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
    <div id="productReviewAreaV28"></div>
+
+   <button
+     id="detailQuestionButton"
+     type="button"
+     class="product-question-button"
+     onclick="openProductQuestionModal()"
+     title="Bu ürün hakkında soru sor"
+   >
+     ❓ Soru Sor
+     <span id="detailQuestionAnswerCount" class="product-question-answer-count hidden">0</span>
+   </button>
+
    <button id="detailAddButton" class="product-add-button">Sepete Ekle</button>
  </div>
+</div>
+
+
+<div id="productQuestionModal" class="product-question-modal hidden">
+  <div class="product-question-modal-card">
+    <div class="product-question-modal-head">
+      <h2>❓ Ürün Soruları</h2>
+      <button type="button" class="product-question-close" onclick="closeProductQuestionModal()" aria-label="Kapat" title="Kapat">×</button>
+    </div>
+
+    <div id="productQuestionProductName" class="product-question-product-name"></div>
+
+    <div id="productQuestionList" class="product-question-list">
+      <div class="small">Sorular yükleniyor...</div>
+    </div>
+
+    <div class="product-question-form">
+      <label for="productQuestionText">Sorulacak soru detayı</label>
+      <textarea
+        id="productQuestionText"
+        maxlength="1000"
+        placeholder="Ürün hakkında sormak istediğiniz soruyu yazın..."
+      ></textarea>
+
+      <button
+        id="productQuestionSubmitButton"
+        type="button"
+        class="product-question-submit"
+        onclick="submitProductQuestion()"
+      >Soruyu Gönder</button>
+
+      <div id="productQuestionStatus" class="product-question-status"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -8516,6 +8731,158 @@ let detailSelectedVariant=null;
 let detailProduct=null;
 let detailGalleryImages=[];
 let detailGalleryIndex=0;
+
+let productQuestionsCache = new Map();
+let productQuestionModalProductId = null;
+let productQuestionSubmitBusy = false;
+
+function productQuestionDateTR(value){
+  if(!value)return "";
+  try{return new Date(value).toLocaleString("tr-TR");}
+  catch{return "";}
+}
+
+function setProductQuestionStatus(message,isError=false){
+  const el=document.getElementById("productQuestionStatus");
+  if(!el)return;
+  el.textContent=message||"";
+  el.style.color=isError?"#b42318":"#666";
+}
+
+function setProductQuestionAnswerCount(productId,questions){
+  if(!detailProduct || String(detailProduct.id)!==String(productId))return;
+  const badge=document.getElementById("detailQuestionAnswerCount");
+  if(!badge)return;
+
+  const answered=(questions||[]).filter(q=>String(q.answer_text||"").trim()).length;
+  badge.textContent=String(answered);
+  badge.classList.toggle("hidden",answered===0);
+  badge.title=`${answered} cevaplanmış soru`;
+}
+
+function renderProductQuestionList(productId,questions){
+  if(String(productQuestionModalProductId)!==String(productId))return;
+
+  const list=document.getElementById("productQuestionList");
+  if(!list)return;
+
+  if(!questions?.length){
+    list.innerHTML='<div class="small" style="padding:14px 0">Bu ürün için henüz soru sorulmamış.</div>';
+    return;
+  }
+
+  list.innerHTML=questions.map(q=>{
+    const answer=String(q.answer_text||"").trim();
+    return `<div class="product-question-item">
+      <div class="product-question-q">❓ ${escapeHtml(q.question_text)}</div>
+      ${answer
+        ? `<div class="product-question-a"><strong>İşletme cevabı:</strong><br>${escapeHtml(answer)}</div>`
+        : `<div class="product-question-pending">⏳ Henüz cevaplanmadı.</div>`}
+      <div class="product-question-date">${escapeHtml(productQuestionDateTR(q.created_at))}</div>
+    </div>`;
+  }).join("");
+}
+
+async function loadProductQuestionsV1(productId,renderModal=true){
+  if(!currentBusinessId || !productId)return [];
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("product_questions")
+      .select("id,business_id,product_id,question_text,answer_text,status,created_at,answered_at")
+      .eq("business_id",currentBusinessId)
+      .eq("product_id",productId)
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+
+    const rows=data||[];
+    productQuestionsCache.set(String(productId),rows);
+    setProductQuestionAnswerCount(productId,rows);
+
+    if(renderModal){
+      renderProductQuestionList(productId,rows);
+    }else if(
+      !document.getElementById("productQuestionModal")?.classList.contains("hidden") &&
+      String(productQuestionModalProductId)===String(productId)
+    ){
+      renderProductQuestionList(productId,rows);
+    }
+
+    return rows;
+  }catch(error){
+    console.error("Ürün soruları yüklenemedi:",error);
+    if(renderModal){
+      const list=document.getElementById("productQuestionList");
+      if(list)list.innerHTML=`<div class="small" style="color:#b42318">Sorular yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
+    }
+    return [];
+  }
+}
+
+async function openProductQuestionModal(){
+  if(!detailProduct || !currentBusinessId)return;
+
+  productQuestionModalProductId=detailProduct.id;
+  document.getElementById("productQuestionProductName").textContent=detailProduct.name||"Ürün";
+  document.getElementById("productQuestionText").value="";
+  document.getElementById("productQuestionList").innerHTML='<div class="small">Sorular yükleniyor...</div>';
+  setProductQuestionStatus("");
+  document.getElementById("productQuestionModal").classList.remove("hidden");
+
+  await loadProductQuestionsV1(detailProduct.id,true);
+}
+
+function closeProductQuestionModal(){
+  document.getElementById("productQuestionModal")?.classList.add("hidden");
+  productQuestionModalProductId=null;
+  setProductQuestionStatus("");
+}
+
+async function submitProductQuestion(){
+  if(productQuestionSubmitBusy || !productQuestionModalProductId || !currentBusinessId)return;
+
+  const input=document.getElementById("productQuestionText");
+  const button=document.getElementById("productQuestionSubmitButton");
+  const question=String(input?.value||"").trim();
+
+  if(question.length<3){
+    setProductQuestionStatus("Soru en az 3 karakter olmalı.",true);
+    return;
+  }
+  if(question.length>1000){
+    setProductQuestionStatus("Soru en fazla 1000 karakter olabilir.",true);
+    return;
+  }
+
+  try{
+    productQuestionSubmitBusy=true;
+    button.disabled=true;
+    button.textContent="Gönderiliyor...";
+    setProductQuestionStatus("Soru gönderiliyor...");
+
+    const {data,error}=await supabaseClient.rpc("submit_product_question",{
+      p_business_id:currentBusinessId,
+      p_product_id:productQuestionModalProductId,
+      p_question_text:question
+    });
+
+    if(error)throw error;
+    if(!data)throw new Error("Soru kaydedilemedi.");
+
+    input.value="";
+    setProductQuestionStatus("Sorunuz işletmeye gönderildi.");
+    await loadProductQuestionsV1(productQuestionModalProductId,true);
+  }catch(error){
+    console.error("Ürün sorusu gönderilemedi:",error);
+    setProductQuestionStatus(error?.message||"Soru gönderilemedi.",true);
+  }finally{
+    productQuestionSubmitBusy=false;
+    button.disabled=false;
+    button.textContent="Soruyu Gönder";
+  }
+}
+
 
 function openProductDetail(productId){
  const product=products.find(p=>String(p.id)===String(productId));
@@ -8570,6 +8937,13 @@ function openProductDetail(productId){
 
  loadProductReviewsV31(product.id);
 
+ const questionBadge=document.getElementById("detailQuestionAnswerCount");
+ if(questionBadge){
+   questionBadge.textContent="0";
+   questionBadge.classList.add("hidden");
+ }
+ loadProductQuestionsV1(product.id,false);
+
  document.getElementById("detailAddButton").onclick=()=>{
    if(product.product_type==="SIZE" && !detailSelectedVariant){
       alert("Lütfen beden seçiniz.");
@@ -8599,6 +8973,7 @@ function changeDetailGallery(step){
 }
 
 function closeProductDetail(){
+ closeProductQuestionModal();
  document.getElementById("productDetailModal").classList.add("hidden");
  document.getElementById("productGalleryModal")?.classList.add("hidden");
  detailProduct=null;
@@ -8979,6 +9354,20 @@ async function loadProductReviewsV31(productId){
     <div id="advertisementStoryCount" class="ad-story-count"></div>
   </div>
 </div>
+
+<script id="product-question-live-fallback-v1">
+setInterval(()=>{
+  if(
+    detailProduct &&
+    currentBusinessId &&
+    !document.hidden &&
+    navigator.onLine &&
+    document.activeElement?.id!=="productQuestionText"
+  ){
+    loadProductQuestionsV1(detailProduct.id,false);
+  }
+},5000);
+</script>
 
 </body>
 
