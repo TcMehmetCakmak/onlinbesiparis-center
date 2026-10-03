@@ -241,7 +241,7 @@ body.modal-open{
 <body>
 
 <div id="loginPage" class="login">
-  <h1 id="tenantLoginTitle">🍽️ İşletme Girişi</h1>
+  <h1 id="tenantLoginTitle">İşletme Girişi</h1>
   <p class="muted">Ürünleri, siparişleri ve ciroyu buradan yönetin.</p>
   <label>E-posta</label>
   <input id="email" type="email" autocomplete="username" placeholder="admin@ornek.com">
@@ -271,7 +271,7 @@ body.modal-open{
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="showTab('products',this)">🍽️ Ürünler</button>
+    <button class="tab active" onclick="showTab('products',this)">Ürünler</button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
@@ -695,7 +695,7 @@ let advertisementImageBusy = false;
 let supportTickets = [];
 let medicineRequests = [];
 let medicineRequestInformId = null;
-let appSettings = {id:null,shop_name:"İşletme",shop_icon:"🍽️",background_color:"#f5f5f5",phone:""};
+let appSettings = {id:null,shop_name:"İşletme",shop_icon:"",background_color:"#f5f5f5",phone:""};
 let platformBusiness = null;
 let currentBusinessId = null;
 let adminRealtimeChannel = null;
@@ -973,7 +973,7 @@ async function loadAdminSettings(){
     const instagramLabel=document.getElementById("settingInstagramLabel");
     const color=document.getElementById("settingBackgroundColor");
     const colorText=document.getElementById("settingBackgroundColorText");
-    if(icon)icon.value=appSettings.shop_icon||"🍽️";
+    if(icon)icon.value=appSettings.shop_icon||"";
     if(phone)phone.value=appSettings.phone||"";
     if(instagram)instagram.value=appSettings.instagram_url||"";
     if(instagramLabel)instagramLabel.value=appSettings.instagram_label||"";
@@ -1998,7 +1998,7 @@ async function saveProduct(){
 
   const payload={
     name:document.getElementById("productName").value.trim(),
-    icon:"🍽️",
+    icon:"",
     price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
     detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
