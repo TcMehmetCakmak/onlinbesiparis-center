@@ -2681,7 +2681,7 @@ body{
 
 <style id="sifa-pharmacy-feature-style">
 #medicineRequestFeature{display:none}
-#medicineRequestFeature.sifa-visible{display:block}
+#medicineRequestFeature.sifa-visible{display:flex}
 .medicine-request-card{padding:16px 18px;text-align:center;border:1px solid #d7eadf;background:#f4fbf7}
 .medicine-request-launcher{width:40px;height:40px;border:0;border-radius:13px;background:#222;color:#fff;font-size:17px;font-weight:800;cursor:pointer}
 .medicine-request-launcher:active{transform:scale(.99)}
@@ -2770,12 +2770,13 @@ body{
 
                 <!-- BİLDİRİM → YORUM → SEPET -->
                 <div class="header-tools">
-                    <button 
-                    type="button" 
-                    class="medicine-request-launcher" 
-                    onclick="openMedicineRequestModal()"
-                    title="İlaç Talep Et"
-                    aria-label="İlaç Talep Et"
+                    <button
+                        id="medicineRequestFeature"
+                        type="button"
+                        class="medicine-request-launcher hidden"
+                        onclick="openMedicineRequestModal()"
+                        title="İlaç Talep Et"
+                        aria-label="İlaç Talep Et"
                     >
                         💊
                     </button>
@@ -3977,6 +3978,7 @@ body{
             customerInfoCard?.classList.add("hidden");
             cartOpenButton?.classList.add("hidden");
             medicineFeature?.classList.remove("sifa-visible");
+            medicineFeature?.classList.add("hidden");
             banner.classList.add("hidden");
             banner.textContent = "";
             return;
@@ -3989,10 +3991,12 @@ body{
         orderItemsCard?.classList.toggle("hidden", inactive);
         customerInfoCard?.classList.toggle("hidden", inactive);
         cartOpenButton?.classList.toggle("hidden", inactive);
-        medicineFeature?.classList.toggle(
-            "sifa-visible",
-            TENANT_SLUG === PHARMACY_FEATURE_TENANT_SLUG && !inactive
-        );
+        const showMedicineRequest =
+            TENANT_SLUG === PHARMACY_FEATURE_TENANT_SLUG &&
+            !inactive;
+
+        medicineFeature?.classList.toggle("sifa-visible", showMedicineRequest);
+        medicineFeature?.classList.toggle("hidden", !showMedicineRequest);
 
         if (inactive) {
             const businessName = String(platformBusiness.shop_name || "işletme").trim() || "işletme";
