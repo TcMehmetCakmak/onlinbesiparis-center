@@ -327,8 +327,19 @@ body.modal-open{
   cursor:pointer;
   transition:background .15s ease, transform .15s ease;
 }
-.order-product-clickable:hover{background:#f5f6f8}
+.order-product-clickable:hover{background:#eef3ff}
 .order-product-clickable:active{transform:scale(.995)}
+.order-product-clickable:focus{
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.order-product-clickable::after{
+  content:"›";
+  margin-left:auto;
+  color:#777;
+  font-size:28px;
+  line-height:1;
+}
 
 .order-product-fullscreen{
   position:fixed;
@@ -2665,9 +2676,119 @@ function changeOrderProductImage(step){
   renderOrderProductGallery();
 }
 
-function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=""){
-  const product=getProductById(productId);
-  const itemName=product?.name || "Ürün";
+function findOrderProduct(orderItem){
+  const productId =
+    orderItem?.productId ??
+    orderItem?.product_id ??
+    orderItem?.id ??
+    "";
+
+  let product = getProductById(productId);
+
+  // Eski siparişlerde ürün id tutulmadıysa ürün adına göre de eşleştir.
+  if(!product && orderItem?.name){
+    const targetName=String(orderItem.name).trim().toLocaleLowerCase("tr");
+    product=products.find(p=>
+      String(p?.name||"").trim().toLocaleLowerCase("tr")===targetName
+    ) || null;
+  }
+
+  return product || null;
+}
+
+function openOrderProductDetailFromCard(card){
+  const modal=document.getElementById("orderProductFullscreen");
+
+  // Önce modalı aç. Sonraki bir veri problemi tıklamanın çalışmasını engellemesin.
+  modal?.classList.remove("hidden");
+  document.body.style.overflow="hidden";
+
+  try{
+    const orderId=String(card?.dataset?.orderId||"");
+    const itemIndex=Number(card?.dataset?.itemIndex);
+
+    const order=orders.find(o=>String(o.id)===orderId);
+    if(!order || !Array.isArray(order.items)){
+      throw new Error("Sipariş kaydı bulunamadı.");
+    }
+
+    const item=order.items[itemIndex];
+    if(!item){
+      throw new Error("Sipariş ürünü bulunamadı.");
+    }
+
+    const product=findOrderProduct(item);
+    const productId=
+      item.productId ??
+      item.product_id ??
+      product?.id ??
+      "";
+
+    const variantText=
+      item.variantName ??
+      item.variant_name ??
+      item.size ??
+      item.beden ??
+      item.variant ??
+      "";
+
+    const quantity=Number(item.quantity||1);
+
+    const lineTotal=
+      Number(item.lineTotal||0)>0
+        ? Number(item.lineTotal)
+        : Number(
+            item.variantPrice ??
+            item.variant_price ??
+            item.unitPrice ??
+            item.price ??
+            0
+          ) * quantity;
+
+    openOrderProductDetail(
+      productId,
+      variantText,
+      quantity,
+      lineTotal,
+      item,
+      product
+    );
+  }catch(error){
+    console.error("Sipariş ürün detayı açılamadı:",error);
+
+    const title=document.getElementById("orderProductFullscreenTitle");
+    const gallery=document.getElementById("orderProductGallery");
+    const grid=document.getElementById("orderProductDetailGrid");
+
+    if(title)title.textContent="Ürün Detayı";
+    if(gallery){
+      gallery.innerHTML='<div class="order-product-gallery-empty">⚠️</div>';
+    }
+    if(grid){
+      grid.innerHTML=`
+        <div class="order-product-detail-box full">
+          <div class="order-product-detail-label">Hata</div>
+          <div class="order-product-detail-value">${escapeHtml(error?.message||"Ürün detayı açılamadı.")}</div>
+        </div>
+      `;
+    }
+  }
+}
+
+function openOrderProductDetail(
+  productId,
+  variantText="",
+  quantity="1",
+  lineTotal="",
+  orderItem=null,
+  resolvedProduct=null
+){
+  const modal=document.getElementById("orderProductFullscreen");
+  modal?.classList.remove("hidden");
+  document.body.style.overflow="hidden";
+
+  const product=resolvedProduct || getProductById(productId) || findOrderProduct(orderItem);
+  const itemName=product?.name || orderItem?.name || "Ürün";
 
   orderProductDetailProduct=product || null;
   orderProductDetailItem={
@@ -2675,7 +2796,8 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
     name:itemName,
     variantText:String(variantText||""),
     quantity:Number(quantity||1),
-    lineTotal:Number(lineTotal||0)
+    lineTotal:Number(lineTotal||0),
+    snapshot:orderItem||null
   };
 
   orderProductDetailImages=getOrderProductImages(product);
@@ -2683,7 +2805,6 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
 
   const title=document.getElementById("orderProductFullscreenTitle");
   const grid=document.getElementById("orderProductDetailGrid");
-  const modal=document.getElementById("orderProductFullscreen");
 
   if(title)title.textContent=itemName;
 
@@ -2691,6 +2812,19 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
   const variantList=variants.length
     ? variants.map(v=>`${escapeHtml(v.variant_name||"-")}: ${money(v.price)}`).join("<br>")
     : "-";
+
+  const snapshotUnitPrice=
+    Number(
+      orderItem?.variantPrice ??
+      orderItem?.variant_price ??
+      orderItem?.unitPrice ??
+      orderItem?.price ??
+      0
+    );
+
+  const priceText = product
+    ? getAdminProductPriceText(product)
+    : money(snapshotUnitPrice);
 
   if(grid){
     grid.innerHTML=`
@@ -2706,7 +2840,7 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
 
       <div class="order-product-detail-box">
         <div class="order-product-detail-label">Ürün fiyatı</div>
-        <div class="order-product-detail-value">${escapeHtml(getAdminProductPriceText(product||{}))}</div>
+        <div class="order-product-detail-value">${escapeHtml(priceText)}</div>
       </div>
 
       <div class="order-product-detail-box">
@@ -2716,7 +2850,7 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
 
       <div class="order-product-detail-box full">
         <div class="order-product-detail-label">Ürün detayı</div>
-        <div class="order-product-detail-value">${escapeHtml(product?.detail||"Ürün detayı girilmemiş.")}</div>
+        <div class="order-product-detail-value">${escapeHtml(product?.detail || orderItem?.detail || "Ürün detayı girilmemiş.")}</div>
       </div>
 
       <div class="order-product-detail-box full">
@@ -2726,7 +2860,7 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
 
       <div class="order-product-detail-box">
         <div class="order-product-detail-label">Durum</div>
-        <div class="order-product-detail-value">${product ? (product.active===false?"Gizli":"Aktif") : "Ürün kaydı bulunamadı"}</div>
+        <div class="order-product-detail-value">${product ? (product.active===false?"Gizli":"Aktif") : "Sipariş anındaki kayıt"}</div>
       </div>
 
       <div class="order-product-detail-box">
@@ -2737,8 +2871,6 @@ function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=
   }
 
   renderOrderProductGallery();
-  modal?.classList.remove("hidden");
-  document.body.style.overflow="hidden";
 }
 
 function closeOrderProductDetail(){
@@ -2761,6 +2893,22 @@ document.addEventListener("keydown",event=>{
   }else if(event.key==="ArrowRight"){
     changeOrderProductImage(1);
   }
+});
+
+document.addEventListener("click",event=>{
+  const card=event.target.closest(".order-product-clickable");
+  if(!card)return;
+  openOrderProductDetailFromCard(card);
+});
+
+document.addEventListener("keydown",event=>{
+  if(event.key!=="Enter" && event.key!==" ")return;
+
+  const card=event.target.closest?.(".order-product-clickable");
+  if(!card)return;
+
+  event.preventDefault();
+  openOrderProductDetailFromCard(card);
 });
 
 function renderOrders(){
@@ -2802,8 +2950,9 @@ function renderOrders(){
     const needsWhatsappVerification=hideCustomerInfo&&order.status!=="iptal-edildi";
     const statusBadge=needsWhatsappVerification?'<span class="badge badge-pending">Doğrulama Bekleniyor</span>':order.status==="tamamlandi"?'<span class="badge badge-done">Tamamlandı</span>':order.status==="iptal-edildi"?'<span class="badge badge-cancel">İptal edildi</span>':'<span class="badge badge-active">Devam ediyor</span>';
     const badge=statusBadge;
-    const items=(order.items||[]).map(i=>{
-      const imageUrl=getProductMainImageUrl(i.productId);
+    const items=(order.items||[]).map((i,itemIndex)=>{
+      const itemProductId = i.productId ?? i.product_id ?? "";
+      const imageUrl=getProductMainImageUrl(itemProductId);
       const visual=imageUrl
         ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
@@ -2814,12 +2963,10 @@ function renderOrders(){
 
       return `<div
         class="order-product-clickable"
-        onclick="openOrderProductDetail(
-          '${escapeAttr(i.productId||"")}',
-          '${escapeAttr(variantText)}',
-          '${escapeAttr(String(i.quantity||1))}',
-          '${escapeAttr(String(itemPrice))}'
-        )"
+        data-order-id="${escapeAttr(String(order.id))}"
+        data-item-index="${itemIndex}"
+        role="button"
+        tabindex="0"
         title="Ürün detaylarını aç"
       >
         ${visual}
