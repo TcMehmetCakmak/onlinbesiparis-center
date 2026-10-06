@@ -3008,6 +3008,77 @@ body{
 }
 </style>
 
+
+<style id="cart-add-success-popup-style-v1">
+.cart-add-success-popup{
+  position:fixed;
+  inset:0;
+  z-index:60000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(0,0,0,.58);
+}
+.cart-add-success-popup.hidden{display:none!important}
+.cart-add-success-card{
+  width:min(430px,100%);
+  background:#fff;
+  border-radius:18px;
+  padding:24px;
+  box-shadow:0 22px 70px rgba(0,0,0,.30);
+  text-align:center;
+}
+.cart-add-success-icon{
+  width:60px;
+  height:60px;
+  margin:0 auto 14px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#e7f7ec;
+  color:#16803a;
+  font-size:30px;
+  font-weight:900;
+}
+.cart-add-success-card h3{
+  margin:0 0 8px;
+  font-size:21px;
+}
+.cart-add-success-message{
+  color:#555;
+  line-height:1.5;
+  margin-bottom:18px;
+  word-break:break-word;
+}
+.cart-add-success-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.cart-add-success-actions button{
+  min-height:46px;
+  border:0;
+  border-radius:12px;
+  padding:11px 14px;
+  font-weight:800;
+  cursor:pointer;
+}
+.cart-add-continue{
+  background:#eef0f2;
+  color:#222;
+}
+.cart-add-go-cart{
+  background:#1f7a4d;
+  color:#fff;
+}
+@media(max-width:480px){
+  .cart-add-success-card{padding:20px 16px}
+  .cart-add-success-actions{grid-template-columns:1fr}
+}
+</style>
+
 </head>
 
 <body>
@@ -4048,15 +4119,6 @@ body{
 
         setTimeout(()=>toast.remove(),3000);
     };
-
-    window.addEventListener("click",function(e){
-        const btn=e.target.closest(".product-add-button");
-        if(btn){
-            setTimeout(()=>{
-                showCustomerToast("Sepete başarılı bir şekilde eklendi");
-            },100);
-        }
-    });
 
     /* İndirim ekranından geri dönüşte boş sayfa problemini düzelt */
     window.fixedCloseCouponPages = function(){
@@ -5182,6 +5244,34 @@ body{
         updateProductAddButton(productId);
     }
 
+
+    function showCartAddSuccessPopup(productName) {
+        const popup = document.getElementById("cartAddSuccessPopup");
+        const message = document.getElementById("cartAddSuccessMessage");
+        if (!popup || !message) return;
+
+        const cleanName = String(productName || "Ürün").trim() || "Ürün";
+        message.textContent =
+            `${cleanName} ürününüz başarılı bir şekilde sepete eklendi.`;
+
+        popup.classList.remove("hidden");
+    }
+
+    function closeCartAddSuccessPopup() {
+        document.getElementById("cartAddSuccessPopup")
+            ?.classList.add("hidden");
+    }
+
+    function continueShoppingAfterAdd() {
+        closeCartAddSuccessPopup();
+        // Sayfa/scroll değiştirilmez; müşteri kaldığı yerden devam eder.
+    }
+
+    function goToCartAfterAdd() {
+        closeCartAddSuccessPopup();
+        openCartPage();
+    }
+
     function addProductToCart(productId, variantId = null) {
         const product = products.find(
             p => String(p.id) === String(productId)
@@ -5227,6 +5317,8 @@ body{
         updateCartUi();
         renderCartProducts();
         updateProductAddButton(productId);
+
+        showCartAddSuccessPopup(product.name);
     }
 
     function updateProductAddButton(productId) {
@@ -9624,6 +9716,25 @@ setInterval(()=>{
   }
 },5000);
 </script>
+
+<div id="cartAddSuccessPopup" class="cart-add-success-popup hidden" role="dialog" aria-modal="true" aria-labelledby="cartAddSuccessTitle">
+  <div class="cart-add-success-card">
+    <div class="cart-add-success-icon">✓</div>
+    <h3 id="cartAddSuccessTitle">Sepete Eklendi</h3>
+    <div id="cartAddSuccessMessage" class="cart-add-success-message">
+      Ürününüz başarılı bir şekilde sepete eklendi.
+    </div>
+
+    <div class="cart-add-success-actions">
+      <button type="button" class="cart-add-continue" onclick="continueShoppingAfterAdd()">
+        Alışverişe Devam Et
+      </button>
+      <button type="button" class="cart-add-go-cart" onclick="goToCartAfterAdd()">
+        Sepete Git
+      </button>
+    </div>
+  </div>
+</div>
 
 </body>
 
