@@ -212,8 +212,24 @@ function renderSupportTickets(){
     </div>
     <div style="margin-top:12px"><strong>${esc(t.title)}</strong></div>
     <div style="white-space:pre-wrap;line-height:1.5;margin-top:8px">${esc(t.detail)}</div>
-    ${t.resolution_note?`<div style="margin-top:12px;padding:11px;background:#f5f8ff;border-radius:9px"><strong>Çözüm Notu</strong><div style="white-space:pre-wrap;margin-top:5px">${esc(t.resolution_note)}</div></div>`:''}
-    ${t.status==='pending'?`<div class="actions" style="margin-top:12px"><button class="btn btn-success" onclick="markSupportReady(${t.id})">✓ Çözüldü · Onaya Gönder</button></div>`:''}
+
+    ${t.resolution_note
+      ? `<div style="margin-top:12px;padding:11px;background:#f5f8ff;border-radius:9px">
+           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+             <strong>Çözüm Notu</strong>
+             ${t.status==='awaiting_admin_confirmation'
+               ? `<button class="btn btn-light" style="padding:7px 10px" onclick="editSupportResolutionNote('${esc(String(t.id))}')">✏️ Düzenle</button>`
+               : ''}
+           </div>
+           <div style="white-space:pre-wrap;margin-top:5px">${esc(t.resolution_note)}</div>
+         </div>`
+      : ''}
+
+    ${t.status==='pending'
+      ? `<div class="actions" style="margin-top:12px">
+           <button class="btn btn-success" onclick="markSupportReady(${t.id})">✓ Çözüldü · Onaya Gönder</button>
+         </div>`
+      : ''}
   </div>`).join('')
 }
 async function markSupportReady(id){
@@ -223,6 +239,48 @@ async function markSupportReady(id){
   const {error}=await db.rpc('super_admin_mark_support_ticket_ready',{p_ticket_id:id,p_resolution_note:note.trim()});
   if(error){toast(error.message);return}
   toast('Talep admin onayına gönderildi.');
+  await loadSupportTickets();
+}
+
+async function editSupportResolutionNote(id){
+  const ticket=supportTickets.find(x=>String(x.id)===String(id));
+  if(!ticket){
+    toast('Destek talebi bulunamadı.');
+    return;
+  }
+
+  if(ticket.status!=='awaiting_admin_confirmation'){
+    toast('Çözüm notu yalnızca onaya gönderilmiş taleplerde düzenlenebilir.');
+    return;
+  }
+
+  const note=prompt(
+    'Çözüm notunu düzenleyin:',
+    ticket.resolution_note || ''
+  );
+
+  if(note===null)return;
+
+  const clean=note.trim();
+  if(clean.length<3){
+    toast('Çözüm notu en az 3 karakter olmalı.');
+    return;
+  }
+
+  const {error}=await db.rpc(
+    'super_admin_update_support_resolution_note',
+    {
+      p_ticket_id:String(id),
+      p_resolution_note:clean
+    }
+  );
+
+  if(error){
+    toast(error.message);
+    return;
+  }
+
+  toast('Çözüm notu güncellendi.');
   await loadSupportTickets();
 }
 

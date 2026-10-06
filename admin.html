@@ -315,6 +315,151 @@ body.modal-open{
 }
 </style>
 
+
+<style id="order-product-fullscreen-style-v1">
+.order-product-clickable{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:8px 0;
+  padding:8px;
+  border-radius:11px;
+  cursor:pointer;
+  transition:background .15s ease, transform .15s ease;
+}
+.order-product-clickable:hover{background:#f5f6f8}
+.order-product-clickable:active{transform:scale(.995)}
+
+.order-product-fullscreen{
+  position:fixed;
+  inset:0;
+  z-index:50000;
+  background:#f4f5f7;
+  overflow:auto;
+  display:block;
+}
+.order-product-fullscreen.hidden{display:none!important}
+
+.order-product-fullscreen-inner{
+  width:min(980px,100%);
+  min-height:100%;
+  margin:0 auto;
+  padding:16px 16px 32px;
+}
+.order-product-fullscreen-header{
+  position:sticky;
+  top:0;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 0 14px;
+  background:#f4f5f7;
+}
+.order-product-fullscreen-header h2{
+  margin:0;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.order-product-fullscreen-close{
+  width:42px;
+  height:42px;
+  min-width:42px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 3px 14px #0002;
+  font-size:28px;
+  cursor:pointer;
+}
+.order-product-detail-card{
+  background:#fff;
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 6px 24px #00000012;
+}
+.order-product-gallery{
+  position:relative;
+  min-height:340px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:16px;
+  overflow:hidden;
+  background:#111;
+}
+.order-product-gallery img{
+  display:block;
+  max-width:100%;
+  max-height:68vh;
+  object-fit:contain;
+  margin:auto;
+}
+.order-product-gallery-empty{
+  color:#fff;
+  font-size:54px;
+}
+.order-product-gallery-nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:46px;
+  height:58px;
+  border:0;
+  border-radius:12px;
+  background:#0008;
+  color:#fff;
+  font-size:32px;
+  cursor:pointer;
+}
+.order-product-gallery-prev{left:12px}
+.order-product-gallery-next{right:12px}
+.order-product-gallery-counter{
+  position:absolute;
+  left:50%;
+  bottom:12px;
+  transform:translateX(-50%);
+  padding:6px 10px;
+  border-radius:999px;
+  background:#0009;
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+}
+.order-product-detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+.order-product-detail-box{
+  padding:14px;
+  border-radius:12px;
+  background:#f7f7f7;
+}
+.order-product-detail-box.full{grid-column:1/-1}
+.order-product-detail-label{
+  color:#777;
+  font-size:12px;
+  margin-bottom:5px;
+}
+.order-product-detail-value{
+  font-weight:800;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+@media(max-width:650px){
+  .order-product-fullscreen-inner{padding:8px 8px 24px}
+  .order-product-detail-card{padding:12px}
+  .order-product-gallery{min-height:260px}
+  .order-product-detail-grid{grid-template-columns:1fr}
+  .order-product-detail-box.full{grid-column:auto}
+}
+</style>
+
 </head>
 <body>
 
@@ -773,6 +918,30 @@ body.modal-open{
   </div>
 </div>
 
+
+<div id="orderProductFullscreen" class="order-product-fullscreen hidden">
+  <div class="order-product-fullscreen-inner">
+    <div class="order-product-fullscreen-header">
+      <h2 id="orderProductFullscreenTitle">Ürün Detayı</h2>
+      <button
+        type="button"
+        class="order-product-fullscreen-close"
+        onclick="closeOrderProductDetail()"
+        aria-label="Kapat"
+        title="Kapat"
+      >×</button>
+    </div>
+
+    <div class="order-product-detail-card">
+      <div id="orderProductGallery" class="order-product-gallery">
+        <div class="order-product-gallery-empty">📷</div>
+      </div>
+
+      <div id="orderProductDetailGrid" class="order-product-detail-grid"></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -852,6 +1021,11 @@ let platformBusiness = null;
 let currentBusinessId = null;
 let adminRealtimeChannel = null;
 const whatsappCodeDrafts = new Map();
+
+let orderProductDetailProduct = null;
+let orderProductDetailItem = null;
+let orderProductDetailImages = [];
+let orderProductDetailImageIndex = 0;
 
 function money(n) {
   return Number(n || 0).toLocaleString("tr-TR", {minimumFractionDigits:0, maximumFractionDigits:2}) + " TL";
@@ -2442,6 +2616,153 @@ function getProductMainImageUrl(productId){
   return data?.publicUrl||"";
 }
 
+
+function getOrderProductImages(product){
+  const images=Array.isArray(product?.images)?[...product.images]:[];
+  images.sort((a,b)=>{
+    if(!!a.is_main!==!!b.is_main)return a.is_main?-1:1;
+    const sortA=Number(a.sort_order||0);
+    const sortB=Number(b.sort_order||0);
+    if(sortA!==sortB)return sortA-sortB;
+    return new Date(a.created_at||0)-new Date(b.created_at||0);
+  });
+  return images;
+}
+
+function renderOrderProductGallery(){
+  const gallery=document.getElementById("orderProductGallery");
+  if(!gallery)return;
+
+  if(!orderProductDetailImages.length){
+    gallery.innerHTML='<div class="order-product-gallery-empty">📷</div>';
+    return;
+  }
+
+  if(orderProductDetailImageIndex<0){
+    orderProductDetailImageIndex=orderProductDetailImages.length-1;
+  }
+  if(orderProductDetailImageIndex>=orderProductDetailImages.length){
+    orderProductDetailImageIndex=0;
+  }
+
+  const image=orderProductDetailImages[orderProductDetailImageIndex];
+  const url=productImagePublicUrl(image.storage_path);
+  const hasMany=orderProductDetailImages.length>1;
+
+  gallery.innerHTML=`
+    <img src="${escapeAttr(url)}" alt="${escapeAttr(orderProductDetailProduct?.name||orderProductDetailItem?.name||"Ürün")}">
+    ${hasMany?`
+      <button type="button" class="order-product-gallery-nav order-product-gallery-prev" onclick="changeOrderProductImage(-1)" aria-label="Önceki fotoğraf">‹</button>
+      <button type="button" class="order-product-gallery-nav order-product-gallery-next" onclick="changeOrderProductImage(1)" aria-label="Sonraki fotoğraf">›</button>
+      <div class="order-product-gallery-counter">${orderProductDetailImageIndex+1} / ${orderProductDetailImages.length}</div>
+    `:""}
+  `;
+}
+
+function changeOrderProductImage(step){
+  if(!orderProductDetailImages.length)return;
+  orderProductDetailImageIndex+=Number(step||0);
+  renderOrderProductGallery();
+}
+
+function openOrderProductDetail(productId,variantText="",quantity="1",lineTotal=""){
+  const product=getProductById(productId);
+  const itemName=product?.name || "Ürün";
+
+  orderProductDetailProduct=product || null;
+  orderProductDetailItem={
+    productId,
+    name:itemName,
+    variantText:String(variantText||""),
+    quantity:Number(quantity||1),
+    lineTotal:Number(lineTotal||0)
+  };
+
+  orderProductDetailImages=getOrderProductImages(product);
+  orderProductDetailImageIndex=0;
+
+  const title=document.getElementById("orderProductFullscreenTitle");
+  const grid=document.getElementById("orderProductDetailGrid");
+  const modal=document.getElementById("orderProductFullscreen");
+
+  if(title)title.textContent=itemName;
+
+  const variants=Array.isArray(product?.variants)?product.variants:[];
+  const variantList=variants.length
+    ? variants.map(v=>`${escapeHtml(v.variant_name||"-")}: ${money(v.price)}`).join("<br>")
+    : "-";
+
+  if(grid){
+    grid.innerHTML=`
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Ürün</div>
+        <div class="order-product-detail-value">${escapeHtml(itemName)}</div>
+      </div>
+
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Siparişte seçilen</div>
+        <div class="order-product-detail-value">${escapeHtml(orderProductDetailItem.variantText||"Standart")} · ${orderProductDetailItem.quantity} adet</div>
+      </div>
+
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Ürün fiyatı</div>
+        <div class="order-product-detail-value">${escapeHtml(getAdminProductPriceText(product||{}))}</div>
+      </div>
+
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Sipariş satır toplamı</div>
+        <div class="order-product-detail-value">${money(orderProductDetailItem.lineTotal)}</div>
+      </div>
+
+      <div class="order-product-detail-box full">
+        <div class="order-product-detail-label">Ürün detayı</div>
+        <div class="order-product-detail-value">${escapeHtml(product?.detail||"Ürün detayı girilmemiş.")}</div>
+      </div>
+
+      <div class="order-product-detail-box full">
+        <div class="order-product-detail-label">Beden / varyant seçenekleri</div>
+        <div class="order-product-detail-value">${variantList}</div>
+      </div>
+
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Durum</div>
+        <div class="order-product-detail-value">${product ? (product.active===false?"Gizli":"Aktif") : "Ürün kaydı bulunamadı"}</div>
+      </div>
+
+      <div class="order-product-detail-box">
+        <div class="order-product-detail-label">Fotoğraf sayısı</div>
+        <div class="order-product-detail-value">${orderProductDetailImages.length}</div>
+      </div>
+    `;
+  }
+
+  renderOrderProductGallery();
+  modal?.classList.remove("hidden");
+  document.body.style.overflow="hidden";
+}
+
+function closeOrderProductDetail(){
+  document.getElementById("orderProductFullscreen")?.classList.add("hidden");
+  document.body.style.overflow="";
+  orderProductDetailProduct=null;
+  orderProductDetailItem=null;
+  orderProductDetailImages=[];
+  orderProductDetailImageIndex=0;
+}
+
+document.addEventListener("keydown",event=>{
+  const modal=document.getElementById("orderProductFullscreen");
+  if(!modal || modal.classList.contains("hidden"))return;
+
+  if(event.key==="Escape"){
+    closeOrderProductDetail();
+  }else if(event.key==="ArrowLeft"){
+    changeOrderProductImage(-1);
+  }else if(event.key==="ArrowRight"){
+    changeOrderProductImage(1);
+  }
+});
+
 function renderOrders(){
   document.querySelectorAll('input[id^="wa-code-"]').forEach(input=>{
     const id=input.id.replace("wa-code-","");
@@ -2491,11 +2812,20 @@ function renderOrders(){
         ? Number(i.lineTotal)
         : Number(i.variantPrice || i.variant_price || i.unitPrice || i.price || 0) * Number(i.quantity || 1);
 
-      return `<div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+      return `<div
+        class="order-product-clickable"
+        onclick="openOrderProductDetail(
+          '${escapeAttr(i.productId||"")}',
+          '${escapeAttr(variantText)}',
+          '${escapeAttr(String(i.quantity||1))}',
+          '${escapeAttr(String(itemPrice))}'
+        )"
+        title="Ürün detaylarını aç"
+      >
         ${visual}
         <div>
           <div><strong>${escapeHtml(i.name || "Ürün")}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong> × ${i.quantity}</div>
-          <div class="muted">${money(itemPrice)}</div>
+          <div class="muted">${money(itemPrice)} · Detay için tıkla</div>
         </div>
       </div>`;
     }).join("");
