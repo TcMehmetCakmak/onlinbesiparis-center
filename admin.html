@@ -471,6 +471,50 @@ body.modal-open{
 }
 </style>
 
+
+<style id="payment-method-admin-style-v1">
+.payment-method-admin-box{
+  margin-top:16px;
+  padding:16px;
+  border:1px solid #e4e7ec;
+  border-radius:14px;
+  background:#fafbfc;
+}
+.payment-method-admin-option{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:10px 0 0;
+  padding:13px 14px;
+  border:1px solid #e2e5e9;
+  border-radius:12px;
+  background:#fff;
+  cursor:pointer;
+}
+.payment-method-admin-option input{
+  width:20px;
+  height:20px;
+  margin:0;
+  flex:0 0 20px;
+}
+.payment-method-admin-option span{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.payment-method-admin-option small{
+  color:#777;
+  font-weight:normal;
+}
+.payment-method-admin-required{
+  opacity:.78;
+  cursor:not-allowed;
+}
+.payment-method-admin-required input{
+  cursor:not-allowed;
+}
+</style>
+
 </head>
 <body>
 
@@ -509,7 +553,7 @@ body.modal-open{
   <div class="grid">
     <div class="card"><div class="stat-label">Tamamlanan Sipariş</div><div id="statCompleted" class="stat-value">0</div></div>
     <div class="card"><div class="stat-label">Hazırlanmaya Başlanan Sipariş</div><div id="statPreparing" class="stat-value">0</div></div>
-    <div class="card"><div class="stat-label">Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
+    <div class="card"><div class="stat-label">Onay Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
     <div class="card"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
   </div>
@@ -641,6 +685,39 @@ body.modal-open{
           </div>
         </div>
       </div>
+
+      <div class="payment-method-admin-box">
+        <h3 style="margin-bottom:6px">💳 Ödeme Yöntemleri</h3>
+        <div class="muted" style="margin-bottom:12px">
+          Burada seçili olan ödeme yöntemleri müşteri ekranında gösterilir.
+          Kapıda nakit zorunludur ve kapatılamaz.
+        </div>
+
+        <label class="payment-method-admin-option payment-method-admin-required">
+          <input
+            id="settingPaymentCash"
+            type="checkbox"
+            checked
+            disabled
+          >
+          <span>
+            <strong>💵 Kapıda Nakit</strong>
+            <small>Varsayılan ve zorunlu ödeme yöntemi</small>
+          </span>
+        </label>
+
+        <label class="payment-method-admin-option">
+          <input
+            id="settingPaymentCard"
+            type="checkbox"
+          >
+          <span>
+            <strong>💳 Kapıda Kredi Kartı</strong>
+            <small>Seçildiğinde müşteri ekranında ayrıca gösterilir</small>
+          </span>
+        </label>
+      </div>
+
       <div id="tenantLicenseInfo" style="margin-top:10px;padding:12px;border-radius:10px;background:#f5f5f5" class="muted">Merkezi lisans bilgisi yükleniyor...</div>
       <div class="actions" style="justify-content:flex-end;margin-top:8px">
         <button class="btn btn-primary" onclick="saveAppSettings()">Ayarları Kaydet</button>
@@ -1028,7 +1105,15 @@ let productQuestions = [];
 let productQuestionAnswerBusy = false;
 let medicineRequests = [];
 let medicineRequestInformId = null;
-let appSettings = {id:null,shop_name:"İşletme",shop_icon:"",background_color:"#f5f5f5",phone:""};
+let appSettings = {
+  id:null,
+  shop_name:"İşletme",
+  shop_icon:"",
+  background_color:"#f5f5f5",
+  phone:"",
+  payment_cash_enabled:true,
+  payment_card_enabled:false
+};
 let platformBusiness = null;
 let currentBusinessId = null;
 let adminRealtimeChannel = null;
@@ -1440,7 +1525,7 @@ async function loadAdminNotifications(){
 async function loadAdminSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
-      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,business_id").eq("business_id",currentBusinessId).maybeSingle();
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,business_id").eq("business_id",currentBusinessId).maybeSingle();
     if(error)throw error;
     if(data)appSettings=data;
     const icon=document.getElementById("settingShopIcon");
@@ -1449,10 +1534,23 @@ async function loadAdminSettings(){
     const instagramLabel=document.getElementById("settingInstagramLabel");
     const color=document.getElementById("settingBackgroundColor");
     const colorText=document.getElementById("settingBackgroundColorText");
+    const paymentCash=document.getElementById("settingPaymentCash");
+    const paymentCard=document.getElementById("settingPaymentCard");
+
     if(icon)icon.value=appSettings.shop_icon||"";
     if(phone)phone.value=appSettings.phone||"";
     if(instagram)instagram.value=appSettings.instagram_url||"";
     if(instagramLabel)instagramLabel.value=appSettings.instagram_label||"";
+
+    // Kapıda nakit sistemde zorunludur; admin tarafından kapatılamaz.
+    if(paymentCash){
+      paymentCash.checked=true;
+      paymentCash.disabled=true;
+    }
+    if(paymentCard){
+      paymentCard.checked=appSettings.payment_card_enabled===true;
+    }
+
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
     if(color)color.value=c;
     if(colorText)colorText.value=c;
@@ -1547,6 +1645,7 @@ async function saveAppSettings(){
   const instagram_url=document.getElementById("settingInstagram").value.trim();
   const instagram_label=document.getElementById("settingInstagramLabel").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
+  const payment_card_enabled=document.getElementById("settingPaymentCard")?.checked===true;
 
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
@@ -1561,9 +1660,11 @@ async function saveAppSettings(){
         instagram_url:instagram_url||null,
         instagram_label:instagram_label||null,
         background_color,
+        payment_cash_enabled:true,
+        payment_card_enabled,
         updated_at:new Date().toISOString()
       },{onConflict:"business_id"})
-      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,business_id")
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,business_id")
       .single();
 
     if(error)throw error;
