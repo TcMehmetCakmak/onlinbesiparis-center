@@ -507,15 +507,15 @@ body.modal-open{
   </div>
 
   <div class="grid">
-    <div class="card"><div class="stat-label">Toplam Sipariş</div><div id="statTotal" class="stat-value">0</div></div>
-    <div class="card"><div class="stat-label">Devam Eden</div><div id="statActive" class="stat-value">0</div></div>
-    <div class="card"><div class="stat-label">Tamamlanan</div><div id="statDone" class="stat-value">0</div></div>
+    <div class="card"><div class="stat-label">Tamamlanan Sipariş</div><div id="statCompleted" class="stat-value">0</div></div>
+    <div class="card"><div class="stat-label">Hazırlanmaya Başlanan Sipariş</div><div id="statPreparing" class="stat-value">0</div></div>
+    <div class="card"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
   </div>
 
   <div class="tabs">
     <button class="tab active" onclick="showTab('products',this)">📦 Ürünler</button>
-    <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler</button>
+    <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler <span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
     <button class="tab" onclick="showTab('advertisements',this)">📣 Reklamlar</button>
@@ -1823,10 +1823,26 @@ async function completeSupportTicket(id){
 }
 
 function loadDashboard(){
-  document.getElementById("statTotal").textContent=orders.filter(o=>o.status!=="onay-bekliyor").length;
-  document.getElementById("statActive").textContent=orders.filter(o=>o.status==="devam-ediyor").length;
-  document.getElementById("statDone").textContent=orders.filter(o=>o.status==="tamamlandi").length;
-  document.getElementById("statRevenue").textContent=money(orders.filter(o=>o.status==="tamamlandi").reduce((s,o)=>s+Number(o.total||0),0));
+  const completedCount=orders.filter(o=>o.status==="tamamlandi").length;
+  const preparingCount=orders.filter(o=>o.status==="devam-ediyor").length;
+  const cancelledCount=orders.filter(o=>o.status==="iptal-edildi").length;
+  const totalCount=orders.length;
+
+  document.getElementById("statCompleted").textContent=completedCount;
+  document.getElementById("statPreparing").textContent=preparingCount;
+  document.getElementById("statCancelled").textContent=cancelledCount;
+
+  const orderTotalCount=document.getElementById("orderTotalCount");
+  if(orderTotalCount){
+    orderTotalCount.textContent=String(totalCount);
+    orderTotalCount.title=`Toplam ${totalCount} sipariş`;
+  }
+
+  document.getElementById("statRevenue").textContent=money(
+    orders
+      .filter(o=>o.status==="tamamlandi")
+      .reduce((s,o)=>s+Number(o.total||0),0)
+  );
 }
 function showTab(name,button){
   document.getElementById("productsTab").classList.toggle("hidden",name!=="products");
