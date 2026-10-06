@@ -39,7 +39,7 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .btn-primary{background:#e63946;color:#fff}.btn-dark{background:#222;color:#fff}.btn-light{background:#eee}.btn-danger{background:#c62828;color:#fff}.btn-success{background:#2e7d32;color:#fff}
 .header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}
 .header-actions{display:flex;gap:8px;flex-wrap:wrap}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
 .card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 5px 20px #0000000d}
 .stat-label{color:#777;font-size:13px}.stat-value{font-size:28px;font-weight:bold;margin-top:8px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
@@ -509,6 +509,7 @@ body.modal-open{
   <div class="grid">
     <div class="card"><div class="stat-label">Tamamlanan Sipariş</div><div id="statCompleted" class="stat-value">0</div></div>
     <div class="card"><div class="stat-label">Hazırlanmaya Başlanan Sipariş</div><div id="statPreparing" class="stat-value">0</div></div>
+    <div class="card"><div class="stat-label">Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
     <div class="card"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
   </div>
@@ -1825,11 +1826,13 @@ async function completeSupportTicket(id){
 function loadDashboard(){
   const completedCount=orders.filter(o=>o.status==="tamamlandi").length;
   const preparingCount=orders.filter(o=>o.status==="devam-ediyor").length;
+  const pendingCount=orders.filter(o=>o.status==="onay-bekliyor").length;
   const cancelledCount=orders.filter(o=>o.status==="iptal-edildi").length;
   const totalCount=orders.length;
 
   document.getElementById("statCompleted").textContent=completedCount;
   document.getElementById("statPreparing").textContent=preparingCount;
+  document.getElementById("statPendingOrders").textContent=pendingCount;
   document.getElementById("statCancelled").textContent=cancelledCount;
 
   const orderTotalCount=document.getElementById("orderTotalCount");
