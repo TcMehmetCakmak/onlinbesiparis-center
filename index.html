@@ -5013,13 +5013,6 @@ body{
                     info.appendChild(detail);
                 }
 
-                if(product.detail){
-                    const detail=document.createElement("div");
-                    detail.className="price";
-                    detail.style.color="#555";
-                    detail.textContent=product.detail;
-                    info.appendChild(detail);
-                }
                 left.appendChild(info);
 
                 const addButton = document.createElement("button");
@@ -8961,16 +8954,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 .product-detail-card.food-detail-mode>.food-detail-footer{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;flex:0 0 auto;margin-top:10px;padding-top:10px;border-top:1px solid #eee;background:#fff;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
 .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
 .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{width:100%;height:44px;min-height:44px;margin:0;padding:0 12px;display:flex;align-items:center;justify-content:center;white-space:nowrap;box-sizing:border-box}
-.product-detail-card.food-detail-mode>.food-detail-footer #foodFooterQuantity{justify-self:center}
+.product-detail-card.food-detail-mode>.food-detail-footer #foodFooterPrice{justify-self:center;font-size:20px;font-weight:900;white-space:nowrap;text-align:center}
 .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{min-width:0}
 .product-detail-card.food-detail-mode>.product-detail-scroll .product-detail-action-row{display:none}
 .product-detail-card.food-detail-mode>.product-detail-scroll #foodProductQuantity{display:none!important}
+.product-detail-card.food-detail-mode>.product-detail-scroll #detailPrice{display:none!important}
 .product-detail-card:not(.food-detail-mode)>.food-detail-footer{display:none}
 @media(max-width:520px){
  .product-detail-card.food-detail-mode>.food-detail-footer{gap:6px}
  .food-quantity-picker{gap:5px}
  .food-quantity-picker button{width:34px;height:34px;font-size:20px}
  .food-quantity-picker span{min-width:20px;font-size:16px}
+ .product-detail-card.food-detail-mode>.food-detail-footer #foodFooterPrice{font-size:16px}
  .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
  .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{height:42px;min-height:42px;padding:0 6px;font-size:12px}
 }
@@ -8990,11 +8985,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <div id="detailPrice"></div>
    <div id="detailVariants"></div>
    <div id="foodProductSelections" class="hidden"></div>
-   <div id="foodProductQuantity" class="food-quantity-picker hidden">
-     <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
-     <span id="foodDetailQuantityValue">1</span>
-     <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
-   </div>
 
    <div class="product-detail-action-row">
      <button
@@ -9028,11 +9018,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        onclick="openProductReviewModalV32()"
        title="Bu ürüne yorum ekle ve yorumları gör"
      >⭐ Yorum Ekle</button>
-     <div id="foodFooterQuantity" class="food-quantity-picker">
-       <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
-       <span id="foodFooterQuantityValue">1</span>
-       <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
-     </div>
+     <div id="foodFooterPrice">0 TL</div>
      <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
    </div>
    <button id="detailAddButtonEcommerce" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
@@ -9316,8 +9302,11 @@ function getFoodExtrasTotal(){
 function updateFoodDetailPrice(){
   if(!currentBusinessIsFood() || !detailProduct)return;
   const unitTotal=Number(detailProduct.price||0)+getFoodExtrasTotal();
+  const priceText=`${unitTotal.toLocaleString("tr-TR")} TL`;
   const detailPrice=document.getElementById("detailPrice");
-  if(detailPrice) detailPrice.textContent=`${unitTotal.toLocaleString("tr-TR")} TL`;
+  const footerPrice=document.getElementById("foodFooterPrice");
+  if(detailPrice) detailPrice.textContent=priceText;
+  if(footerPrice) footerPrice.textContent=priceText;
 }
 function changeFoodDetailQuantity(amount){
   foodDetailQuantity=Math.max(1,Math.min(99,foodDetailQuantity+Number(amount||0)));
@@ -9416,11 +9405,7 @@ function openProductDetail(productId){
  }
 
  const foodSelections=document.getElementById("foodProductSelections");
- const foodQuantity=document.getElementById("foodProductQuantity");
  const detailCard=document.querySelector("#productDetailModal .product-detail-card");
- foodDetailQuantity=1;
- document.getElementById("foodDetailQuantityValue").textContent="1";
- document.getElementById("foodFooterQuantityValue").textContent="1";
  const questionButton=document.getElementById("detailQuestionButton");
  const ecommerceAddButton=document.getElementById("detailAddButtonEcommerce");
  if(currentBusinessIsFood()){
@@ -9431,7 +9416,6 @@ function openProductDetail(productId){
      foodCheckboxHtml("side","Yan ürün seçiniz",product.side_options)+
      foodCheckboxHtml("drink","İçecek seçiniz",product.drink_options);
    foodSelections.classList.toggle("hidden",!foodSelections.innerHTML.trim());
-   foodQuantity.classList.remove("hidden");
    detailCard?.classList.add("food-detail-mode");
    updateFoodDetailPrice();
  }else{
@@ -9439,7 +9423,6 @@ function openProductDetail(productId){
    if(ecommerceAddButton) ecommerceAddButton.style.display="";
    foodSelections.innerHTML="";
    foodSelections.classList.add("hidden");
-   foodQuantity.classList.add("hidden");
    detailCard?.classList.remove("food-detail-mode");
  }
 
@@ -9467,7 +9450,7 @@ function openProductDetail(productId){
      sideSelections:getFoodCheckedSelections("side"),
      drinkSelections:getFoodCheckedSelections("drink")
    };
-   addFoodProductToCart(product,foodDetailQuantity,selection);
+   addFoodProductToCart(product,1,selection);
    closeProductDetail();
  };
 
