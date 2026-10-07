@@ -809,13 +809,13 @@ body.modal-open{
 
 <div id="foodProductOptionsArea" class="hidden" style="margin-top:14px;padding:14px;background:#fff8ee;border:1px solid #f2d6ad;border-radius:12px">
   <strong>🍽️ Yemek ürün seçenekleri</strong>
-  <div class="muted" style="margin:6px 0 12px">Bu alanlar zorunlu değildir. Her seçeneği ayrı satıra yazın.</div>
+  <div class="muted" style="margin:6px 0 12px">Bu alanlar zorunlu değildir. Ekmek seçeneklerini ayrı satıra, yan ürün ve içecekleri ise <b>Ad | Fiyat</b> biçiminde yazın. Örnek: <b>Patates Kızartması | 40</b></div>
   <label>Ekmek seçenekleri</label>
   <textarea id="productBreadOptions" rows="4" placeholder="Lavaş\nSomun ekmek\nEkmeksiz"></textarea>
-  <label>Yan ürünler</label>
-  <textarea id="productSideOptions" rows="4" placeholder="Patates kızartması\nSoğan halkası\nSalata"></textarea>
-  <label>İçecekler</label>
-  <textarea id="productDrinkOptions" rows="4" placeholder="Ayran\nKola\nŞalgam"></textarea>
+  <label>Yan ürünler (Ad | Fiyat)</label>
+  <textarea id="productSideOptions" rows="4" placeholder="Patates kızartması | 40\nSoğan halkası | 35\nSalata | 25"></textarea>
+  <label>İçecekler (Ad | Fiyat)</label>
+  <textarea id="productDrinkOptions" rows="4" placeholder="Ayran | 20\nKola | 35\nŞalgam | 25"></textarea>
 </div>
 
 
@@ -2266,8 +2266,33 @@ function isFoodBusiness(){
   return String(platformBusiness?.business_type||"ecommerce").toLowerCase()==="food";
 }
 function normalizeOptionList(value){
-  if(Array.isArray(value)) return value.map(x=>String(x||"").trim()).filter(Boolean);
+  if(Array.isArray(value)) return value.map(x=>typeof x==="object" ? String(x?.name||"").trim() : String(x||"").trim()).filter(Boolean);
   return String(value||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+}
+function normalizePricedOptionList(value){
+  if(Array.isArray(value)){
+    return value.map(x=>{
+      if(x && typeof x==="object"){
+        const name=String(x.name||x.label||"").trim();
+        const price=Math.max(0,Number(x.price||0)||0);
+        return name ? {name,price} : null;
+      }
+      const name=String(x||"").trim();
+      return name ? {name,price:0} : null;
+    }).filter(Boolean);
+  }
+  return String(value||"").split(/\r?\n/).map(line=>{
+    const text=line.trim();
+    if(!text)return null;
+    const parts=text.split("|");
+    const name=String(parts.shift()||"").trim();
+    const rawPrice=String(parts.join("|")||"").trim().replace(",", ".");
+    const price=rawPrice==="" ? 0 : Number(rawPrice);
+    return name ? {name,price:Number.isFinite(price)&&price>=0?price:0} : null;
+  }).filter(Boolean);
+}
+function formatPricedOptionLines(value){
+  return normalizePricedOptionList(value).map(x=>`${x.name} | ${Number(x.price||0)}`).join("\n");
 }
 function setFoodProductFieldsVisibility(){
   const area=document.getElementById("foodProductOptionsArea");
@@ -2287,8 +2312,8 @@ function openProductModal(p=null){
     p?.product_type === "SIZE" ? "" : (p?.price ?? "");
   document.getElementById("productDetail").value=p?.detail || "";
   document.getElementById("productBreadOptions").value=normalizeOptionList(p?.bread_options).join("\n");
-  document.getElementById("productSideOptions").value=normalizeOptionList(p?.side_options).join("\n");
-  document.getElementById("productDrinkOptions").value=normalizeOptionList(p?.drink_options).join("\n");
+  document.getElementById("productSideOptions").value=formatPricedOptionLines(p?.side_options);
+  document.getElementById("productDrinkOptions").value=formatPricedOptionLines(p?.drink_options);
   setFoodProductFieldsVisibility();
 
   // Düzenle ekranında ürün tipi ve varyantları geri yükle
@@ -2628,8 +2653,8 @@ async function saveProduct(){
     detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
     bread_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productBreadOptions").value) : [],
-    side_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productSideOptions").value) : [],
-    drink_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productDrinkOptions").value) : [],
+    side_options: isFoodBusiness() ? normalizePricedOptionList(document.getElementById("productSideOptions").value) : [],
+    drink_options: isFoodBusiness() ? normalizePricedOptionList(document.getElementById("productDrinkOptions").value) : [],
     active:document.getElementById("productActive").checked
   };
 

@@ -8946,6 +8946,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 .food-option-section{margin:14px 0;padding:12px;background:#f8f8f8;border-radius:12px}
 .food-option-section label{display:block;font-weight:700;margin-bottom:7px}
 .food-option-section select{width:100%;padding:11px;border:1px solid #d7d7d7;border-radius:10px;background:#fff}
+.food-checkbox-list{display:flex;flex-direction:column;gap:8px}
+.food-checkbox-option{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:0!important;padding:10px 12px;background:#fff;border:1px solid #e2e2e2;border-radius:10px;font-weight:600!important;cursor:pointer}
+.food-checkbox-option-main{display:flex;align-items:center;gap:9px;min-width:0}
+.food-checkbox-option input{width:18px;height:18px;flex:0 0 auto;accent-color:currentColor}
+.food-checkbox-option-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.food-checkbox-option-price{font-weight:800;white-space:nowrap}
 .food-quantity-picker{display:flex;align-items:center;justify-content:center;gap:10px;margin:0}
 .food-quantity-picker button{width:38px;height:38px;border:0;border-radius:50%;font-size:22px;font-weight:700;cursor:pointer}
 .food-quantity-picker span{min-width:26px;text-align:center;font-size:18px;font-weight:800}
@@ -9271,12 +9277,47 @@ function currentBusinessIsFood(){
   return String(platformBusiness?.business_type||"ecommerce").toLowerCase()==="food";
 }
 function foodOptionArray(value){
-  return Array.isArray(value)?value.map(x=>String(x||"").trim()).filter(Boolean):[];
+  return Array.isArray(value)?value.map(x=>typeof x==="object" ? String(x?.name||"").trim() : String(x||"").trim()).filter(Boolean):[];
+}
+function foodPricedOptionArray(value){
+  if(!Array.isArray(value))return [];
+  return value.map(x=>{
+    if(x && typeof x==="object"){
+      const name=String(x.name||x.label||"").trim();
+      const price=Math.max(0,Number(x.price||0)||0);
+      return name ? {name,price} : null;
+    }
+    const name=String(x||"").trim();
+    return name ? {name,price:0} : null;
+  }).filter(Boolean);
 }
 function foodSelectHtml(id,label,items){
   const values=foodOptionArray(items);
   if(!values.length)return "";
-  return `<div class="food-option-section"><label for="${id}">${label}</label><select id="${id}"><option value="">Seçim yok</option>${values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("")}</select></div>`;
+  return `<div class="food-option-section"><label for="${id}">${label}</label><select id="${id}" onchange="updateFoodDetailPrice()"><option value="">Seçim yok</option>${values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("")}</select></div>`;
+}
+function foodCheckboxHtml(type,label,items){
+  const values=foodPricedOptionArray(items);
+  if(!values.length)return "";
+  return `<div class="food-option-section"><label>${label}</label><div class="food-checkbox-list">${values.map((v,i)=>{
+    const id=`food-${type}-${i}`;
+    return `<label class="food-checkbox-option" for="${id}"><span class="food-checkbox-option-main"><input id="${id}" type="checkbox" class="food-extra-checkbox" data-food-type="${type}" data-food-name="${escapeHtml(v.name)}" data-food-price="${Number(v.price||0)}" onchange="updateFoodDetailPrice()"><span class="food-checkbox-option-name">${escapeHtml(v.name)}</span></span><span class="food-checkbox-option-price">${Number(v.price||0) > 0 ? `+${Number(v.price||0).toLocaleString("tr-TR")} TL` : "Ücretsiz"}</span></label>`;
+  }).join("")}</div></div>`;
+}
+function getFoodCheckedSelections(type){
+  return Array.from(document.querySelectorAll(`.food-extra-checkbox[data-food-type="${type}"]:checked`)).map(el=>({
+    name:String(el.dataset.foodName||"").trim(),
+    price:Math.max(0,Number(el.dataset.foodPrice||0)||0)
+  })).filter(x=>x.name);
+}
+function getFoodExtrasTotal(){
+  return [...getFoodCheckedSelections("side"),...getFoodCheckedSelections("drink")].reduce((sum,x)=>sum+Number(x.price||0),0);
+}
+function updateFoodDetailPrice(){
+  if(!currentBusinessIsFood() || !detailProduct)return;
+  const unitTotal=Number(detailProduct.price||0)+getFoodExtrasTotal();
+  const detailPrice=document.getElementById("detailPrice");
+  if(detailPrice) detailPrice.textContent=`${unitTotal.toLocaleString("tr-TR")} TL`;
 }
 function changeFoodDetailQuantity(amount){
   foodDetailQuantity=Math.max(1,Math.min(99,foodDetailQuantity+Number(amount||0)));
@@ -9286,17 +9327,28 @@ function changeFoodDetailQuantity(amount){
   if(footerEl)footerEl.textContent=String(foodDetailQuantity);
 }
 function getFoodSelectionKey(selection){
-  return [selection.bread||"",selection.side||"",selection.drink||""].join("||");
+  const sides=(selection.sideSelections||[]).map(x=>`${x.name}:${Number(x.price||0)}`).sort().join(";");
+  const drinks=(selection.drinkSelections||[]).map(x=>`${x.name}:${Number(x.price||0)}`).sort().join(";");
+  return [selection.bread||"",sides,drinks].join("||");
 }
 function addFoodProductToCart(product,quantity,selection){
   const selectionKey=getFoodSelectionKey(selection);
+  const extrasTotal=[...(selection.sideSelections||[]),...(selection.drinkSelections||[])].reduce((sum,x)=>sum+Number(x.price||0),0);
+  const unitPrice=Number(product.price||0)+extrasTotal;
   let item=order.items.find(x=>String(x.productId)===String(product.id)&&String(x.selectionKey||"")===selectionKey&&!x.variantId);
   if(!item){
     item={
       cartItemId:crypto.randomUUID(),productId:product.id,name:product.name,icon:product.icon||"",variantId:null,variantName:null,
-      price:Number(product.price||0),quantity:0,selectionKey,bread:selection.bread||null,side:selection.side||null,drink:selection.drink||null
+      basePrice:Number(product.price||0),extrasTotal,price:unitPrice,quantity:0,selectionKey,bread:selection.bread||null,
+      side:(selection.sideSelections||[]).map(x=>x.name).join(", ")||null,
+      drink:(selection.drinkSelections||[]).map(x=>x.name).join(", ")||null,
+      sideSelections:selection.sideSelections||[],drinkSelections:selection.drinkSelections||[]
     };
     order.items.push(item);
+  }else{
+    item.basePrice=Number(product.price||0);
+    item.extrasTotal=extrasTotal;
+    item.price=unitPrice;
   }
   item.quantity+=Number(quantity||1);
   calculateTotal();saveOrder();updateCartUi();renderCartProducts();
@@ -9376,11 +9428,12 @@ function openProductDetail(productId){
    if(ecommerceAddButton) ecommerceAddButton.style.display="none";
    foodSelections.innerHTML=
      foodSelectHtml("foodBreadSelection","Ekmek seçimi",product.bread_options)+
-     foodSelectHtml("foodSideSelection","Yan ürün",product.side_options)+
-     foodSelectHtml("foodDrinkSelection","İçecek",product.drink_options);
+     foodCheckboxHtml("side","Yan ürün seçiniz",product.side_options)+
+     foodCheckboxHtml("drink","İçecek seçiniz",product.drink_options);
    foodSelections.classList.toggle("hidden",!foodSelections.innerHTML.trim());
    foodQuantity.classList.remove("hidden");
    detailCard?.classList.add("food-detail-mode");
+   updateFoodDetailPrice();
  }else{
    if(questionButton) questionButton.style.display="";
    if(ecommerceAddButton) ecommerceAddButton.style.display="";
@@ -9411,8 +9464,8 @@ function openProductDetail(productId){
  document.getElementById("detailAddButton").onclick=()=>{
    const selection={
      bread:document.getElementById("foodBreadSelection")?.value||"",
-     side:document.getElementById("foodSideSelection")?.value||"",
-     drink:document.getElementById("foodDrinkSelection")?.value||""
+     sideSelections:getFoodCheckedSelections("side"),
+     drinkSelections:getFoodCheckedSelections("drink")
    };
    addFoodProductToCart(product,foodDetailQuantity,selection);
    closeProductDetail();
