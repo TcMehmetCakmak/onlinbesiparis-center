@@ -4533,7 +4533,7 @@ body{
         try {
             const { data, error } = await platformClient
                 .from("business_public")
-                .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
+                .select("business_id,public_key,shop_name,slug,business_type,license_end_date,manual_enabled,updated_at")
                 .eq("slug", TENANT_SLUG)
                 .maybeSingle();
 
@@ -4681,7 +4681,7 @@ body{
         try {
             const productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,product_type,active,created_at,business_id")
+                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -5039,7 +5039,9 @@ body{
                 addButton.onclick = () => product.product_type === 'SIZE' ? openProductDetail(product.id) : addProductToCart(product.id);
 
                 row.appendChild(left);
-                row.appendChild(addButton);
+                if(String(platformBusiness?.business_type||"ecommerce").toLowerCase()!=="food") {
+                    row.appendChild(addButton);
+                }
 
                 list.appendChild(row);
             });
@@ -5250,13 +5252,15 @@ body{
        ADET DEĞİŞTİR
     ========================================= */
 
-    function changeQuantity(productId, amount, variantId = null) {
+    function changeQuantity(productId, amount, variantId = null, cartItemId = null) {
         const product = products.find(p => String(p.id) === String(productId));
         if (!product) return;
 
         const item = order.items.find(x =>
-            String(x.productId) === String(productId) &&
-            String(x.variantId || "") === String(variantId || "")
+            cartItemId ? String(x.cartItemId||"")===String(cartItemId) : (
+              String(x.productId) === String(productId) &&
+              String(x.variantId || "") === String(variantId || "")
+            )
         );
 
         if (!item) return;
@@ -5266,8 +5270,10 @@ body{
         if (item.quantity <= 0) {
             order.items = order.items.filter(x =>
                 !(
-                    String(x.productId) === String(productId) &&
-                    String(x.variantId || "") === String(variantId || "")
+                    cartItemId ? String(x.cartItemId||"")===String(cartItemId) : (
+                      String(x.productId) === String(productId) &&
+                      String(x.variantId || "") === String(variantId || "")
+                    )
                 )
             );
         }
@@ -5439,6 +5445,9 @@ body{
                         <div class="cart-product-name">
                             ${escapeHtml(product.name)}
                             ${item.variantName ? `<div>Beden: ${escapeHtml(item.variantName)}</div>` : ""}
+                            ${item.bread ? `<div>Ekmek: ${escapeHtml(item.bread)}</div>` : ""}
+                            ${item.side ? `<div>Yan ürün: ${escapeHtml(item.side)}</div>` : ""}
+                            ${item.drink ? `<div>İçecek: ${escapeHtml(item.drink)}</div>` : ""}
                         </div>
 
                         <div class="cart-product-price">
@@ -5446,9 +5455,9 @@ body{
                         </div>
 
                         <div class="cart-quantity">
-                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', -1, '${String(item.variantId || '').replace(/'/g, "\'")}')">−</button>
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', -1, '${String(item.variantId || '').replace(/'/g, "\'")}', '${String(item.cartItemId || '').replace(/'/g, "\'")}')">−</button>
                             <span>${Number(item.quantity || 0)}</span>
-                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', 1, '${String(item.variantId || '').replace(/'/g, "\'")}')">+</button>
+                            <button type="button" onclick="changeQuantity('${String(product.id).replace(/'/g, "\'")}', 1, '${String(item.variantId || '').replace(/'/g, "\'")}', '${String(item.cartItemId || '').replace(/'/g, "\'")}')">+</button>
                         </div>
                     </div>
 
@@ -7326,6 +7335,9 @@ body{
                 productId: item.productId,
                 variantId: item.variantId || null,
                 variantName: item.variantName || null,
+                bread: item.bread || null,
+                side: item.side || null,
+                drink: item.drink || null,
                 price: Number(item.price || 0),
                 quantity: Number(item.quantity)
             })).filter(item => item.quantity > 0),
@@ -8929,8 +8941,21 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 </script>
 
 
+
+<style id="food-product-modal-v1">
+.food-option-section{margin:14px 0;padding:12px;background:#f8f8f8;border-radius:12px}
+.food-option-section label{display:block;font-weight:700;margin-bottom:7px}
+.food-option-section select{width:100%;padding:11px;border:1px solid #d7d7d7;border-radius:10px;background:#fff}
+.food-quantity-picker{display:flex;align-items:center;justify-content:center;gap:16px;margin:16px 0}
+.food-quantity-picker button{width:42px;height:42px;border:0;border-radius:50%;font-size:24px;font-weight:700;cursor:pointer}
+.food-quantity-picker span{min-width:34px;text-align:center;font-size:20px;font-weight:800}
+.product-detail-card.food-detail-mode{overflow:hidden;display:flex;flex-direction:column;position:relative}
+.product-detail-card.food-detail-mode .product-detail-scroll{overflow:auto;min-height:0;padding-right:2px}
+.product-detail-card.food-detail-mode #detailAddButton{flex:0 0 auto;width:100%;margin-top:12px;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
+</style>
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
+  <div class="product-detail-scroll">
    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button></div>
    <div class="detail-gallery-v15">
 <img id="detailProductImage">
@@ -8941,6 +8966,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <h2 id="detailProductName"></h2>
    <p id="detailProductText"></p>
    <div id="detailVariants"></div>
+   <div id="foodProductSelections" class="hidden"></div>
+   <div id="foodProductQuantity" class="food-quantity-picker hidden">
+     <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
+     <span id="foodDetailQuantityValue">1</span>
+     <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
+   </div>
    <div id="detailPrice"></div>
    <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
 
@@ -8967,7 +8998,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        <span id="detailReviewCount" class="product-review-count-badge hidden">0</span>
      </button>
    </div>
-
+  </div>
    <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
  </div>
 </div>
@@ -9204,6 +9235,42 @@ async function submitProductQuestion(){
 }
 
 
+
+let foodDetailQuantity=1;
+function currentBusinessIsFood(){
+  return String(platformBusiness?.business_type||"ecommerce").toLowerCase()==="food";
+}
+function foodOptionArray(value){
+  return Array.isArray(value)?value.map(x=>String(x||"").trim()).filter(Boolean):[];
+}
+function foodSelectHtml(id,label,items){
+  const values=foodOptionArray(items);
+  if(!values.length)return "";
+  return `<div class="food-option-section"><label for="${id}">${label}</label><select id="${id}"><option value="">Seçim yok</option>${values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("")}</select></div>`;
+}
+function changeFoodDetailQuantity(amount){
+  foodDetailQuantity=Math.max(1,Math.min(99,foodDetailQuantity+Number(amount||0)));
+  const el=document.getElementById("foodDetailQuantityValue");
+  if(el)el.textContent=String(foodDetailQuantity);
+}
+function getFoodSelectionKey(selection){
+  return [selection.bread||"",selection.side||"",selection.drink||""].join("||");
+}
+function addFoodProductToCart(product,quantity,selection){
+  const selectionKey=getFoodSelectionKey(selection);
+  let item=order.items.find(x=>String(x.productId)===String(product.id)&&String(x.selectionKey||"")===selectionKey&&!x.variantId);
+  if(!item){
+    item={
+      cartItemId:crypto.randomUUID(),productId:product.id,name:product.name,icon:product.icon||"",variantId:null,variantName:null,
+      price:Number(product.price||0),quantity:0,selectionKey,bread:selection.bread||null,side:selection.side||null,drink:selection.drink||null
+    };
+    order.items.push(item);
+  }
+  item.quantity+=Number(quantity||1);
+  calculateTotal();saveOrder();updateCartUi();renderCartProducts();
+  showCartAddSuccessPopup(product.name);
+}
+
 function openProductDetail(productId){
  const product=products.find(p=>String(p.id)===String(productId));
  if(!product)return;
@@ -9214,6 +9281,16 @@ function openProductDetail(productId){
  document.getElementById("detailProductName").textContent=product.name;
  document.getElementById("detailProductText").textContent=product.detail || "";
  document.getElementById("detailProductDetail").textContent=product.detail || "";
+ const detailPrice=document.getElementById("detailPrice");
+ if(detailPrice){
+   const priceValue=product.product_type==="SIZE" && product.variants?.length
+     ? `${Math.min(...product.variants.map(v=>Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
+     : `${Number(product.price||0).toLocaleString("tr-TR")} TL`;
+   detailPrice.textContent=priceValue;
+   detailPrice.style.fontWeight="800";
+   detailPrice.style.fontSize="20px";
+   detailPrice.style.marginTop="10px";
+ }
 
  // Ürün modalı açılırken ilk gösterilecek foto ana foto olsun
  const galleryImages = Array.isArray(product.images) ? [...product.images] : [];
@@ -9255,6 +9332,26 @@ function openProductDetail(productId){
    detailSelectedVariant=null;
  }
 
+ const foodSelections=document.getElementById("foodProductSelections");
+ const foodQuantity=document.getElementById("foodProductQuantity");
+ const detailCard=document.querySelector("#productDetailModal .product-detail-card");
+ foodDetailQuantity=1;
+ document.getElementById("foodDetailQuantityValue").textContent="1";
+ if(currentBusinessIsFood()){
+   foodSelections.innerHTML=
+     foodSelectHtml("foodBreadSelection","Ekmek seçimi",product.bread_options)+
+     foodSelectHtml("foodSideSelection","Yan ürün",product.side_options)+
+     foodSelectHtml("foodDrinkSelection","İçecek",product.drink_options);
+   foodSelections.classList.toggle("hidden",!foodSelections.innerHTML.trim());
+   foodQuantity.classList.remove("hidden");
+   detailCard?.classList.add("food-detail-mode");
+ }else{
+   foodSelections.innerHTML="";
+   foodSelections.classList.add("hidden");
+   foodQuantity.classList.add("hidden");
+   detailCard?.classList.remove("food-detail-mode");
+ }
+
  const reviewBadge=document.getElementById("detailReviewCount");
  const cachedReviewCount=(productReviewsCacheV32[String(product.id)] || []).length;
  if(reviewBadge){
@@ -9274,6 +9371,16 @@ function openProductDetail(productId){
  loadProductQuestionsV1(product.id,false);
 
  document.getElementById("detailAddButton").onclick=()=>{
+   if(currentBusinessIsFood()){
+      const selection={
+        bread:document.getElementById("foodBreadSelection")?.value||"",
+        side:document.getElementById("foodSideSelection")?.value||"",
+        drink:document.getElementById("foodDrinkSelection")?.value||""
+      };
+      addFoodProductToCart(product,foodDetailQuantity,selection);
+      closeProductDetail();
+      return;
+   }
    if(product.product_type==="SIZE" && !detailSelectedVariant){
       alert("Lütfen beden seçiniz.");
       return;

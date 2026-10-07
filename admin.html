@@ -807,6 +807,17 @@ body.modal-open{
   <button type="button" class="btn btn-light" onclick="addProductVariantRow()">+ Boyut Ekle</button>
 </div>
 
+<div id="foodProductOptionsArea" class="hidden" style="margin-top:14px;padding:14px;background:#fff8ee;border:1px solid #f2d6ad;border-radius:12px">
+  <strong>🍽️ Yemek ürün seçenekleri</strong>
+  <div class="muted" style="margin:6px 0 12px">Bu alanlar zorunlu değildir. Her seçeneği ayrı satıra yazın.</div>
+  <label>Ekmek seçenekleri</label>
+  <textarea id="productBreadOptions" rows="4" placeholder="Lavaş\nSomun ekmek\nEkmeksiz"></textarea>
+  <label>Yan ürünler</label>
+  <textarea id="productSideOptions" rows="4" placeholder="Patates kızartması\nSoğan halkası\nSalata"></textarea>
+  <label>İçecekler</label>
+  <textarea id="productDrinkOptions" rows="4" placeholder="Ayran\nKola\nŞalgam"></textarea>
+</div>
+
 
     <div class="product-upload-box">
       <label style="margin:0">Ürün Fotoğrafları</label>
@@ -1138,7 +1149,7 @@ async function resolveTenantBusiness(){
   }
 
   const {data,error}=await platformClient.from("business_public")
-    .select("business_id,public_key,shop_name,slug,license_end_date,manual_enabled,updated_at")
+    .select("business_id,public_key,shop_name,slug,business_type,license_end_date,manual_enabled,updated_at")
     .eq("slug",TENANT_SLUG)
     .maybeSingle();
 
@@ -1313,7 +1324,7 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     const productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
+      .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error)throw productResult.error;
@@ -2250,6 +2261,19 @@ function revokePendingPreviewUrls(){
   });
 }
 
+
+function isFoodBusiness(){
+  return String(platformBusiness?.business_type||"ecommerce").toLowerCase()==="food";
+}
+function normalizeOptionList(value){
+  if(Array.isArray(value)) return value.map(x=>String(x||"").trim()).filter(Boolean);
+  return String(value||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+}
+function setFoodProductFieldsVisibility(){
+  const area=document.getElementById("foodProductOptionsArea");
+  if(area) area.classList.toggle("hidden",!isFoodBusiness());
+}
+
 function openProductModal(p=null){
   revokePendingPreviewUrls();
   pendingProductFiles=[];
@@ -2262,6 +2286,10 @@ function openProductModal(p=null){
   document.getElementById("productPrice").value =
     p?.product_type === "SIZE" ? "" : (p?.price ?? "");
   document.getElementById("productDetail").value=p?.detail || "";
+  document.getElementById("productBreadOptions").value=normalizeOptionList(p?.bread_options).join("\n");
+  document.getElementById("productSideOptions").value=normalizeOptionList(p?.side_options).join("\n");
+  document.getElementById("productDrinkOptions").value=normalizeOptionList(p?.drink_options).join("\n");
+  setFoodProductFieldsVisibility();
 
   // Düzenle ekranında ürün tipi ve varyantları geri yükle
   const productTypeEl = document.getElementById("productType");
@@ -2308,7 +2336,7 @@ async function editProduct(id){
   // Düzenleme için detay ve varyantları tekrar garanti çek
   const {data:detailProduct,error:detailError}=await supabaseClient
     .from("products")
-    .select("id,name,icon,price,detail,product_type,active,business_id")
+    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,business_id")
     .eq("id",id)
     .maybeSingle();
 
@@ -2599,6 +2627,9 @@ async function saveProduct(){
     price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
     detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
+    bread_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productBreadOptions").value) : [],
+    side_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productSideOptions").value) : [],
+    drink_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productDrinkOptions").value) : [],
     active:document.getElementById("productActive").checked
   };
 
@@ -2640,7 +2671,7 @@ async function saveProduct(){
         .update(payload)
         .eq("id",id)
         .eq("business_id",currentBusinessId)
-        .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
@@ -2648,7 +2679,7 @@ async function saveProduct(){
       const newId=crypto.randomUUID();
       const {data,error}=await supabaseClient.from("products")
         .insert({...payload,id:newId,business_id:currentBusinessId})
-        .select("id,name,icon,price,detail,product_type,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
         .single();
       if(error)throw error;
       savedProduct=data;
