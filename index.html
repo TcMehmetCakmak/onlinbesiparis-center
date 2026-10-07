@@ -8946,12 +8946,26 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 .food-option-section{margin:14px 0;padding:12px;background:#f8f8f8;border-radius:12px}
 .food-option-section label{display:block;font-weight:700;margin-bottom:7px}
 .food-option-section select{width:100%;padding:11px;border:1px solid #d7d7d7;border-radius:10px;background:#fff}
-.food-quantity-picker{display:flex;align-items:center;justify-content:center;gap:16px;margin:16px 0}
-.food-quantity-picker button{width:42px;height:42px;border:0;border-radius:50%;font-size:24px;font-weight:700;cursor:pointer}
-.food-quantity-picker span{min-width:34px;text-align:center;font-size:20px;font-weight:800}
+.food-quantity-picker{display:flex;align-items:center;justify-content:center;gap:10px;margin:0}
+.food-quantity-picker button{width:38px;height:38px;border:0;border-radius:50%;font-size:22px;font-weight:700;cursor:pointer}
+.food-quantity-picker span{min-width:26px;text-align:center;font-size:18px;font-weight:800}
 .product-detail-card.food-detail-mode{overflow:hidden;display:flex;flex-direction:column;position:relative}
-.product-detail-card.food-detail-mode .product-detail-scroll{overflow:auto;min-height:0;padding-right:2px}
-.product-detail-card.food-detail-mode #detailAddButton{flex:0 0 auto;width:100%;margin-top:12px;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
+.product-detail-card.food-detail-mode .product-detail-scroll{overflow:auto;min-height:0;padding-right:2px;padding-bottom:12px}
+.food-detail-footer{display:none}
+.product-detail-card.food-detail-mode>.food-detail-footer{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-top:10px;padding-top:10px;border-top:1px solid #eee;background:#fff;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
+.product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button{flex:0 0 auto;white-space:nowrap;margin:0}
+.product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{flex:1 1 auto;width:auto;margin:0;min-height:42px}
+.product-detail-card.food-detail-mode>.product-detail-scroll .product-detail-action-row{display:none}
+.product-detail-card.food-detail-mode>.product-detail-scroll #foodProductQuantity{display:none!important}
+.product-detail-card:not(.food-detail-mode)>.food-detail-footer{display:none}
+@media(max-width:520px){
+ .product-detail-card.food-detail-mode>.food-detail-footer{gap:6px}
+ .food-quantity-picker{gap:5px}
+ .food-quantity-picker button{width:34px;height:34px;font-size:20px}
+ .food-quantity-picker span{min-width:20px;font-size:16px}
+ .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button{padding:9px 8px;font-size:12px}
+ .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{padding:10px 8px;font-size:13px}
+}
 </style>
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
@@ -8965,6 +8979,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 </div>
    <h2 id="detailProductName"></h2>
    <p id="detailProductText"></p>
+   <div id="detailPrice"></div>
    <div id="detailVariants"></div>
    <div id="foodProductSelections" class="hidden"></div>
    <div id="foodProductQuantity" class="food-quantity-picker hidden">
@@ -8972,8 +8987,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
      <span id="foodDetailQuantityValue">1</span>
      <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
    </div>
-   <div id="detailPrice"></div>
-   <div id="detailProductDetail" style="margin-top:12px;padding:12px;background:#f7f7f7;border-radius:10px;white-space:pre-wrap;color:#555;"></div>
 
    <div class="product-detail-action-row">
      <button
@@ -8999,7 +9012,22 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
      </button>
    </div>
   </div>
-   <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
+   <div class="food-detail-footer">
+     <div id="foodFooterQuantity" class="food-quantity-picker">
+       <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
+       <span id="foodFooterQuantityValue">1</span>
+       <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
+     </div>
+     <button
+       id="foodDetailReviewButton"
+       type="button"
+       class="product-review-launch-button"
+       onclick="openProductReviewModalV32()"
+       title="Bu ürüne yorum ekle ve yorumları gör"
+     >⭐ Yorum Ekle</button>
+     <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
+   </div>
+   <button id="detailAddButtonEcommerce" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
  </div>
 </div>
 
@@ -9251,7 +9279,9 @@ function foodSelectHtml(id,label,items){
 function changeFoodDetailQuantity(amount){
   foodDetailQuantity=Math.max(1,Math.min(99,foodDetailQuantity+Number(amount||0)));
   const el=document.getElementById("foodDetailQuantityValue");
+  const footerEl=document.getElementById("foodFooterQuantityValue");
   if(el)el.textContent=String(foodDetailQuantity);
+  if(footerEl)footerEl.textContent=String(foodDetailQuantity);
 }
 function getFoodSelectionKey(selection){
   return [selection.bread||"",selection.side||"",selection.drink||""].join("||");
@@ -9280,7 +9310,6 @@ function openProductDetail(productId){
 
  document.getElementById("detailProductName").textContent=product.name;
  document.getElementById("detailProductText").textContent=product.detail || "";
- document.getElementById("detailProductDetail").textContent=product.detail || "";
  const detailPrice=document.getElementById("detailPrice");
  if(detailPrice){
    const priceValue=product.product_type==="SIZE" && product.variants?.length
@@ -9337,7 +9366,12 @@ function openProductDetail(productId){
  const detailCard=document.querySelector("#productDetailModal .product-detail-card");
  foodDetailQuantity=1;
  document.getElementById("foodDetailQuantityValue").textContent="1";
+ document.getElementById("foodFooterQuantityValue").textContent="1";
+ const questionButton=document.getElementById("detailQuestionButton");
+ const ecommerceAddButton=document.getElementById("detailAddButtonEcommerce");
  if(currentBusinessIsFood()){
+   if(questionButton) questionButton.style.display="none";
+   if(ecommerceAddButton) ecommerceAddButton.style.display="none";
    foodSelections.innerHTML=
      foodSelectHtml("foodBreadSelection","Ekmek seçimi",product.bread_options)+
      foodSelectHtml("foodSideSelection","Yan ürün",product.side_options)+
@@ -9346,6 +9380,8 @@ function openProductDetail(productId){
    foodQuantity.classList.remove("hidden");
    detailCard?.classList.add("food-detail-mode");
  }else{
+   if(questionButton) questionButton.style.display="";
+   if(ecommerceAddButton) ecommerceAddButton.style.display="";
    foodSelections.innerHTML="";
    foodSelections.classList.add("hidden");
    foodQuantity.classList.add("hidden");
@@ -9371,16 +9407,16 @@ function openProductDetail(productId){
  loadProductQuestionsV1(product.id,false);
 
  document.getElementById("detailAddButton").onclick=()=>{
-   if(currentBusinessIsFood()){
-      const selection={
-        bread:document.getElementById("foodBreadSelection")?.value||"",
-        side:document.getElementById("foodSideSelection")?.value||"",
-        drink:document.getElementById("foodDrinkSelection")?.value||""
-      };
-      addFoodProductToCart(product,foodDetailQuantity,selection);
-      closeProductDetail();
-      return;
-   }
+   const selection={
+     bread:document.getElementById("foodBreadSelection")?.value||"",
+     side:document.getElementById("foodSideSelection")?.value||"",
+     drink:document.getElementById("foodDrinkSelection")?.value||""
+   };
+   addFoodProductToCart(product,foodDetailQuantity,selection);
+   closeProductDetail();
+ };
+
+ document.getElementById("detailAddButtonEcommerce").onclick=()=>{
    if(product.product_type==="SIZE" && !detailSelectedVariant){
       alert("Lütfen beden seçiniz.");
       return;
