@@ -8952,9 +8952,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 .product-detail-card.food-detail-mode{overflow:hidden;display:flex;flex-direction:column;position:relative}
 .product-detail-card.food-detail-mode .product-detail-scroll{overflow:auto;min-height:0;padding-right:2px;padding-bottom:12px}
 .food-detail-footer{display:none}
-.product-detail-card.food-detail-mode>.food-detail-footer{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-top:10px;padding-top:10px;border-top:1px solid #eee;background:#fff;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
-.product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button{flex:0 0 auto;white-space:nowrap;margin:0}
-.product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{flex:1 1 auto;width:auto;margin:0;min-height:42px}
+.product-detail-card.food-detail-mode>.food-detail-footer{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;flex:0 0 auto;margin-top:10px;padding-top:10px;border-top:1px solid #eee;background:#fff;z-index:8;box-shadow:0 -8px 18px rgba(255,255,255,.95)}
+.product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
+.product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{width:100%;height:44px;min-height:44px;margin:0;padding:0 12px;display:flex;align-items:center;justify-content:center;white-space:nowrap;box-sizing:border-box}
+.product-detail-card.food-detail-mode>.food-detail-footer #foodFooterQuantity{justify-self:center}
+.product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{min-width:0}
 .product-detail-card.food-detail-mode>.product-detail-scroll .product-detail-action-row{display:none}
 .product-detail-card.food-detail-mode>.product-detail-scroll #foodProductQuantity{display:none!important}
 .product-detail-card:not(.food-detail-mode)>.food-detail-footer{display:none}
@@ -8963,8 +8965,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
  .food-quantity-picker{gap:5px}
  .food-quantity-picker button{width:34px;height:34px;font-size:20px}
  .food-quantity-picker span{min-width:20px;font-size:16px}
- .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button{padding:9px 8px;font-size:12px}
- .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{padding:10px 8px;font-size:13px}
+ .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
+ .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{height:42px;min-height:42px;padding:0 6px;font-size:12px}
 }
 </style>
 <div id="productDetailModal" class="product-detail-modal hidden">
@@ -9013,11 +9015,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    </div>
   </div>
    <div class="food-detail-footer">
-     <div id="foodFooterQuantity" class="food-quantity-picker">
-       <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
-       <span id="foodFooterQuantityValue">1</span>
-       <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
-     </div>
      <button
        id="foodDetailReviewButton"
        type="button"
@@ -9025,6 +9022,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        onclick="openProductReviewModalV32()"
        title="Bu ürüne yorum ekle ve yorumları gör"
      >⭐ Yorum Ekle</button>
+     <div id="foodFooterQuantity" class="food-quantity-picker">
+       <button type="button" onclick="changeFoodDetailQuantity(-1)">−</button>
+       <span id="foodFooterQuantityValue">1</span>
+       <button type="button" onclick="changeFoodDetailQuantity(1)">+</button>
+     </div>
      <button id="detailAddButton" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
    </div>
    <button id="detailAddButtonEcommerce" class="product-add-button product-detail-full-add-button">Sepete Ekle</button>
