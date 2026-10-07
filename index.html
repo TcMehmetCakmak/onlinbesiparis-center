@@ -1758,6 +1758,32 @@
             font-size: 14px;
         }
 
+        .cart-food-options-card {
+            margin-top: 8px;
+            padding: 9px 10px;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            background: #f8f8f8;
+            display: grid;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .cart-food-option-row {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            line-height: 1.35;
+        }
+
+        .cart-food-option-label {
+            font-weight: 800;
+            color: #222;
+            flex: 0 0 auto;
+        }
+
         .cart-quantity {
             display: inline-flex;
             align-items: center;
@@ -5438,10 +5464,15 @@ body{
                         <div class="cart-product-name">
                             ${escapeHtml(product.name)}
                             ${item.variantName ? `<div>Beden: ${escapeHtml(item.variantName)}</div>` : ""}
-                            ${item.bread ? `<div>Ekmek: ${escapeHtml(item.bread)}</div>` : ""}
-                            ${item.side ? `<div>Yan ürün: ${escapeHtml(item.side)}</div>` : ""}
-                            ${item.drink ? `<div>İçecek: ${escapeHtml(item.drink)}</div>` : ""}
                         </div>
+
+                        ${(item.bread || item.side || item.drink) ? `
+                            <div class="cart-food-options-card">
+                                ${item.bread ? `<div class="cart-food-option-row"><span class="cart-food-option-label">Ekmek:</span><span>${escapeHtml(item.bread)}</span></div>` : ""}
+                                ${item.side ? `<div class="cart-food-option-row"><span class="cart-food-option-label">Yan ürün:</span><span>${escapeHtml(item.side)}</span></div>` : ""}
+                                ${item.drink ? `<div class="cart-food-option-row"><span class="cart-food-option-label">İçecek:</span><span>${escapeHtml(item.drink)}</span></div>` : ""}
+                            </div>
+                        ` : ""}
 
                         <div class="cart-product-price">
                             ${Number(item.price ?? product.price ?? 0).toLocaleString("tr-TR")} TL
