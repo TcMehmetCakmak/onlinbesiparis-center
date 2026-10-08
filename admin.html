@@ -515,6 +515,65 @@ body.modal-open{
 }
 </style>
 
+
+<style id="food-product-admin-style-v1">
+.food-product-options-admin{
+  margin-top:16px;
+  padding:16px;
+  border:1px solid #e3e6ea;
+  border-radius:14px;
+  background:#fafbfc;
+}
+.food-product-options-admin.hidden{display:none!important}
+.food-product-options-title{
+  font-size:17px;
+  font-weight:900;
+  margin-bottom:6px;
+}
+.food-option-admin-section{
+  margin-top:14px;
+  padding:14px;
+  border:1px solid #e6e8eb;
+  border-radius:12px;
+  background:#fff;
+}
+.food-option-admin-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.food-option-admin-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 150px auto;
+  gap:8px;
+  align-items:end;
+  margin-top:8px;
+}
+.food-option-admin-row .food-option-field-label{
+  display:block;
+  margin:0 0 5px;
+  font-size:12px;
+  color:#666;
+  font-weight:700;
+}
+.food-option-admin-row input{
+  margin:0;
+}
+.food-option-admin-empty{
+  padding:11px;
+  border:1px dashed #ddd;
+  border-radius:10px;
+  color:#777;
+  font-size:13px;
+}
+@media(max-width:650px){
+  .food-option-admin-head{flex-direction:column}
+  .food-option-admin-row{grid-template-columns:1fr}
+}
+</style>
+
 </head>
 <body>
 
@@ -559,7 +618,7 @@ body.modal-open{
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="showTab('products',this)">📦 Ürünler</button>
+    <button id="productsTabButton" class="tab active" onclick="showTab('products',this)">📦 Ürünler</button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler <span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
@@ -572,8 +631,8 @@ body.modal-open{
   <section id="productsTab">
     <div class="card">
       <div class="header">
-        <div><h2>Ürün Yönetimi</h2><div class="muted">Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.</div></div>
-        <button class="btn btn-primary" onclick="openProductModal()">+ Yeni Ürün</button>
+        <div><h2 id="productManagementTitle">Ürün Yönetimi</h2><div id="productManagementHelp" class="muted">Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.</div></div>
+        <button id="newProductButton" class="btn btn-primary" onclick="openProductModal()">+ Yeni Ürün</button>
       </div>
       <div id="productList" class="products"></div>
     </div>
@@ -807,15 +866,45 @@ body.modal-open{
   <button type="button" class="btn btn-light" onclick="addProductVariantRow()">+ Boyut Ekle</button>
 </div>
 
-<div id="foodProductOptionsArea" class="hidden" style="margin-top:14px;padding:14px;background:#fff8ee;border:1px solid #f2d6ad;border-radius:12px">
-  <strong>🍽️ Yemek ürün seçenekleri</strong>
-  <div class="muted" style="margin:6px 0 12px">Bu alanlar zorunlu değildir. Ekmek seçeneklerini ayrı satıra, yan ürün ve içecekleri ise <b>Ad | Fiyat</b> biçiminde yazın. Örnek: <b>Patates Kızartması | 40</b></div>
-  <label>Ekmek seçenekleri</label>
-  <textarea id="productBreadOptions" rows="4" placeholder="Lavaş\nSomun ekmek\nEkmeksiz"></textarea>
-  <label>Yan ürünler (Ad | Fiyat)</label>
-  <textarea id="productSideOptions" rows="4" placeholder="Patates kızartması | 40\nSoğan halkası | 35\nSalata | 25"></textarea>
-  <label>İçecekler (Ad | Fiyat)</label>
-  <textarea id="productDrinkOptions" rows="4" placeholder="Ayran | 20\nKola | 35\nŞalgam | 25"></textarea>
+<div id="foodProductOptionsArea" class="food-product-options-admin hidden">
+  <div class="food-product-options-title">🍽️ Yemek Ürünü Seçenekleri</div>
+  <div class="muted" style="margin-bottom:12px">
+    Bu alanlar yalnızca işletme tipi <strong>Yemek</strong> olduğunda müşteri ürün modalında gösterilir.
+    Ek fiyat 0 TL olabilir.
+  </div>
+
+  <div class="food-option-admin-section">
+    <div class="food-option-admin-head">
+      <div>
+        <strong>🥖 Ekmek Seçimleri</strong>
+        <div class="muted">Müşteri bir ekmek seçer. İlk seçenek varsayılan seçilir.</div>
+      </div>
+      <button type="button" class="btn btn-light" onclick="addFoodOptionDraft('bread')">+ Ekmek Ekle</button>
+    </div>
+    <div id="foodBreadOptionRows"></div>
+  </div>
+
+  <div class="food-option-admin-section">
+    <div class="food-option-admin-head">
+      <div>
+        <strong>🍟 Yan Ürünler</strong>
+        <div class="muted">Müşteri birden fazla yan ürün seçebilir.</div>
+      </div>
+      <button type="button" class="btn btn-light" onclick="addFoodOptionDraft('side')">+ Yan Ürün Ekle</button>
+    </div>
+    <div id="foodSideOptionRows"></div>
+  </div>
+
+  <div class="food-option-admin-section">
+    <div class="food-option-admin-head">
+      <div>
+        <strong>🥤 İçecekler</strong>
+        <div class="muted">Müşteri tek içecek seçebilir veya içecek istemeyebilir.</div>
+      </div>
+      <button type="button" class="btn btn-light" onclick="addFoodOptionDraft('drink')">+ İçecek Ekle</button>
+    </div>
+    <div id="foodDrinkOptionRows"></div>
+  </div>
 </div>
 
 
@@ -1137,6 +1226,34 @@ let orderProductDetailImageIndex = 0;
 
 function money(n) {
   return Number(n || 0).toLocaleString("tr-TR", {minimumFractionDigits:0, maximumFractionDigits:2}) + " TL";
+}
+
+function isFoodBusiness(){
+  return platformBusiness?.business_type === "food";
+}
+
+function businessTypeAdminLabel(){
+  return isFoodBusiness() ? "Yemek" : "E-Ticaret";
+}
+
+function applyAdminBusinessTypeUi(){
+  const food=isFoodBusiness();
+  const tab=document.getElementById("productsTabButton");
+  const title=document.getElementById("productManagementTitle");
+  const help=document.getElementById("productManagementHelp");
+  const add=document.getElementById("newProductButton");
+
+  if(tab)tab.textContent=food ? "🍽️ Menü" : "📦 Ürünler";
+  if(title)title.textContent=food ? "Menü Yönetimi" : "Ürün Yönetimi";
+  if(help){
+    help.textContent=food
+      ? "Yemek ürünlerini, fotoğrafları ve ekmek / yan ürün / içecek seçeneklerini yönetin."
+      : "Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.";
+  }
+  if(add)add.textContent=food ? "+ Menü Ürünü Ekle" : "+ Yeni Ürün";
+
+  const foodArea=document.getElementById("foodProductOptionsArea");
+  foodArea?.classList.toggle("hidden",!food);
 }
 function toast(message) {
   const el=document.getElementById("toast");
@@ -1598,8 +1715,9 @@ function renderPlatformBusiness(){
     }
 
     const active=tenantLicenseIsActive(platformBusiness);
+    applyAdminBusinessTypeUi();
     if(box){
-      box.innerHTML=`<strong>${active?"🟢 Aktif":"🔴 Deaktif"}</strong> · Lisans sonu: ${escapeHtml(platformBusiness.license_end_date||"-")}`;
+      box.innerHTML=`<strong>${active?"🟢 Aktif":"🔴 Deaktif"}</strong> · İşletme tipi: <strong>${escapeHtml(businessTypeAdminLabel())}</strong> · Lisans sonu: ${escapeHtml(platformBusiness.license_end_date||"-")}`;
       box.style.background=active?"#e8f5e9":"#ffebee";
       box.style.color=active?"#176b2c":"#a11";
     }
@@ -2235,7 +2353,7 @@ function renderProducts(){
         ${visual}
         <div>
           <strong>${escapeHtml(p.name)}</strong>
-          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf</div>
+          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf${isFoodBusiness()?` · 🥖 ${(p.bread_options||[]).length} · 🍟 ${(p.side_options||[]).length} · 🥤 ${(p.drink_options||[]).length}`:""}</div>
         </div>
       </div>
       <div class="actions">
@@ -2262,41 +2380,166 @@ function revokePendingPreviewUrls(){
 }
 
 
-function isFoodBusiness(){
-  return String(platformBusiness?.business_type||"ecommerce").toLowerCase()==="food";
+let foodOptionDrafts={
+  bread:[],
+  side:[],
+  drink:[]
+};
+
+function normalizeFoodOptionRows(value){
+  if(!Array.isArray(value))return [];
+
+  return value
+    .map(row=>({
+      id:String(row?.id||crypto.randomUUID()),
+      name:String(row?.name||"").trim(),
+      price:Number(row?.price||0)
+    }))
+    .filter(row=>row.name);
 }
-function normalizeOptionList(value){
-  if(Array.isArray(value)) return value.map(x=>typeof x==="object" ? String(x?.name||"").trim() : String(x||"").trim()).filter(Boolean);
-  return String(value||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+
+function resetFoodOptionDrafts(product=null){
+  foodOptionDrafts={
+    bread:normalizeFoodOptionRows(product?.bread_options),
+    side:normalizeFoodOptionRows(product?.side_options),
+    drink:normalizeFoodOptionRows(product?.drink_options)
+  };
+  renderAllFoodOptionDrafts();
 }
-function normalizePricedOptionList(value){
-  if(Array.isArray(value)){
-    return value.map(x=>{
-      if(x && typeof x==="object"){
-        const name=String(x.name||x.label||"").trim();
-        const price=Math.max(0,Number(x.price||0)||0);
-        return name ? {name,price} : null;
-      }
-      const name=String(x||"").trim();
-      return name ? {name,price:0} : null;
-    }).filter(Boolean);
+
+function getFoodDraftContainer(type){
+  return type==="bread"
+    ? document.getElementById("foodBreadOptionRows")
+    : type==="side"
+      ? document.getElementById("foodSideOptionRows")
+      : document.getElementById("foodDrinkOptionRows");
+}
+
+function foodDraftLabel(type){
+  if(type==="bread")return "Ekmek";
+  if(type==="side")return "Yan ürün";
+  return "İçecek";
+}
+
+function renderFoodOptionDrafts(type){
+  const container=getFoodDraftContainer(type);
+  if(!container)return;
+
+  const rows=foodOptionDrafts[type]||[];
+
+  if(!rows.length){
+    container.innerHTML=`<div class="food-option-admin-empty">Henüz ${foodDraftLabel(type).toLocaleLowerCase("tr-TR")} seçeneği eklenmedi.</div>`;
+    return;
   }
-  return String(value||"").split(/\r?\n/).map(line=>{
-    const text=line.trim();
-    if(!text)return null;
-    const parts=text.split("|");
-    const name=String(parts.shift()||"").trim();
-    const rawPrice=String(parts.join("|")||"").trim().replace(",", ".");
-    const price=rawPrice==="" ? 0 : Number(rawPrice);
-    return name ? {name,price:Number.isFinite(price)&&price>=0?price:0} : null;
-  }).filter(Boolean);
+
+  container.innerHTML=rows.map((row,index)=>`
+    <div class="food-option-admin-row">
+      <div>
+        <span class="food-option-field-label">${foodDraftLabel(type)} adı</span>
+        <input
+          value="${escapeAttr(row.name||"")}"
+          maxlength="120"
+          placeholder="${type==="bread"?"Örn. Lavaş":type==="side"?"Örn. Patates Kızartması":"Örn. Ayran"}"
+          oninput="updateFoodOptionDraft('${type}',${index},'name',this.value)"
+        >
+      </div>
+
+      <div>
+        <span class="food-option-field-label">Ek fiyat (TL)</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value="${Number(row.price||0)}"
+          oninput="updateFoodOptionDraft('${type}',${index},'price',this.value)"
+        >
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-danger"
+        onclick="removeFoodOptionDraft('${type}',${index})"
+      >Sil</button>
+    </div>
+  `).join("");
 }
-function formatPricedOptionLines(value){
-  return normalizePricedOptionList(value).map(x=>`${x.name} | ${Number(x.price||0)}`).join("\n");
+
+function renderAllFoodOptionDrafts(){
+  renderFoodOptionDrafts("bread");
+  renderFoodOptionDrafts("side");
+  renderFoodOptionDrafts("drink");
 }
-function setFoodProductFieldsVisibility(){
-  const area=document.getElementById("foodProductOptionsArea");
-  if(area) area.classList.toggle("hidden",!isFoodBusiness());
+
+function addFoodOptionDraft(type){
+  if(!["bread","side","drink"].includes(type))return;
+
+  foodOptionDrafts[type].push({
+    id:crypto.randomUUID(),
+    name:"",
+    price:0
+  });
+
+  renderFoodOptionDrafts(type);
+
+  const container=getFoodDraftContainer(type);
+  container?.querySelector(".food-option-admin-row:last-child input")?.focus();
+}
+
+function removeFoodOptionDraft(type,index){
+  if(!Array.isArray(foodOptionDrafts[type]))return;
+  foodOptionDrafts[type].splice(index,1);
+  renderFoodOptionDrafts(type);
+}
+
+function updateFoodOptionDraft(type,index,field,value){
+  const row=foodOptionDrafts[type]?.[index];
+  if(!row)return;
+
+  if(field==="price"){
+    row.price=value;
+  }else{
+    row.name=value;
+  }
+}
+
+function normalizeFoodDraftForSave(type){
+  const source=Array.isArray(foodOptionDrafts[type])
+    ? foodOptionDrafts[type]
+    : [];
+
+  for(const row of source){
+    const name=String(row?.name||"").trim();
+    const rawPrice=String(row?.price??"").trim();
+
+    if(!name && rawPrice && Number(rawPrice)!==0){
+      throw new Error(`${foodDraftLabel(type)} adını girin.`);
+    }
+
+    if(name){
+      const price=Number(rawPrice||0);
+      if(!Number.isFinite(price)||price<0){
+        throw new Error(`${name} için ek fiyat geçersiz.`);
+      }
+    }
+  }
+
+  return source
+    .map(row=>({
+      id:String(row?.id||crypto.randomUUID()),
+      name:String(row?.name||"").trim(),
+      price:Number(row?.price||0)
+    }))
+    .filter(row=>row.name);
+}
+
+function getFoodProductOptionsPayload(){
+  if(!isFoodBusiness())return null;
+
+  return {
+    bread_options:normalizeFoodDraftForSave("bread"),
+    side_options:normalizeFoodDraftForSave("side"),
+    drink_options:normalizeFoodDraftForSave("drink")
+  };
 }
 
 function openProductModal(p=null){
@@ -2311,10 +2554,6 @@ function openProductModal(p=null){
   document.getElementById("productPrice").value =
     p?.product_type === "SIZE" ? "" : (p?.price ?? "");
   document.getElementById("productDetail").value=p?.detail || "";
-  document.getElementById("productBreadOptions").value=normalizeOptionList(p?.bread_options).join("\n");
-  document.getElementById("productSideOptions").value=formatPricedOptionLines(p?.side_options);
-  document.getElementById("productDrinkOptions").value=formatPricedOptionLines(p?.drink_options);
-  setFoodProductFieldsVisibility();
 
   // Düzenle ekranında ürün tipi ve varyantları geri yükle
   const productTypeEl = document.getElementById("productType");
@@ -2338,6 +2577,11 @@ function openProductModal(p=null){
   setProductGalleryStatus("");
   renderProductImageEditor();
   toggleProductVariantFields();
+
+  resetFoodOptionDrafts(p);
+  document.getElementById("foodProductOptionsArea")
+    ?.classList.toggle("hidden",!isFoodBusiness());
+
   document.getElementById("productModal").classList.remove("hidden");
 }
 
@@ -2646,16 +2890,23 @@ async function saveProduct(){
   const id=document.getElementById("productId").value;
   const productType=document.getElementById("productType")?.value || "";
 
+  let foodOptionsPayload=null;
+
+  try{
+    foodOptionsPayload=getFoodProductOptionsPayload();
+  }catch(error){
+    toast(error.message||"Yemek seçeneklerini kontrol edin.");
+    return;
+  }
+
   const payload={
     name:document.getElementById("productName").value.trim(),
     icon:"",
     price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
     detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
-    bread_options: isFoodBusiness() ? normalizeOptionList(document.getElementById("productBreadOptions").value) : [],
-    side_options: isFoodBusiness() ? normalizePricedOptionList(document.getElementById("productSideOptions").value) : [],
-    drink_options: isFoodBusiness() ? normalizePricedOptionList(document.getElementById("productDrinkOptions").value) : [],
-    active:document.getElementById("productActive").checked
+    active:document.getElementById("productActive").checked,
+    ...(foodOptionsPayload||{})
   };
 
   if(!payload.name){
@@ -2872,44 +3123,6 @@ function findOrderProduct(orderItem){
   return product || null;
 }
 
-// Sipariş RPC'si bazı sürümlerde seçenekleri dizi yerine yalnızca side/drink metni
-// olarak kaydedebiliyor. Admin ekranında ürün tanımındaki fiyatlarla eşleştir.
-function getOrderSelections(item, product=findOrderProduct(item)){
-  const resolve=(arrayValue, textValue, optionDefinitions)=>{
-    const definitions=normalizePricedOptionList(optionDefinitions);
-    if(Array.isArray(arrayValue) && arrayValue.length){
-      return arrayValue.map(x=>{
-        const name=String(x?.name||x?.label||x||"").trim();
-        const found=definitions.find(o=>o.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr"));
-        return name ? {name,price:Number(x?.price ?? found?.price ?? 0)} : null;
-      }).filter(Boolean);
-    }
-    return String(textValue||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean).map(name=>{
-      const found=definitions.find(o=>o.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr"));
-      return {name,price:Number(found?.price||0)};
-    });
-  };
-  return {
-    sides:resolve(item?.sideSelections,item?.side,product?.side_options),
-    drinks:resolve(item?.drinkSelections,item?.drink,product?.drink_options)
-  };
-}
-function getOrderPriceBreakdown(item, product=findOrderProduct(item)){
-  const {sides,drinks}=getOrderSelections(item,product);
-  const inferredExtras=[...sides,...drinks].reduce((sum,x)=>sum+Number(x.price||0),0);
-  const base=Number(item?.basePrice ?? product?.price ?? item?.price ?? item?.unitPrice ?? 0);
-  const savedExtras=Number(item?.extrasTotal);
-  const extras=(item?.extrasTotal!=null && savedExtras>0) ? savedExtras : inferredExtras;
-  const storedUnit=Number(item?.unitPrice ?? item?.price ?? item?.variantPrice ?? item?.variant_price ?? 0);
-  // Mevcut kayıt ana ürün fiyatı içeriyorsa seçenek fiyatlarını ekle; kayıt zaten
-  // seçenekleri içeriyorsa aynı tutarı ikinci kez eklememek için büyük olanı al.
-  const unitPrice=Math.max(storedUnit,base+extras);
-  const quantity=Math.max(1,Number(item?.quantity||1));
-  const computedLine=unitPrice*quantity;
-  const lineTotal=Math.max(Number(item?.lineTotal||0),computedLine);
-  return {basePrice:base,extrasTotal:extras,unitPrice,quantity,lineTotal,sides,drinks};
-}
-
 function openOrderProductDetailFromCard(card){
   const modal=document.getElementById("orderProductFullscreen");
 
@@ -2947,7 +3160,17 @@ function openOrderProductDetailFromCard(card){
       "";
 
     const quantity=Number(item.quantity||1);
-    const lineTotal=getOrderPriceBreakdown(item,product).lineTotal;
+
+    const lineTotal=
+      Number(item.lineTotal||0)>0
+        ? Number(item.lineTotal)
+        : Number(
+            item.variantPrice ??
+            item.variant_price ??
+            item.unitPrice ??
+            item.price ??
+            0
+          ) * quantity;
 
     openOrderProductDetail(
       productId,
@@ -3017,14 +3240,21 @@ function openOrderProductDetail(
     ? variants.map(v=>`${escapeHtml(v.variant_name||"-")}: ${money(v.price)}`).join("<br>")
     : "-";
 
-  const priceBreakdown=getOrderPriceBreakdown(orderItem||{},product);
-  const snapshotUnitPrice=priceBreakdown.unitPrice;
-  const selectionsText=[
-    ...(orderItem?.bread ? [`Ekmek: ${orderItem.bread}`] : []),
-    ...priceBreakdown.sides.map(x=>`Yan ürün: ${x.name} (+${money(x.price)})`),
-    ...priceBreakdown.drinks.map(x=>`İçecek: ${x.name} (+${money(x.price)})`)
-  ];
-  const priceText = money(snapshotUnitPrice);
+  const snapshotUnitPrice=
+    Number(
+      orderItem?.variantPrice ??
+      orderItem?.variant_price ??
+      orderItem?.unitPrice ??
+      orderItem?.price ??
+      0
+    );
+
+  const priceText = product
+    ? getAdminProductPriceText(product)
+    : money(snapshotUnitPrice);
+
+  const selectedFoodParts=getAdminFoodParts(orderItem||{});
+  const selectedFoodText=selectedFoodParts.join(" · ");
 
   if(grid){
     grid.innerHTML=`
@@ -3048,10 +3278,12 @@ function openOrderProductDetail(
         <div class="order-product-detail-value">${money(orderProductDetailItem.lineTotal)}</div>
       </div>
 
+      ${selectedFoodText?`
       <div class="order-product-detail-box full">
-        <div class="order-product-detail-label">Seçilen ek ürünler</div>
-        <div class="order-product-detail-value">${selectionsText.length ? selectionsText.map(escapeHtml).join("<br>") : "Ek ürün seçilmemiş."}</div>
+        <div class="order-product-detail-label">Siparişte seçilen yemek seçenekleri</div>
+        <div class="order-product-detail-value">${escapeHtml(selectedFoodText)}</div>
       </div>
+      `:""}
 
       <div class="order-product-detail-box full">
         <div class="order-product-detail-label">Ürün detayı</div>
@@ -3116,6 +3348,36 @@ document.addEventListener("keydown",event=>{
   openOrderProductDetailFromCard(card);
 });
 
+function adminFoodOptionLabel(option, kind){
+  if(!option?.name)return "";
+  const price=Number(option.price||0);
+  return `${kind}: ${option.name}${price>0?` (+${money(price)})`:" (Ücretsiz)"}`;
+}
+
+function getAdminFoodParts(item){
+  const food=item?.foodOptions||item?.food_options||{};
+  const parts=[];
+  if(food.bread?.name)parts.push(adminFoodOptionLabel(food.bread,"Ekmek"));
+  const sides=Array.isArray(food.sides)?food.sides:(Array.isArray(item?.sideSelections)?item.sideSelections:[]);
+  sides.forEach(x=>{const label=adminFoodOptionLabel(x,"Yan ürün");if(label)parts.push(label);});
+  const drinks=Array.isArray(food.drinks)?food.drinks:(food.drink?[food.drink]:(Array.isArray(item?.drinkSelections)?item.drinkSelections:[]));
+  drinks.forEach(x=>{const label=adminFoodOptionLabel(x,"İçecek");if(label)parts.push(label);});
+  // Eski siparişler yalnızca metin saklamış olabilir; en azından seçimi göster.
+  if(!parts.length){
+    if(item?.bread)parts.push(`Ekmek: ${item.bread}`);
+    if(item?.side)parts.push(`Yan ürün: ${item.side}`);
+    if(item?.drink)parts.push(`İçecek: ${item.drink}`);
+  }
+  return parts;
+}
+
+function getAdminOrderItemLineTotal(item){
+  const explicit=Number(item?.lineTotal);
+  if(Number.isFinite(explicit) && explicit>=0 && item?.lineTotal!==null && item?.lineTotal!==undefined && item?.lineTotal!=="")return explicit;
+  const unit=Number(item?.price ?? item?.unitPrice ?? item?.variantPrice ?? item?.variant_price ?? 0);
+  return unit * Number(item?.quantity||1);
+}
+
 function renderOrders(){
   document.querySelectorAll('input[id^="wa-code-"]').forEach(input=>{
     const id=input.id.replace("wa-code-","");
@@ -3162,13 +3424,9 @@ function renderOrders(){
         ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
       const variantText = i.variantName || i.variant_name || i.size || i.beden || i.variant || "";
-      const priceBreakdown=getOrderPriceBreakdown(i);
-      const optionLines=[
-        ...(i.bread ? [`Ekmek: ${i.bread}`] : []),
-        ...priceBreakdown.sides.map(x=>`Yan ürün: ${x.name} (+${money(x.price)})`),
-        ...priceBreakdown.drinks.map(x=>`İçecek: ${x.name} (+${money(x.price)})`)
-      ];
-      const itemPrice=priceBreakdown.lineTotal;
+      const foodParts=getAdminFoodParts(i);
+      const foodText=foodParts.join(" · ");
+      const itemPrice=getAdminOrderItemLineTotal(i);
 
       return `<div
         class="order-product-clickable"
@@ -3181,15 +3439,11 @@ function renderOrders(){
         ${visual}
         <div>
           <div><strong>${escapeHtml(i.name || "Ürün")}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong> × ${i.quantity}</div>
+          ${foodText?`<div class="muted" style="margin-top:3px">${escapeHtml(foodText)}</div>`:""}
           <div class="muted">${money(itemPrice)} · Detay için tıkla</div>
-          ${optionLines.length ? `<div class="muted" style="margin-top:3px">${optionLines.map(escapeHtml).join(" · ")}</div>` : ""}
         </div>
       </div>`;
     }).join("");
-    const orderItemsSubtotal=(order.items||[]).reduce((sum,i)=>sum+getOrderPriceBreakdown(i).lineTotal,0);
-    const displayedSubtotal=Number(order.subtotal||0)>orderItemsSubtotal?Number(order.subtotal):orderItemsSubtotal;
-    const displayedDiscount=Number(order.discount_amount||0);
-    const displayedTotal=orderItemsSubtotal>0?Math.max(0,orderItemsSubtotal-displayedDiscount):Number(order.total||0);
     const date=new Date(order.created_at).toLocaleString("tr-TR");
     const customerTitle=hideCustomerInfo
       ? '<span style="color:#777">🔒 Müşteri bilgileri gizli</span>'
@@ -3205,7 +3459,7 @@ function renderOrders(){
 
     return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${customerTitle}<div class="muted">${date}</div></div>${badge}</div>
       <div class="order-items">${items}</div>
-      <div><div><strong>Ara toplam: ${money(displayedSubtotal)}</strong></div>${displayedDiscount>0?`<div class="muted">İndirim: -${money(displayedDiscount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` · Kodlar: ${escapeHtml(order.coupon_codes.join(", "))}`:(order.coupon_code?` · Kod: ${escapeHtml(order.coupon_code)}`:"")}</div>`:""}<div><strong>Toplam ödeme: ${money(displayedTotal)}</strong></div></div>
+      <div><strong>Toplam: ${money(order.total)}</strong>${Number(order.discount_amount||0)>0?`<div class="muted">Ara toplam: ${money(order.subtotal||Number(order.total)+Number(order.discount_amount||0))} · İndirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` · Kodlar: ${escapeHtml(order.coupon_codes.join(", "))}`:(order.coupon_code?` · Kod: ${escapeHtml(order.coupon_code)}`:"")}</div>`:""}</div>
       ${customerDetail}
       <div class="actions" style="margin-top:12px">
         ${needsWhatsappVerification?`<input id="wa-code-${order.id}" maxlength="6" inputmode="numeric" placeholder="Güvenlik kodu" value="${escapeAttr(whatsappCodeDrafts.get(String(order.id))||"")}" oninput="whatsappCodeDrafts.set('${order.id}', this.value.replace(/\D/g,'').slice(0,6)); this.value=whatsappCodeDrafts.get('${order.id}')" style="max-width:150px;padding:9px;border:1px solid #ddd;border-radius:9px"><button class="btn btn-success" onclick="verifyWhatsappOrder(${order.id})">✓ Kodu Doğrula</button><button class="btn btn-danger" onclick="openRejectOrderModal(${order.id})">✕ Reddet</button>`:""}
@@ -3622,7 +3876,11 @@ function downloadOrderPdf(id){
     "İşletme"
   ).trim() || "İşletme";
   line(`${pdfBusinessName} - Siparis #${order.id}`,18,true); line(`Tarih: ${new Date(order.created_at).toLocaleString("tr-TR")}`); line(`Durum: ${order.status}`,11,true); y+=3;
-  line("Siparis Detaylari",14,true); (order.items||[]).forEach(i=>line(`${i.icon||""} ${i.name} x ${i.quantity} - ${money(i.lineTotal)}`));
+  line("Siparis Detaylari",14,true);
+  (order.items||[]).forEach(i=>{
+    line(`${i.icon||""} ${i.name} x ${i.quantity} - ${money(getAdminOrderItemLineTotal(i))}`);
+    getAdminFoodParts(i).forEach(part=>line(`  ${part}`,10));
+  });
   y+=3; const subtotal=Number(order.subtotal||Number(order.total||0)+Number(order.discount_amount||0)); line(`Ara Toplam: ${money(subtotal)}`,11,true);
   if(Number(order.discount_amount||0)>0){line(`Indirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` (Kodlar: ${order.coupon_codes.join(", ")})`:(order.coupon_code?` (Kod: ${order.coupon_code})`:"")}`);}
   line(`Odenecek Toplam: ${money(order.total)}`,13,true); y+=3;

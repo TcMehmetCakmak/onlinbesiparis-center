@@ -7355,22 +7355,42 @@ body{
             p_latitude: order.latitude,
             p_longitude: order.longitude,
             p_google_maps_url: order.googleMapsUrl || "",
-            p_items: order.items.map(item => ({
-                productId: item.productId,
-                variantId: item.variantId || null,
-                variantName: item.variantName || null,
-                bread: item.bread || null,
-                side: item.side || null,
-                drink: item.drink || null,
-                // price = seçenekler dahil gerçek birim fiyat
-                price: Number(item.price ?? item.basePrice ?? 0),
-                unitPrice: Number(item.price ?? item.basePrice ?? 0),
-                basePrice: Number(item.basePrice ?? item.price ?? 0),
-                extrasTotal: Number(item.extrasTotal || 0),
-                sideSelections: Array.isArray(item.sideSelections) ? item.sideSelections : [],
-                drinkSelections: Array.isArray(item.drinkSelections) ? item.drinkSelections : [],
-                quantity: Number(item.quantity)
-            })).filter(item => item.quantity > 0),
+            p_items: order.items.map(item => {
+                const product = products.find(p => String(p.id) === String(item.productId));
+                const isFood = currentBusinessIsFood();
+                const breadName = String(item.bread || "").trim();
+                const breadOption = (Array.isArray(product?.bread_options) ? product.bread_options : [])
+                    .find(option => String(option?.name || option || "").trim().toLocaleLowerCase("tr-TR") === breadName.toLocaleLowerCase("tr-TR"));
+                const sideSelections = Array.isArray(item.sideSelections)
+                    ? item.sideSelections
+                    : String(item.side || "").split(",").map(name => ({name: name.trim()})).filter(x => x.name);
+                const drinkSelections = Array.isArray(item.drinkSelections)
+                    ? item.drinkSelections
+                    : String(item.drink || "").split(",").map(name => ({name: name.trim()})).filter(x => x.name);
+                const foodOptions = isFood ? {
+                    bread: breadName ? {
+                        ...(breadOption && typeof breadOption === "object" ? breadOption : {}),
+                        name: breadName
+                    } : null,
+                    sides: sideSelections.map(option => ({name: String(option.name || option.label || option || "").trim()})).filter(x => x.name),
+                    // SQL RPC validates every selected drink and its price against products.drink_options.
+                    drinks: drinkSelections.map(option => ({name: String(option.name || option.label || option || "").trim()})).filter(x => x.name)
+                } : {};
+                return {
+                    productId: item.productId,
+                    variantId: item.variantId || null,
+                    variantName: item.variantName || null,
+                    bread: item.bread || null,
+                    side: item.side || null,
+                    drink: item.drink || null,
+                    basePrice: Number(item.basePrice ?? product?.price ?? item.price ?? 0),
+                    extrasTotal: Number(item.extrasTotal || 0),
+                    price: Number(item.price || 0),
+                    quantity: Number(item.quantity),
+                    businessType: isFood ? "food" : "ecommerce",
+                    foodOptions
+                };
+            }).filter(item => item.quantity > 0),
             p_coupon_codes: order.couponCodes || []
         };
     }
@@ -7536,9 +7556,9 @@ body{
             );
 
             const savedItems =
-                Array.isArray(order.items) && order.items.length
-                    ? order.items
-                    : (Array.isArray(data.items) ? data.items : []);
+                Array.isArray(data.items) && data.items.length
+                    ? data.items
+                    : (Array.isArray(order.items) ? order.items : []);
 
             const calculatedSubtotal = order.items.reduce((sum, item) => {
                 const product = products.find(
@@ -7550,16 +7570,14 @@ body{
                     Number(item.quantity || 0);
             }, 0);
 
-            // Sepetteki birim fiyat, ücretli yan ürün/içecekleri de içerir.
-            // Sunucu eski hesapla ana ürün fiyatı döndürse bile WhatsApp mesajında
-            // müşteri özetindeki doğru sepet toplamını kullan.
-            const savedSubtotal = calculatedSubtotal;
+            const savedSubtotal =
+                Number(data.subtotal || calculatedSubtotal || 0);
 
-            const savedDiscount = Number(
-                data.discount_amount ?? getPreviewDiscount(savedSubtotal) ?? 0
-            );
+            const savedDiscount =
+                Number(data.discount_amount || getPreviewDiscount(savedSubtotal) || 0);
 
-            const savedTotal = Math.max(0, savedSubtotal - savedDiscount);
+            const savedTotal =
+                Number(data.total || (savedSubtotal - savedDiscount) || 0);
 
             let message = `Merhaba, ben ${order.name}.
 
@@ -7581,24 +7599,26 @@ Sipariş vermek istiyorum:
                 );
 
                 const itemPrice = Number(
-                    item.price ??
-                    variant?.price ??
-                    product?.price ??
-                    0
+                    item.price ?? item.unitPrice ??
+                    variant?.price ?? product?.price ?? 0
                 );
+                const quantity = Number(item.quantity || 1);
+                const lineTotal = Number(item.lineTotal ?? (itemPrice * quantity));
+                message += `${quantity} adet ${item.name || product?.name}${variantText} - Birim: ${itemPrice.toLocaleString("tr-TR")} TL, Tutar: ${lineTotal.toLocaleString("tr-TR")} TL\n`;
 
-                const selectedSides = Array.isArray(item.sideSelections) ? item.sideSelections : [];
-                const selectedDrinks = Array.isArray(item.drinkSelections) ? item.drinkSelections : [];
-                const optionLines = [];
-                if (item.bread) optionLines.push(`  Ekmek: ${item.bread}`);
-                if (selectedSides.length) {
-                    optionLines.push(`  Yan ürün: ${selectedSides.map(x => `${x.name} (${Number(x.price || 0).toLocaleString("tr-TR")} TL)`).join(", ")}`);
-                } else if (item.side) optionLines.push(`  Yan ürün: ${item.side}`);
-                if (selectedDrinks.length) {
-                    optionLines.push(`  İçecek: ${selectedDrinks.map(x => `${x.name} (${Number(x.price || 0).toLocaleString("tr-TR")} TL)`).join(", ")}`);
-                } else if (item.drink) optionLines.push(`  İçecek: ${item.drink}`);
-                message += `${item.quantity} adet ${item.name || product?.name}${variantText} - ${(itemPrice * Number(item.quantity || 0)).toLocaleString("tr-TR")} TL
-${optionLines.length ? optionLines.join("\n") + "\n" : ""}`;
+                const foodOptions = item.foodOptions || item.food_options || {};
+                const bread = foodOptions.bread;
+                if (bread?.name) {
+                    message += `   • Ekmek: ${bread.name}${Number(bread.price || 0) > 0 ? ` (+${Number(bread.price).toLocaleString("tr-TR")} TL)` : ""}\n`;
+                }
+                const sides = Array.isArray(foodOptions.sides) ? foodOptions.sides : (Array.isArray(item.sideSelections) ? item.sideSelections : []);
+                sides.forEach(option => {
+                    if (option?.name) message += `   • Yan ürün: ${option.name}${Number(option.price || 0) > 0 ? ` (+${Number(option.price).toLocaleString("tr-TR")} TL)` : " (Ücretsiz)"}\n`;
+                });
+                const drinks = Array.isArray(foodOptions.drinks) ? foodOptions.drinks : (foodOptions.drink ? [foodOptions.drink] : (Array.isArray(item.drinkSelections) ? item.drinkSelections : []));
+                drinks.forEach(option => {
+                    if (option?.name) message += `   • İçecek: ${option.name}${Number(option.price || 0) > 0 ? ` (+${Number(option.price).toLocaleString("tr-TR")} TL)` : " (Ücretsiz)"}\n`;
+                });
             });
 
             message += `
