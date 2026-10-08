@@ -7368,10 +7368,9 @@ body{
                     ? item.drinkSelections
                     : String(item.drink || "").split(",").map(name => ({name: name.trim()})).filter(x => x.name);
                 const foodOptions = isFood ? {
-                    bread: breadName ? {
-                        ...(breadOption && typeof breadOption === "object" ? breadOption : {}),
-                        name: breadName
-                    } : null,
+                    // Yalnızca ekmek adını gönder: istemcideki eski/farklı option id'si
+                    // SQL doğrulamasında yanlış eşleşmeye neden olmasın. Fiyat DB'den alınır.
+                    bread: breadName ? { name: breadName } : null,
                     sides: sideSelections.map(option => ({name: String(option.name || option.label || option || "").trim()})).filter(x => x.name),
                     // SQL RPC validates every selected drink and its price against products.drink_options.
                     drinks: drinkSelections.map(option => ({name: String(option.name || option.label || option || "").trim()})).filter(x => x.name)
