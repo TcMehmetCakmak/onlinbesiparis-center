@@ -7362,7 +7362,13 @@ body{
                 bread: item.bread || null,
                 side: item.side || null,
                 drink: item.drink || null,
-                price: Number(item.price || 0),
+                // price = seçenekler dahil gerçek birim fiyat
+                price: Number(item.price ?? item.basePrice ?? 0),
+                unitPrice: Number(item.price ?? item.basePrice ?? 0),
+                basePrice: Number(item.basePrice ?? item.price ?? 0),
+                extrasTotal: Number(item.extrasTotal || 0),
+                sideSelections: Array.isArray(item.sideSelections) ? item.sideSelections : [],
+                drinkSelections: Array.isArray(item.drinkSelections) ? item.drinkSelections : [],
                 quantity: Number(item.quantity)
             })).filter(item => item.quantity > 0),
             p_coupon_codes: order.couponCodes || []
@@ -7544,14 +7550,16 @@ body{
                     Number(item.quantity || 0);
             }, 0);
 
-            const savedSubtotal =
-                Number(data.subtotal || calculatedSubtotal || 0);
+            // Sepetteki birim fiyat, ücretli yan ürün/içecekleri de içerir.
+            // Sunucu eski hesapla ana ürün fiyatı döndürse bile WhatsApp mesajında
+            // müşteri özetindeki doğru sepet toplamını kullan.
+            const savedSubtotal = calculatedSubtotal;
 
-            const savedDiscount =
-                Number(data.discount_amount || getPreviewDiscount(savedSubtotal) || 0);
+            const savedDiscount = Number(
+                data.discount_amount ?? getPreviewDiscount(savedSubtotal) ?? 0
+            );
 
-            const savedTotal =
-                Number(data.total || (savedSubtotal - savedDiscount) || 0);
+            const savedTotal = Math.max(0, savedSubtotal - savedDiscount);
 
             let message = `Merhaba, ben ${order.name}.
 
@@ -7579,8 +7587,18 @@ Sipariş vermek istiyorum:
                     0
                 );
 
-                message += `${item.quantity} adet ${item.name || product?.name}${variantText} - ${itemPrice.toLocaleString("tr-TR")} TL
-`;
+                const selectedSides = Array.isArray(item.sideSelections) ? item.sideSelections : [];
+                const selectedDrinks = Array.isArray(item.drinkSelections) ? item.drinkSelections : [];
+                const optionLines = [];
+                if (item.bread) optionLines.push(`  Ekmek: ${item.bread}`);
+                if (selectedSides.length) {
+                    optionLines.push(`  Yan ürün: ${selectedSides.map(x => `${x.name} (${Number(x.price || 0).toLocaleString("tr-TR")} TL)`).join(", ")}`);
+                } else if (item.side) optionLines.push(`  Yan ürün: ${item.side}`);
+                if (selectedDrinks.length) {
+                    optionLines.push(`  İçecek: ${selectedDrinks.map(x => `${x.name} (${Number(x.price || 0).toLocaleString("tr-TR")} TL)`).join(", ")}`);
+                } else if (item.drink) optionLines.push(`  İçecek: ${item.drink}`);
+                message += `${item.quantity} adet ${item.name || product?.name}${variantText} - ${(itemPrice * Number(item.quantity || 0)).toLocaleString("tr-TR")} TL
+${optionLines.length ? optionLines.join("\n") + "\n" : ""}`;
             });
 
             message += `
