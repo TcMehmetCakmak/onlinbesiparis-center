@@ -2872,6 +2872,44 @@ function findOrderProduct(orderItem){
   return product || null;
 }
 
+// Sipariş RPC'si bazı sürümlerde seçenekleri dizi yerine yalnızca side/drink metni
+// olarak kaydedebiliyor. Admin ekranında ürün tanımındaki fiyatlarla eşleştir.
+function getOrderSelections(item, product=findOrderProduct(item)){
+  const resolve=(arrayValue, textValue, optionDefinitions)=>{
+    const definitions=normalizePricedOptionList(optionDefinitions);
+    if(Array.isArray(arrayValue) && arrayValue.length){
+      return arrayValue.map(x=>{
+        const name=String(x?.name||x?.label||x||"").trim();
+        const found=definitions.find(o=>o.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr"));
+        return name ? {name,price:Number(x?.price ?? found?.price ?? 0)} : null;
+      }).filter(Boolean);
+    }
+    return String(textValue||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean).map(name=>{
+      const found=definitions.find(o=>o.name.toLocaleLowerCase("tr")===name.toLocaleLowerCase("tr"));
+      return {name,price:Number(found?.price||0)};
+    });
+  };
+  return {
+    sides:resolve(item?.sideSelections,item?.side,product?.side_options),
+    drinks:resolve(item?.drinkSelections,item?.drink,product?.drink_options)
+  };
+}
+function getOrderPriceBreakdown(item, product=findOrderProduct(item)){
+  const {sides,drinks}=getOrderSelections(item,product);
+  const inferredExtras=[...sides,...drinks].reduce((sum,x)=>sum+Number(x.price||0),0);
+  const base=Number(item?.basePrice ?? product?.price ?? item?.price ?? item?.unitPrice ?? 0);
+  const savedExtras=Number(item?.extrasTotal);
+  const extras=(item?.extrasTotal!=null && savedExtras>0) ? savedExtras : inferredExtras;
+  const storedUnit=Number(item?.unitPrice ?? item?.price ?? item?.variantPrice ?? item?.variant_price ?? 0);
+  // Mevcut kayıt ana ürün fiyatı içeriyorsa seçenek fiyatlarını ekle; kayıt zaten
+  // seçenekleri içeriyorsa aynı tutarı ikinci kez eklememek için büyük olanı al.
+  const unitPrice=Math.max(storedUnit,base+extras);
+  const quantity=Math.max(1,Number(item?.quantity||1));
+  const computedLine=unitPrice*quantity;
+  const lineTotal=Math.max(Number(item?.lineTotal||0),computedLine);
+  return {basePrice:base,extrasTotal:extras,unitPrice,quantity,lineTotal,sides,drinks};
+}
+
 function openOrderProductDetailFromCard(card){
   const modal=document.getElementById("orderProductFullscreen");
 
@@ -2909,17 +2947,7 @@ function openOrderProductDetailFromCard(card){
       "";
 
     const quantity=Number(item.quantity||1);
-
-    const lineTotal=
-      Number(item.lineTotal||0)>0
-        ? Number(item.lineTotal)
-        : Number(
-            item.variantPrice ??
-            item.variant_price ??
-            item.unitPrice ??
-            item.price ??
-            0
-          ) * quantity;
+    const lineTotal=getOrderPriceBreakdown(item,product).lineTotal;
 
     openOrderProductDetail(
       productId,
@@ -2989,18 +3017,14 @@ function openOrderProductDetail(
     ? variants.map(v=>`${escapeHtml(v.variant_name||"-")}: ${money(v.price)}`).join("<br>")
     : "-";
 
-  const snapshotUnitPrice=
-    Number(
-      orderItem?.variantPrice ??
-      orderItem?.variant_price ??
-      orderItem?.unitPrice ??
-      orderItem?.price ??
-      0
-    );
-
-  const priceText = product
-    ? getAdminProductPriceText(product)
-    : money(snapshotUnitPrice);
+  const priceBreakdown=getOrderPriceBreakdown(orderItem||{},product);
+  const snapshotUnitPrice=priceBreakdown.unitPrice;
+  const selectionsText=[
+    ...(orderItem?.bread ? [`Ekmek: ${orderItem.bread}`] : []),
+    ...priceBreakdown.sides.map(x=>`Yan ürün: ${x.name} (+${money(x.price)})`),
+    ...priceBreakdown.drinks.map(x=>`İçecek: ${x.name} (+${money(x.price)})`)
+  ];
+  const priceText = money(snapshotUnitPrice);
 
   if(grid){
     grid.innerHTML=`
@@ -3022,6 +3046,11 @@ function openOrderProductDetail(
       <div class="order-product-detail-box">
         <div class="order-product-detail-label">Sipariş satır toplamı</div>
         <div class="order-product-detail-value">${money(orderProductDetailItem.lineTotal)}</div>
+      </div>
+
+      <div class="order-product-detail-box full">
+        <div class="order-product-detail-label">Seçilen ek ürünler</div>
+        <div class="order-product-detail-value">${selectionsText.length ? selectionsText.map(escapeHtml).join("<br>") : "Ek ürün seçilmemiş."}</div>
       </div>
 
       <div class="order-product-detail-box full">
@@ -3133,18 +3162,13 @@ function renderOrders(){
         ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
       const variantText = i.variantName || i.variant_name || i.size || i.beden || i.variant || "";
-      const optionSelections = [
-        ...(Array.isArray(i.sideSelections) ? i.sideSelections : []),
-        ...(Array.isArray(i.drinkSelections) ? i.drinkSelections : [])
+      const priceBreakdown=getOrderPriceBreakdown(i);
+      const optionLines=[
+        ...(i.bread ? [`Ekmek: ${i.bread}`] : []),
+        ...priceBreakdown.sides.map(x=>`Yan ürün: ${x.name} (+${money(x.price)})`),
+        ...priceBreakdown.drinks.map(x=>`İçecek: ${x.name} (+${money(x.price)})`)
       ];
-      const optionPrice = optionSelections.reduce((sum, option) => sum + Number(option.price || 0), 0);
-      const storedUnitPrice = Number(i.unitPrice ?? i.price ?? i.variantPrice ?? i.variant_price ?? 0);
-      const computedUnitPrice = i.basePrice != null
-        ? Number(i.basePrice || 0) + Number(i.extrasTotal ?? optionPrice ?? 0)
-        : (storedUnitPrice + ((optionSelections.length && i.extrasTotal == null && i.basePrice == null) ? optionPrice : 0));
-      const itemPrice = Number(i.lineTotal || 0) > 0
-        ? Number(i.lineTotal)
-        : computedUnitPrice * Number(i.quantity || 1);
+      const itemPrice=priceBreakdown.lineTotal;
 
       return `<div
         class="order-product-clickable"
@@ -3158,17 +3182,11 @@ function renderOrders(){
         <div>
           <div><strong>${escapeHtml(i.name || "Ürün")}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong> × ${i.quantity}</div>
           <div class="muted">${money(itemPrice)} · Detay için tıkla</div>
+          ${optionLines.length ? `<div class="muted" style="margin-top:3px">${optionLines.map(escapeHtml).join(" · ")}</div>` : ""}
         </div>
       </div>`;
     }).join("");
-    const orderItemsSubtotal=(order.items||[]).reduce((sum,i)=>{
-      const selections=[...(Array.isArray(i.sideSelections)?i.sideSelections:[]),...(Array.isArray(i.drinkSelections)?i.drinkSelections:[])];
-      const selectionsTotal=selections.reduce((n,x)=>n+Number(x.price||0),0);
-      const unit= i.basePrice!=null
-        ? Number(i.basePrice||0)+Number(i.extrasTotal ?? selectionsTotal)
-        : Number(i.unitPrice ?? i.price ?? i.variantPrice ?? i.variant_price ?? 0) + ((selections.length && i.extrasTotal==null && i.basePrice==null)?selectionsTotal:0);
-      return sum+(Number(i.lineTotal||0)>0?Number(i.lineTotal):unit*Number(i.quantity||1));
-    },0);
+    const orderItemsSubtotal=(order.items||[]).reduce((sum,i)=>sum+getOrderPriceBreakdown(i).lineTotal,0);
     const displayedSubtotal=Number(order.subtotal||0)>orderItemsSubtotal?Number(order.subtotal):orderItemsSubtotal;
     const displayedDiscount=Number(order.discount_amount||0);
     const displayedTotal=orderItemsSubtotal>0?Math.max(0,orderItemsSubtotal-displayedDiscount):Number(order.total||0);
