@@ -9369,7 +9369,7 @@ function getFoodExtrasTotal(){
 }
 function updateFoodDetailPrice(){
   if(!currentBusinessIsFood() || !detailProduct)return;
-  const unitTotal=Number(detailProduct.price||0)+getFoodExtrasTotal();
+  const unitTotal=getFoodProductBasePrice(detailProduct,detailSelectedVariant)+getFoodExtrasTotal();
   const priceText=`${unitTotal.toLocaleString("tr-TR")} TL`;
   const detailPrice=document.getElementById("detailPrice");
   const footerPrice=document.getElementById("foodFooterPrice");
@@ -9386,26 +9386,47 @@ function changeFoodDetailQuantity(amount){
 function getFoodSelectionKey(selection){
   const sides=(selection.sideSelections||[]).map(x=>`${x.name}:${Number(x.price||0)}`).sort().join(";");
   const drinks=(selection.drinkSelections||[]).map(x=>`${x.name}:${Number(x.price||0)}`).sort().join(";");
-  return [selection.bread||"",sides,drinks].join("||");
+  return [selection.variantId||"",selection.bread||"",sides,drinks].join("||");
 }
-function addFoodProductToCart(product,quantity,selection){
-  const selectionKey=getFoodSelectionKey(selection);
+function getFoodProductBasePrice(product,variantId=detailSelectedVariant){
+  const variants=Array.isArray(product?.variants)?product.variants:[];
+  if(String(product?.product_type||"").toUpperCase()==="SIZE" && variants.length){
+    const selected=variants.find(v=>String(v.id)===String(variantId||""));
+    if(selected && Number.isFinite(Number(selected.price))) return Number(selected.price);
+    const prices=variants.map(v=>Number(v.price)).filter(Number.isFinite);
+    return prices.length?Math.min(...prices):0;
+  }
+  const price=Number(product?.price??0);
+  return Number.isFinite(price)?price:0;
+}
+function addFoodProductToCart(product,quantity,selection,variantId=null){
+  const variant=(product.variants||[]).find(v=>String(v.id)===String(variantId||""));
+  if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !variant){
+    alert("Lütfen beden seçiniz.");
+    return;
+  }
+  const variantName=variant?.variant_name||null;
+  const basePrice=getFoodProductBasePrice(product,variantId);
+  const selectionWithVariant={...selection,variantId:variantId||""};
+  const selectionKey=getFoodSelectionKey(selectionWithVariant);
   const extrasTotal=[...(selection.sideSelections||[]),...(selection.drinkSelections||[])].reduce((sum,x)=>sum+Number(x.price||0),0);
-  const unitPrice=Number(product.price||0)+extrasTotal;
-  let item=order.items.find(x=>String(x.productId)===String(product.id)&&String(x.selectionKey||"")===selectionKey&&!x.variantId);
+  const unitPrice=basePrice+extrasTotal;
+  let item=order.items.find(x=>String(x.productId)===String(product.id)&&String(x.selectionKey||"")===selectionKey&&String(x.variantId||"")===String(variantId||""));
   if(!item){
     item={
-      cartItemId:crypto.randomUUID(),productId:product.id,name:product.name,icon:product.icon||"",variantId:null,variantName:null,
-      basePrice:Number(product.price||0),extrasTotal,price:unitPrice,quantity:0,selectionKey,bread:selection.bread||null,
+      cartItemId:crypto.randomUUID(),productId:product.id,name:product.name,icon:product.icon||"",variantId:variantId||null,variantName,
+      basePrice,extrasTotal,price:unitPrice,quantity:0,selectionKey,bread:selection.bread||null,
       side:(selection.sideSelections||[]).map(x=>x.name).join(", ")||null,
       drink:(selection.drinkSelections||[]).map(x=>x.name).join(", ")||null,
       sideSelections:selection.sideSelections||[],drinkSelections:selection.drinkSelections||[]
     };
     order.items.push(item);
   }else{
-    item.basePrice=Number(product.price||0);
+    item.basePrice=basePrice;
     item.extrasTotal=extrasTotal;
     item.price=unitPrice;
+    item.variantId=variantId||null;
+    item.variantName=variantName;
   }
   item.quantity+=Number(quantity||1);
   calculateTotal();saveOrder();updateCartUi();renderCartProducts();
@@ -9465,7 +9486,7 @@ function openProductDetail(productId){
       <span>${v.variant_name}</span>
       <span>${Number(v.price).toLocaleString("tr-TR")} TL
       <input type="radio" name="detailVariant"
-       onchange="detailSelectedVariant='${v.id}'"></span>
+       onchange="detailSelectedVariant='${v.id}';updateFoodDetailPrice()"></span>
     </label>`).join("");
  }else{
    area.innerHTML="";
@@ -9518,7 +9539,11 @@ function openProductDetail(productId){
      sideSelections:getFoodCheckedSelections("side"),
      drinkSelections:getFoodCheckedSelections("drink")
    };
-   addFoodProductToCart(product,1,selection);
+   if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !detailSelectedVariant){
+     alert("Lütfen beden seçiniz.");
+     return;
+   }
+   addFoodProductToCart(product,foodDetailQuantity,selection,detailSelectedVariant);
    closeProductDetail();
  };
 
