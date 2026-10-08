@@ -7603,7 +7603,7 @@ Sipariş vermek istiyorum:
                 );
                 const quantity = Number(item.quantity || 1);
                 const lineTotal = Number(item.lineTotal ?? (itemPrice * quantity));
-                message += `${quantity} adet ${item.name || product?.name}${variantText} - Birim: ${itemPrice.toLocaleString("tr-TR")} TL, Tutar: ${lineTotal.toLocaleString("tr-TR")} TL\n`;
+                message += `${quantity} adet ${item.name || product?.name}${variantText}\n`;
 
                 const foodOptions = item.foodOptions || item.food_options || {};
                 const bread = foodOptions.bread;
