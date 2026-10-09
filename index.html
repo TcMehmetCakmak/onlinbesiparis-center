@@ -10076,15 +10076,13 @@ setInterval(()=>{
             var videoSrc = isFood ? "medya/musteri.mp4" : "medya/musteri-e-ticaret.mp4";
             
             var sourceEl = player.querySelector("source");
-            if (sourceEl.getAttribute("src") !== videoSrc) {
+            if (sourceEl && sourceEl.getAttribute("src") !== videoSrc) {
                 sourceEl.setAttribute("src", videoSrc);
                 player.load();
             }
 
             document.getElementById("promoVideoModal").classList.remove("hidden");
             player.play().catch(function(e){ console.log("Oynatma başlatılamadı", e); });
-        }
-    });
         }
     }
     function closePromoVideoModal() {
