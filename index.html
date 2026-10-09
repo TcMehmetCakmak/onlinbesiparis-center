@@ -5023,7 +5023,7 @@ body{
                 if(rating){
                     const star = document.createElement("div");
                     star.className = "product-card-rating-v29";
-                    star.textContent = `★★★★★ ${rating.avg} (${rating.count})`;
+                    star.textContent = `${getReviewStars(Math.round(rating.avg))} ${rating.avg} (${rating.count})`;
                     info.appendChild(star);
                 }
 
