@@ -4557,23 +4557,25 @@ function renderProductVariantRows(){
     function openPromoVideoModal() {
         var player = document.getElementById('promoVideoPlayer');
         if (player) {
-            var sourceEl = player.querySelector("source");
-            if (sourceEl) {
-                sourceEl.setAttribute("src", "medya/admin.mp4");
-                player.load();
-            }
-
             document.getElementById("promoVideoModal").classList.remove("hidden");
             
-            // Bekleyerek başlat (Tarayıcının yüklemesine zaman tanı)
+            // Doğrudan video nesnesine src veriyoruz (kaynak hatasını yakalayabilmek için)
+            player.src = "medya/admin.mp4";
+            
+            player.onerror = function(e) {
+                alert("Video dosyası bulunamadı veya yüklenemedi. Yol: " + player.currentSrc);
+            };
+
+            player.load();
+
             setTimeout(function() {
                 var playPromise = player.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(function(e) {
-                        console.log("Otomotik oynatma engellendi. Kullanıcı manuel play'e basmalı.", e);
+                        console.log("Otomatik oynatma başarısız: ", e);
                     });
                 }
-            }, 100);
+            }, 150);
         }
     }
     function closePromoVideoModal() {
