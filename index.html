@@ -3153,6 +3153,12 @@ body{
                         class="header-nav-button"
                         onclick="installPwaApp()"
                     >📲 Uygulamayı Yükle</button>
+                    <button
+                        id="promoVideoButton"
+                        type="button"
+                        class="header-nav-button"
+                        onclick="openPromoVideoModal()"
+                    >🎬 Tanıtım Videosu</button>
 
                     <button
                         id="franchiseButton"
@@ -10048,6 +10054,37 @@ setInterval(()=>{
   </div>
 </div>
 
+  <!-- TANITIM VİDEOSU MODALI -->
+  <div id="promoVideoModal" class="verify-modal hidden" style="z-index: 10000;">
+    <div class="verify-modal-card" style="max-width: 800px; padding: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 10px; margin-top: 5px;">
+        <h2 style="margin: 0; font-size: 20px;">Tanıtım Videosu</h2>
+        <button type="button" onclick="closePromoVideoModal()" style="background: transparent; border: none; font-size: 28px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
+      </div>
+      <video id="promoVideoPlayer" controls playsinline style="width: 100%; border-radius: 12px; display: block; background: #000;">
+        <source src="medya/musteri.mp4" type="video/mp4">
+        Tarayıcınız video etiketini desteklemiyor.
+      </video>
+    </div>
+  </div>
+
+  <script>
+    function openPromoVideoModal() {
+        document.getElementById('promoVideoModal').classList.remove('hidden');
+        var player = document.getElementById('promoVideoPlayer');
+        if (player) {
+            player.play().catch(function(e){ console.log('Oynatma başlatılamadı', e); });
+        }
+    }
+    function closePromoVideoModal() {
+        document.getElementById('promoVideoModal').classList.add('hidden');
+        var player = document.getElementById('promoVideoPlayer');
+        if (player) {
+            player.pause();
+            player.currentTime = 0;
+        }
+    }
+  </script>
 </body>
 
 
