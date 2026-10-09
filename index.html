@@ -10073,7 +10073,7 @@ setInterval(()=>{
         var player = document.getElementById('promoVideoPlayer');
         if (player) {
             var isFood = typeof currentBusinessIsFood === "function" ? currentBusinessIsFood() : false;
-            var videoSrc = isFood ? "medya/musteri.mp4" : "medya/musteri-e-ticaret.mp4";
+            var videoSrc = isFood ? "medya/musteri-e-ticaret.mp4" : "medya/musteri.mp4";
             
             var sourceEl = player.querySelector("source");
             if (sourceEl && sourceEl.getAttribute("src") !== videoSrc) {
