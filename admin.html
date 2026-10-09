@@ -4547,7 +4547,7 @@ function renderProductVariantRows(){
         <button type="button" onclick="closePromoVideoModal()" style="background: transparent; border: none; font-size: 28px; cursor: pointer; line-height: 1; padding: 10px;">&times;</button>
       </div>
       <video id="promoVideoPlayer" controls playsinline style="width: 100%; border-radius: 12px; display: block; background: #000;">
-        <source src="medya/admin.mp4" type="video/mp4">
+        <source src="medya/Admin.mp4" type="video/mp4">
         Tarayıcınız video etiketini desteklemiyor.
       </video>
     </div>
@@ -4560,7 +4560,7 @@ function renderProductVariantRows(){
             document.getElementById("promoVideoModal").classList.remove("hidden");
             
             // Doğrudan video nesnesine src veriyoruz (kaynak hatasını yakalayabilmek için)
-            player.src = "medya/admin.mp4";
+            player.src = "medya/Admin.mp4";
             
             player.onerror = function(e) {
                 alert("Video dosyası bulunamadı veya yüklenemedi. Yol: " + player.currentSrc);
