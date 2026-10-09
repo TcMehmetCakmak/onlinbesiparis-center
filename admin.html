@@ -4555,19 +4555,25 @@ function renderProductVariantRows(){
 
   <script>
     function openPromoVideoModal() {
-        try {
-            var modal = document.getElementById('promoVideoModal');
-            if(modal) modal.classList.remove('hidden');
+        var player = document.getElementById('promoVideoPlayer');
+        if (player) {
+            var sourceEl = player.querySelector("source");
+            if (sourceEl) {
+                sourceEl.setAttribute("src", "medya/admin.mp4");
+                player.load();
+            }
+
+            document.getElementById("promoVideoModal").classList.remove("hidden");
             
-            var player = document.getElementById('promoVideoPlayer');
-            if (player && typeof player.play === 'function') {
+            // Bekleyerek başlat (Tarayıcının yüklemesine zaman tanı)
+            setTimeout(function() {
                 var playPromise = player.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(function(e){ console.log('Oynatma başlatılamadı', e); });
+                    playPromise.catch(function(e) {
+                        console.log("Otomotik oynatma engellendi. Kullanıcı manuel play'e basmalı.", e);
+                    });
                 }
-            }
-        } catch(err) {
-            alert("Video açılırken bir hata oluştu: " + err.message);
+            }, 100);
         }
     }
     function closePromoVideoModal() {
