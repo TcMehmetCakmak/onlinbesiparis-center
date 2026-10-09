@@ -604,6 +604,7 @@ body.modal-open{
       <div class="muted">Müşteri sayfasında görüntülenen ürünler ve siparişler yönetim paneli üzerinden yönetilir.</div>
     </div>
     <div class="header-actions">
+      <button class="btn btn-primary" onclick="openPromoVideoModal()">🎬 Tanıtım Videosu</button>
       <a id="tenantCustomerLink" class="btn btn-light" href="#" target="_blank">Müşteri Sayfası</a>
       <button class="btn btn-dark" onclick="logout()">Çıkış</button>
     </div>
@@ -4538,5 +4539,37 @@ function renderProductVariantRows(){
  </div>`).join("");
 }
 </script>
+
+  <div id="promoVideoModal" class="modal hidden" style="z-index: 10000;">
+    <div class="modal-card" style="max-width: 800px; padding: 10px; background: transparent; box-shadow: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 10px; margin-top: 5px; background: white; border-radius: 8px;">
+        <h2 style="margin: 0; font-size: 20px; padding: 10px;">Tanıtım Videosu</h2>
+        <button type="button" onclick="closePromoVideoModal()" style="background: transparent; border: none; font-size: 28px; cursor: pointer; line-height: 1; padding: 10px;">&times;</button>
+      </div>
+      <video id="promoVideoPlayer" controls playsinline style="width: 100%; border-radius: 12px; display: block; background: #000;">
+        <source src="medya/admin.mp4" type="video/mp4">
+        Tarayıcınız video etiketini desteklemiyor.
+      </video>
+    </div>
+  </div>
+
+  <script>
+    function openPromoVideoModal() {
+        var player = document.getElementById('promoVideoPlayer');
+        if (player) {
+            document.getElementById('promoVideoModal').classList.remove('hidden');
+            player.play().catch(function(e){ console.log('Oynatma başlatılamadı', e); });
+        }
+    }
+    function closePromoVideoModal() {
+        document.getElementById('promoVideoModal').classList.add('hidden');
+        var player = document.getElementById('promoVideoPlayer');
+        if (player) {
+            player.pause();
+            player.currentTime = 0;
+        }
+    }
+  </script>
 </body>
+
 </html>
