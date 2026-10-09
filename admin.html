@@ -4555,10 +4555,19 @@ function renderProductVariantRows(){
 
   <script>
     function openPromoVideoModal() {
-        var player = document.getElementById('promoVideoPlayer');
-        if (player) {
-            document.getElementById('promoVideoModal').classList.remove('hidden');
-            player.play().catch(function(e){ console.log('Oynatma başlatılamadı', e); });
+        try {
+            var modal = document.getElementById('promoVideoModal');
+            if(modal) modal.classList.remove('hidden');
+            
+            var player = document.getElementById('promoVideoPlayer');
+            if (player && typeof player.play === 'function') {
+                var playPromise = player.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(function(e){ console.log('Oynatma başlatılamadı', e); });
+                }
+            }
+        } catch(err) {
+            alert("Video açılırken bir hata oluştu: " + err.message);
         }
     }
     function closePromoVideoModal() {
