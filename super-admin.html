@@ -378,10 +378,12 @@ function renderPackageRequests() {
   const el = document.getElementById('packageList');
   if(!el) return;
   if(!packageRequests.length) { el.innerHTML = '<div class="empty">Paket talebi yok.</div>'; return; }
+  const PACKAGE_NAMES = {1: 'Başlangıç (10 Ürün)', 2: 'Pro (100 Ürün)', 3: 'Premium (250 Ürün)', 4: 'Elite (500 Ürün)', 5: 'Ultimate (1000 Ürün)'};
   el.innerHTML = packageRequests.map(r => {
     const b = businesses.find(x => x.id === r.business_id);
     const shopName = b ? b.shop_name : 'Bilinmeyen İşletme';
-    return `<div class="request"><div class="business-head"><div><strong>${esc(shopName)}</strong><div class="muted">${dateTimeTR(r.created_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Talep Edilen Paket Seviyesi:</span> <strong>Tier ${r.requested_tier}</strong></div>${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approvePackage(${r.id}, '${r.business_id}', ${r.requested_tier})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectPackage(${r.id})">✕ Reddet</button></div>`:``}</div>`;
+    const pkgName = PACKAGE_NAMES[r.requested_tier] || 'Tier ' + r.requested_tier;
+    return `<div class="request"><div class="business-head"><div><strong>${esc(shopName)}</strong><div class="muted">${dateTimeTR(r.created_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Talep Edilen Paket Seviyesi:</span> <strong>${pkgName}</strong></div>${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approvePackage(${r.id}, '${r.business_id}', ${r.requested_tier})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectPackage(${r.id})">✕ Reddet</button></div>`:``}</div>`;
   }).join('');
 }
 async function approvePackage(id, businessId, tier) {
