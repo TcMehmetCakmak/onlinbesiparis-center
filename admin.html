@@ -1252,7 +1252,7 @@ let appSettings = {
   shop_icon:"",
   background_color:"#f5f5f5",
   phone:"",
-  payment_cash_enabled:true,
+  payment_cash_enabled:false,
   payment_card_enabled:false,
   payment_transfer_enabled:undefined
 };
@@ -1815,7 +1815,7 @@ async function loadAdminSettings(){
     if(instagramLabel)instagramLabel.value=appSettings.instagram_label||"";
 
     if(paymentCash){
-      paymentCash.checked=appSettings.payment_cash_enabled!==false;
+      paymentCash.checked=appSettings.payment_cash_enabled===true;
     }
     if(paymentCard){
       paymentCard.checked=appSettings.payment_card_enabled===true;
