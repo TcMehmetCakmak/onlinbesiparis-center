@@ -619,13 +619,13 @@ body.modal-open{
   </div>
 
   <div class="tabs">
-    <button id="productsTabButton" class="tab active" onclick="showTab('products',this)">📦 Ürünler</button>
+    <button id="productsTabButton" class="tab active" onclick="showTab('products',this)">📦 Ürünler <span id="productTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler <span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
     <button class="tab" onclick="showTab('advertisements',this)">📣 Reklamlar</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️ Genel Ayarlar</button>
-    <button class="tab" onclick="showTab('subscription',this)">📦 Paket ve Abonelik <span id="subscriptionUsageBadge" class="badge" style="margin-left:5px;display:none;"></span></button>
+    <button class="tab" onclick="showTab('subscription',this)">♛ Abonelik Paketi <span id="subscriptionUsageBadge" class="badge" style="margin-left:5px;display:none;"></span></button>
     <button class="tab" onclick="showTab('support',this)">🛠️ Talepler <span id="supportPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('productQuestions',this)">❓ Ürün Soruları <span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
   </div>
@@ -810,7 +810,7 @@ body.modal-open{
     <div class="card">
       <div class="header">
         <div>
-          <h2>📦 Paket ve Abonelik</h2>
+          <h2>♛ Abonelik Paketi</h2>
           <div class="muted">Güncel paketinizi aşağıdan görebilir ve yeni paket talebinde bulunabilirsiniz. Ürün limitinizi aşmanız durumunda yeni ürün yükleyemezsiniz.</div>
         </div>
       </div>
@@ -2244,8 +2244,10 @@ function showTab(name,button){
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
   document.getElementById("advertisementsTab").classList.toggle("hidden",name!=="advertisements");
   document.getElementById("settingsTab").classList.toggle("hidden",name!=="settings");
+  document.getElementById("subscriptionTab").classList.toggle("hidden",name!=="subscription");
   document.getElementById("supportTab").classList.toggle("hidden",name!=="support");
   if(name==="support")loadSupportTickets();
+  if(name==="subscription")loadSubscription();
   if(name==="productQuestions")loadAdminProductQuestions();
   if(name==="advertisements")loadAdminAdvertisements();
   if(name==="medicineRequests")loadMedicineRequests();
@@ -2531,6 +2533,11 @@ function updateSubscriptionBadge() {
 
 function renderProducts(){
   updateSubscriptionBadge();
+  const countBadge = document.getElementById("productTotalCount");
+  if(countBadge) {
+    countBadge.textContent = products.length.toString();
+    countBadge.classList.toggle("hidden", products.length === 0);
+  }
   const el=document.getElementById("productList");
   if(!products.length){
     el.innerHTML='<div class="empty">Henüz ürün yok.</div>';
