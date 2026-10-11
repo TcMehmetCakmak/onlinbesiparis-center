@@ -2307,7 +2307,9 @@ async function confirmMedicineInform(){
 
 function productImagePublicUrl(storagePath){
   if(!storagePath)return "";
-  if(storagePath.startsWith("http")) return storagePath;
+  if(storagePath.startsWith("http")) {
+      return storagePath.replace("pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev", "image-uploader.tc-mehmetcakmak.workers.dev");
+  }
   const {data}=supabaseClient.storage.from("product-images").getPublicUrl(storagePath);
   return data?.publicUrl||"";
 }
@@ -2853,10 +2855,12 @@ async function uploadPendingProductImages(productId){
     });
     
     if (!r2Response.ok) {
-        throw new Error("Cloudflare R2 yükleme hatası!");
+        const errText = await r2Response.text();
+        console.error("R2 Upload Error Details:", errText);
+        throw new Error(`Cloudflare R2 yükleme hatası! Detay: ${errText}`);
     }
 
-    const fullUrl = `https://pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev/${objectPath}`;
+    const fullUrl = `https://image-uploader.tc-mehmetcakmak.workers.dev/${objectPath}`;
 
     const {data:inserted,error:insertError}=await supabaseClient.from("product_images")
       .insert({
@@ -3053,6 +3057,7 @@ function getProductMainImageUrl(productId){
   const images=Array.isArray(product.images)?product.images:[];
   const main=images.find(img=>img.is_main)||images[0];
   if(!main?.storage_path)return "";
+  if(main.storage_path.startsWith("http")) return main.storage_path;
   const {data}=supabaseClient.storage
     .from("product-images")
     .getPublicUrl(main.storage_path);
@@ -3896,7 +3901,10 @@ function downloadOrderPdf(id){
 
 function advertisementImagePublicUrl(storagePath){
   if(!storagePath)return "";
-  if(storagePath.startsWith("http")) return storagePath;
+  if(!storagePath)return "";
+  if(storagePath.startsWith("http")) {
+      return storagePath.replace("pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev", "image-uploader.tc-mehmetcakmak.workers.dev");
+  }
   const {data}=supabaseClient.storage.from("advertisement-images").getPublicUrl(storagePath);
   return data?.publicUrl||"";
 }
@@ -4112,10 +4120,12 @@ async function uploadPendingAdvertisementImages(advertisementId){
     });
 
     if (!r2Response.ok) {
-        throw new Error("Cloudflare R2 yükleme hatası!");
+        const errText = await r2Response.text();
+        console.error("R2 Upload Error Details:", errText);
+        throw new Error(`Cloudflare R2 yükleme hatası! Detay: ${errText}`);
     }
 
-    const fullUrl = `https://pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev/${objectPath}`;
+    const fullUrl = `https://image-uploader.tc-mehmetcakmak.workers.dev/${objectPath}`;
 
     const {data:inserted,error:insertError}=await supabaseClient.from("advertisement_images")
       .insert({

@@ -4700,7 +4700,9 @@ body{
 
     function productImagePublicUrl(storagePath) {
         if (!storagePath) return "";
-        if (storagePath.startsWith("http")) return storagePath;
+        if (storagePath.startsWith("http")) {
+            return storagePath.replace("pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev", "image-uploader.tc-mehmetcakmak.workers.dev");
+        }
         const { data } = supabaseClient.storage
             .from("product-images")
             .getPublicUrl(storagePath);
@@ -8056,7 +8058,9 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     function advertisementImagePublicUrl(storagePath) {
         if (!storagePath) return "";
-        if (storagePath.startsWith("http")) return storagePath;
+        if (storagePath.startsWith("http")) {
+            return storagePath.replace("pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev", "image-uploader.tc-mehmetcakmak.workers.dev");
+        }
         const { data } = supabaseClient.storage
             .from("advertisement-images")
             .getPublicUrl(storagePath);
