@@ -1716,7 +1716,7 @@ function renderSubscriptionCard() {
       badgeHtml = '<div style="position:absolute; top:12px; right:12px; background:#16803a; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold;">✓</div>';
     } else if (isPending) {
       if (pendingPackageRequest.question && !pendingPackageRequest.answer) {
-        btnHtml = `<button class="btn btn-primary" onclick="openPackageAnswerModal(${pendingPackageRequest.id}, '${escapeAttr(pendingPackageRequest.question)}')" style="margin-top:10px; width:100%; font-size:12px">Cevap Ver</button>`;
+        btnHtml = `<button class="btn btn-success" onclick="openPackageAnswerModal(${pendingPackageRequest.id}, '${escapeAttr(pendingPackageRequest.question)}')" style="margin-top:10px; width:100%; font-size:12px">Cevap Ver</button>`;
       } else {
         btnHtml = '<button class="btn btn-light" disabled style="margin-top:10px; width:100%; font-size:12px; cursor:not-allowed; opacity:0.7">Onay Bekleniyor</button>';
       }
@@ -1756,6 +1756,7 @@ async function requestPackage(tier) {
   try {
     const {error} = await platformClient.from("package_requests").insert({
       business_id: currentBusinessId,
+      current_tier: currentPackageTier,
       requested_tier: tier,
       status: "pending"
     });
