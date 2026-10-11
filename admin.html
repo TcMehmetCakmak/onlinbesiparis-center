@@ -2304,6 +2304,20 @@ async function confirmMedicineInform(){
     button.textContent=oldText;
   }
 }
+async function deleteFromCloudflareR2(storagePath) {
+    if (!storagePath || !storagePath.startsWith("http")) return;
+    try {
+        const urlObj = new URL(storagePath);
+        if (urlObj.hostname.includes("r2.dev") || urlObj.hostname.includes("workers.dev")) {
+            const objectPath = urlObj.pathname.slice(1);
+            await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`, {
+                method: 'DELETE'
+            });
+        }
+    } catch(e) {
+        console.warn("R2'den silinirken hata oldu:", e);
+    }
+}
 
 function productImagePublicUrl(storagePath){
   if(!storagePath)return "";
@@ -2741,7 +2755,9 @@ async function deleteExistingProductImage(imageId){
       .eq("business_id",currentBusinessId);
     if(dbError)throw dbError;
 
-    if(!image.storage_path.startsWith("http")){
+    if(image.storage_path.startsWith("http")){
+      await deleteFromCloudflareR2(image.storage_path);
+    } else {
       const {error:storageError}=await supabaseClient.storage
         .from("product-images")
         .remove([image.storage_path]);
@@ -3017,25 +3033,24 @@ async function deleteProduct(id){
 
   try{
     const product=products.find(p=>String(p.id)===String(id));
-    const imagePaths=(product?.images||[])
-      .map(x=>x.storage_path)
-      .filter(x => Boolean(x) && !x.startsWith("http"));
+    const allPaths=(product?.images||[]).map(x=>x.storage_path).filter(Boolean);
+    const supabasePaths=allPaths.filter(x=>!x.startsWith("http"));
+    const httpPaths=allPaths.filter(x=>x.startsWith("http"));
 
-    // Ürün silinince product_images satırları FK ON DELETE CASCADE ile silinir.
     const {error}=await supabaseClient.from("products")
       .delete()
       .eq("id",id)
       .eq("business_id",currentBusinessId);
     if(error)throw error;
 
-    // Storage nesneleri FK ile silinmez, ayrıca temizlenir.
-    if(imagePaths.length){
+    if(supabasePaths.length){
       const {error:storageError}=await supabaseClient.storage
         .from("product-images")
-        .remove(imagePaths);
-      if(storageError){
-        console.warn("Ürün silindi fakat bazı Storage dosyaları temizlenemedi:",storageError);
-      }
+        .remove(supabasePaths);
+      if(storageError) console.warn("Supabase Storage hatası:", storageError);
+    }
+    for(const p of httpPaths){
+      await deleteFromCloudflareR2(p);
     }
 
     products=products.filter(p=>String(p.id)!==String(id));
@@ -4086,7 +4101,9 @@ async function deleteExistingAdvertisementImage(imageId){
       .delete().eq("id",image.id).eq("business_id",currentBusinessId);
     if(error)throw error;
 
-    if(!image.storage_path.startsWith("http")){
+    if(image.storage_path.startsWith("http")){
+      await deleteFromCloudflareR2(image.storage_path);
+    } else {
       const {error:storageError}=await supabaseClient.storage
         .from("advertisement-images").remove([image.storage_path]);
       if(storageError)console.warn("Storage reklam fotoğrafı temizlenemedi:",storageError);
@@ -4210,17 +4227,22 @@ async function deleteAdvertisement(id){
   if(!ad)return;
   if(!confirm(`"${ad.title}" reklamı ve tüm fotoğrafları silinsin mi?`))return;
 
-  const paths=(ad.images||[]).map(x=>x.storage_path).filter(x => Boolean(x) && !x.startsWith("http"));
+  const allPaths=(ad.images||[]).map(x=>x.storage_path).filter(Boolean);
+  const supabasePaths=allPaths.filter(x=>!x.startsWith("http"));
+  const httpPaths=allPaths.filter(x=>x.startsWith("http"));
 
   try{
     const {error}=await supabaseClient.from("advertisements")
       .delete().eq("id",id).eq("business_id",currentBusinessId);
     if(error)throw error;
 
-    if(paths.length){
+    if(supabasePaths.length){
       const {error:storageError}=await supabaseClient.storage
-        .from("advertisement-images").remove(paths);
+        .from("advertisement-images").remove(supabasePaths);
       if(storageError)console.warn("Bazı reklam Storage dosyaları temizlenemedi:",storageError);
+    }
+    for(const p of httpPaths){
+      await deleteFromCloudflareR2(p);
     }
 
     advertisements=advertisements.filter(x=>String(x.id)!==String(id));
