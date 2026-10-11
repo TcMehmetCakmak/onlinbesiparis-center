@@ -4500,7 +4500,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
-    /* /* .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();}) */ */
+    // .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
     .on("postgres_changes",{event:"*",schema:"public",table:"medicine_requests",filter:businessFilter},async()=>{await loadMedicineRequests();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
