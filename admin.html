@@ -1399,6 +1399,24 @@ function subscribeSupportTicketRealtime(){
       console.log("Destek talebi durumu Realtime:",payload);
       loadSupportTickets();
     })
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"package_requests",
+      filter:`business_id=eq.${currentBusinessId}`
+    },payload=>{
+      console.log("Paket talebi Realtime:",payload);
+      loadSubscription();
+    })
+    .on("postgres_changes",{
+      event:"*",
+      schema:"public",
+      table:"package_subscriptions",
+      filter:`business_id=eq.${currentBusinessId}`
+    },payload=>{
+      console.log("Paket aboneliği Realtime:",payload);
+      loadSubscription();
+    })
     .subscribe(status=>{
       console.log("Destek talebi Realtime bağlantısı:",status);
     });
@@ -1672,14 +1690,14 @@ async function loadAdminNotifications(){
   }
 }
 
-let pendingPackageTier = null;
+let pendingPackageRequest = null;
 async function loadSubscription() {
   if(!platformClient || !currentBusinessId) return;
   try {
     const {data} = await platformClient.from("package_subscriptions").select("package_tier").eq("business_id", currentBusinessId).maybeSingle();
     currentPackageTier = data?.package_tier || 1;
-    const {data: reqData} = await platformClient.from("package_requests").select("requested_tier").eq("business_id", currentBusinessId).eq("status", "pending").maybeSingle();
-    pendingPackageTier = reqData?.requested_tier || null;
+    const {data: reqData} = await platformClient.from("package_requests").select("*").eq("business_id", currentBusinessId).eq("status", "pending").maybeSingle();
+    pendingPackageRequest = reqData || null;
     renderSubscriptionCard();
   } catch(e) {
     console.warn("Abonelik bilgisi çekilemedi", e);
@@ -1691,17 +1709,21 @@ function renderSubscriptionCard() {
   if(!el) return;
   el.innerHTML = SUBSCRIPTION_PACKAGES.map(pkg => {
     const isActive = pkg.tier === currentPackageTier;
-    const isPending = pkg.tier === pendingPackageTier;
+    const isPending = pendingPackageRequest && pkg.tier === pendingPackageRequest.requested_tier;
     let btnHtml = '';
     let badgeHtml = '';
     if (isActive) {
       badgeHtml = '<div style="position:absolute; top:12px; right:12px; background:#16803a; color:white; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold;">✓</div>';
     } else if (isPending) {
-      btnHtml = '<button class="btn btn-light" disabled style="margin-top:10px; width:100%; font-size:12px; cursor:not-allowed; opacity:0.7">Onay Bekleniyor</button>';
+      if (pendingPackageRequest.question && !pendingPackageRequest.answer) {
+        btnHtml = `<button class="btn btn-primary" onclick="openPackageAnswerModal(${pendingPackageRequest.id}, '${escapeAttr(pendingPackageRequest.question)}')" style="margin-top:10px; width:100%; font-size:12px">Cevap Ver</button>`;
+      } else {
+        btnHtml = '<button class="btn btn-light" disabled style="margin-top:10px; width:100%; font-size:12px; cursor:not-allowed; opacity:0.7">Onay Bekleniyor</button>';
+      }
     } else {
       btnHtml = '<button class="btn btn-primary" style="margin-top:10px; width:100%; font-size:12px">Bu Pakete Geç</button>';
     }
-    return `<div class="card ${isActive ? 'active-package' : ''}" style="position:relative; border: 2px solid ${isActive ? '#16803a' : '#e6e9ee'}; cursor:${isActive || isPending ? 'default' : 'pointer'}" ${isActive || isPending ? '' : `onclick="requestPackage(${pkg.tier})"`}>
+    return `<div class="card ${isActive ? 'active-package' : ''}" style="position:relative; border: 2px solid ${isActive ? '#16803a' : '#e6e9ee'}; cursor:${isActive || (isPending && (!pendingPackageRequest.question || pendingPackageRequest.answer)) ? 'default' : 'pointer'}" ${isActive || isPending ? '' : `onclick="requestPackage(${pkg.tier})"`}>
       ${badgeHtml}
       <div style="font-weight:bold; font-size:16px; margin-bottom:8px">${pkg.name}</div>
       <div class="muted" style="margin-bottom:8px">Maksimum ${pkg.limit} Ürün</div>
@@ -1709,6 +1731,23 @@ function renderSubscriptionCard() {
       ${btnHtml}
     </div>`;
   }).join("");
+}
+
+function openPackageAnswerModal(id, question) {
+  document.getElementById('packageAnswerRequestId').value = id;
+  document.getElementById('packageAnswerQuestion').textContent = question;
+  document.getElementById('packageAnswerInput').value = '';
+  document.getElementById('packageAnswerModal').classList.remove('hidden');
+}
+
+async function submitPackageAnswer() {
+  const id = document.getElementById('packageAnswerRequestId').value;
+  const ans = document.getElementById('packageAnswerInput').value.trim();
+  if(!ans) { alert('Lütfen bir cevap yazın.'); return; }
+  const {error} = await platformClient.from('package_requests').update({answer: ans}).eq('id', id);
+  if (error) { alert('Cevap gönderilemedi: ' + error.message); return; }
+  document.getElementById('packageAnswerModal').classList.add('hidden');
+  loadSubscription();
 }
 
 async function requestPackage(tier) {
@@ -4716,6 +4755,23 @@ function renderProductVariantRows(){
         }
     }
   </script>
+<div id="packageAnswerModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="document.getElementById('packageAnswerModal').classList.add('hidden')">×</button></div>
+    <div class="header"><h2>Platform Yetkilisinden Soru</h2></div>
+    <input type="hidden" id="packageAnswerRequestId">
+    <div style="background:#f9fafb; padding:12px; border-radius:8px; margin-bottom:12px;">
+      <strong>Soru:</strong> <span id="packageAnswerQuestion"></span>
+    </div>
+    <div>
+      <label>Cevabınız</label>
+      <textarea id="packageAnswerInput" rows="3" placeholder="Yanıtınızı buraya yazın..."></textarea>
+    </div>
+    <div class="actions" style="justify-content:flex-end; margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitPackageAnswer()">Cevapla ve Gönder</button>
+    </div>
+  </div>
+</div>
 </body>
 
 </html>

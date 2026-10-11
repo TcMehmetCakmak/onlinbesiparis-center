@@ -353,6 +353,7 @@ const ch=db.channel('super-admin-live')
   .on('postgres_changes',{event:'*',schema:'public',table:'support_tickets'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'support_ticket_status_public'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'franchise_requests'},()=>loadFranchiseRequests())
+  .on('postgres_changes',{event:'*',schema:'public',table:'package_requests'},()=>loadPackageRequests())
   .subscribe();
 
 db.auth.onAuthStateChange((_,s)=>{
@@ -367,10 +368,13 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSup
 window.addEventListener('focus',()=>refreshSuperAdminData());
 checkSession();
 let packageRequests = [];
+let packageSubscriptions = [];
 async function loadPackageRequests() {
-  const {data, error} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
-  if(error){ toast(error.message); return; }
-  packageRequests = data || [];
+  const {data: reqs, error: err1} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
+  if(err1){ toast(err1.message); return; }
+  packageRequests = reqs || [];
+  const {data: subs, error: err2} = await db.from('package_subscriptions').select('*');
+  if(!err2) packageSubscriptions = subs || [];
   renderPackageRequests();
   renderStats();
 }
@@ -382,22 +386,48 @@ function renderPackageRequests() {
   el.innerHTML = packageRequests.map(r => {
     const b = businesses.find(x => x.id === r.business_id);
     const shopName = b ? b.shop_name : 'Bilinmeyen İşletme';
-    const pkgName = PACKAGE_NAMES[r.requested_tier] || 'Tier ' + r.requested_tier;
-    return `<div class="request"><div class="business-head"><div><strong>${esc(shopName)}</strong><div class="muted">${dateTimeTR(r.created_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Talep Edilen Paket Seviyesi:</span> <strong>${pkgName}</strong></div>${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approvePackage(${r.id}, '${r.business_id}', ${r.requested_tier})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectPackage(${r.id})">✕ Reddet</button></div>`:``}</div>`;
+    const sub = packageSubscriptions.find(x => x.business_id === r.business_id);
+    const currentTier = sub ? sub.package_tier : 1;
+    const currentName = PACKAGE_NAMES[currentTier] || 'Tier ' + currentTier;
+    const requestedName = PACKAGE_NAMES[r.requested_tier] || 'Tier ' + r.requested_tier;
+
+    let qaHtml = '';
+    if (r.question) {
+      qaHtml = `<div style="margin:12px 0; padding:10px; background:#f9fafb; border-radius:8px;"><div style="margin-bottom:6px"><strong>Soru:</strong> ${esc(r.question)}</div>${r.answer ? `<div><strong>Cevap:</strong> ${esc(r.answer)}</div>` : `<div class="muted">Cevap bekleniyor...</div>`}</div>`;
+    }
+
+    let actionsHtml = '';
+    if (r.status === 'pending') {
+      actionsHtml = `<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approvePackage(${r.id}, '${r.business_id}', ${r.requested_tier})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectPackage(${r.id})">✕ Reddet</button>${!r.question ? `<button class="btn btn-light" onclick="askPackageQuestion(${r.id})">❓ Soru Sor</button>` : ''}</div>`;
+    }
+
+    return `<div class="request"><div class="business-head"><div><strong>${esc(shopName)}</strong><div class="muted">${dateTimeTR(r.created_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Mevcut:</span> <strong>${currentName}</strong> → <span class="muted">İstenen:</span> <strong>${requestedName}</strong></div>${qaHtml}${actionsHtml}</div>`;
   }).join('');
+}
+async function askPackageQuestion(id) {
+  const q = prompt('İşletmeye sormak istediğiniz soru:');
+  if(!q || !q.trim()) return;
+  const {error} = await db.from('package_requests').update({question: q.trim()}).eq('id', id);
+  if(error) { toast('Soru gönderilemedi: ' + error.message); return; }
+  toast('Soru gönderildi.');
+  loadPackageRequests();
 }
 async function approvePackage(id, businessId, tier) {
   if(!confirm('Bu paketi onaylamak istediğinize emin misiniz?')) return;
-  await db.from('package_requests').update({status: 'approved'}).eq('id', id);
-  const { data: existing } = await db.from('package_subscriptions').select('id, business_id').eq('business_id', businessId).maybeSingle();
+  const { error: reqErr } = await db.from('package_requests').update({status: 'approved'}).eq('id', id);
+  if (reqErr) { toast('Talep güncellenemedi: ' + reqErr.message); return; }
+
+  const { data: existing, error: selErr } = await db.from('package_subscriptions').select('business_id').eq('business_id', businessId).maybeSingle();
+  if (selErr) { toast('Sorgu hatası: ' + selErr.message); return; }
+
   if (existing) {
     const { error } = await db.from('package_subscriptions').update({package_tier: tier, updated_at: new Date().toISOString()}).eq('business_id', businessId);
-    if(error) { toast('Hata: ' + error.message); return; }
+    if(error) { toast('Güncelleme hatası: ' + error.message); return; }
   } else {
     const { error } = await db.from('package_subscriptions').insert({business_id: businessId, package_tier: tier});
-    if(error) { toast('Hata: ' + error.message); return; }
+    if(error) { toast('Ekleme hatası: ' + error.message); return; }
   }
-  toast('Onaylandı');
+  toast('Onaylandı ve paket güncellendi.');
   loadPackageRequests();
 }
 async function rejectPackage(id) {
@@ -409,6 +439,8 @@ async function rejectPackage(id) {
 </script>
 </body>
 </html>
+
+
 
 
 
