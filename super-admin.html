@@ -372,7 +372,15 @@ let packageSubscriptions = [];
 async function loadPackageRequests() {
   const {data: reqs, error: err1} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
   if(err1){ toast(err1.message); return; }
-  packageRequests = reqs || [];
+  
+  if (reqs && reqs.length > 5) {
+    const toDelete = reqs.slice(5).map(r => r.id);
+    await db.from('package_requests').delete().in('id', toDelete);
+    packageRequests = reqs.slice(0, 5);
+  } else {
+    packageRequests = reqs || [];
+  }
+  
   const {data: subs, error: err2} = await db.from('package_subscriptions').select('*');
   if(!err2) packageSubscriptions = subs || [];
   renderPackageRequests();
