@@ -4821,27 +4821,21 @@ function renderBranches() {
             <div style="margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:8px; border:1px solid #eee;">
                 <div style="margin-bottom:8px; font-weight:bold; font-size:14px; color:#555;">Şube Adresi</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                    <!-- AÇIK ADRES (Readonly) -->
-                    <textarea id="branchFullAddress_" readonly placeholder="Açık Adres (üzerine tıklayarak düzenleyin veya konumdan bulun)" style="width:100%; padding:10px; height:60px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0; background-color: #eee; cursor: pointer;" onclick="document.getElementById('branchAddressDetails_').style.display='flex'"></textarea>
-                    
-                    <!-- GİZLİ DETAYLAR -->
-                    <div id="branchAddressDetails_" style="display: none; flex-direction:column; gap:8px; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px;">
-                        <select id="branchProvince_" onchange="adminHandleProvinceChange()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;">
-                            <option value="">İl seçin</option>
-                        </select>
-                        <select id="branchDistrict_" onchange="adminHandleDistrictChange()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
-                            <option value="">Önce il seçin</option>
-                        </select>
-                        <select id="branchNeighborhood_" onchange="adminHandleNeighborhoodChange()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
-                            <option value="">Önce ilçe seçin</option>
-                        </select>
-                        <input id="branchStreet_" type="text" placeholder="Cadde / sokak adı" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="" onchange="adminHandleManualAddressChange()">
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <input id="branchBuilding_" type="text" placeholder="Bina / Kapı No" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="" onchange="adminHandleManualAddressChange()">
-                            <input id="branchApartment_" type="text" placeholder="Daire No (opsiyonel)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="" onchange="adminHandleManualAddressChange()">
-                        </div>
-                        <textarea id="branchDetail_" placeholder="Site, blok, kat, tarif gibi ek adres bilgileri (opsiyonel)" style="width:100%; padding:10px; height:60px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" onchange="adminHandleManualAddressChange()"></textarea>
+                    <select id="branchProvince_${index}" onchange="adminHandleProvinceChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;">
+                        <option value="">İl seçin</option>
+                    </select>
+                    <select id="branchDistrict_${index}" onchange="adminHandleDistrictChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
+                        <option value="">Önce il seçin</option>
+                    </select>
+                    <select id="branchNeighborhood_${index}" onchange="adminHandleNeighborhoodChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
+                        <option value="">Önce ilçe seçin</option>
+                    </select>
+                    <input id="branchStreet_${index}" type="text" placeholder="Cadde / sokak adı" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.street || ''}" onchange="adminHandleManualAddressChange(${index})">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <input id="branchBuilding_${index}" type="text" placeholder="Bina / Kapı No" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.buildingNo || ''}" onchange="adminHandleManualAddressChange(${index})">
+                        <input id="branchApartment_${index}" type="text" placeholder="Daire No (opsiyonel)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.apartmentNo || ''}" onchange="adminHandleManualAddressChange(${index})">
                     </div>
+                    <textarea id="branchDetail_${index}" placeholder="Site, blok, kat, tarif gibi ek adres bilgileri (opsiyonel)" style="width:100%; padding:10px; height:60px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" onchange="adminHandleManualAddressChange(${index})">${b.addressDetail || ''}</textarea>
                 </div>
                 
                 <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -5091,11 +5085,6 @@ function adminHandleManualAddressChange(index) {
     adminBranches[index].addressDetail = detail.value.trim();
     
     adminBranches[index].address = adminBuildAddressFromDraft(adminBranches[index]);
-    
-    const fullAddressEl = document.getElementById("branchFullAddress_" + index);
-    if (fullAddressEl) {
-        fullAddressEl.value = adminBranches[index].address;
-    }
 }
 
 async function autoLocateAdminBranch(index) {
