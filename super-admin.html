@@ -389,7 +389,14 @@ function renderPackageRequests() {
 async function approvePackage(id, businessId, tier) {
   if(!confirm('Bu paketi onaylamak istediğinize emin misiniz?')) return;
   await db.from('package_requests').update({status: 'approved'}).eq('id', id);
-  await db.from('package_subscriptions').upsert({business_id: businessId, package_tier: tier, updated_at: new Date().toISOString()});
+  const { data: existing } = await db.from('package_subscriptions').select('id, business_id').eq('business_id', businessId).maybeSingle();
+  if (existing) {
+    const { error } = await db.from('package_subscriptions').update({package_tier: tier, updated_at: new Date().toISOString()}).eq('business_id', businessId);
+    if(error) { toast('Hata: ' + error.message); return; }
+  } else {
+    const { error } = await db.from('package_subscriptions').insert({business_id: businessId, package_tier: tier});
+    if(error) { toast('Hata: ' + error.message); return; }
+  }
   toast('Onaylandı');
   loadPackageRequests();
 }
