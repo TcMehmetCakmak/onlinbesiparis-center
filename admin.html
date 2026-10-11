@@ -761,19 +761,29 @@ body.modal-open{
         <h3 style="margin-bottom:6px">💳 Ödeme Yöntemleri</h3>
         <div class="muted" style="margin-bottom:12px">
           Burada seçili olan ödeme yöntemleri müşteri ekranında gösterilir.
-          Kapıda nakit zorunludur ve kapatılamaz.
         </div>
 
-        <label class="payment-method-admin-option payment-method-admin-required">
+        <label class="payment-method-admin-option payment-method-admin-required" id="settingPaymentTransferWrap" style="display:none;">
           <input
-            id="settingPaymentCash"
+            id="settingPaymentTransfer"
             type="checkbox"
             checked
             disabled
           >
           <span>
-            <strong>💵 Kapıda Nakit</strong>
+            <strong>🏦 Eft ve Havale</strong>
             <small>Varsayılan ve zorunlu ödeme yöntemi</small>
+          </span>
+        </label>
+
+        <label class="payment-method-admin-option">
+          <input
+            id="settingPaymentCash"
+            type="checkbox"
+          >
+          <span>
+            <strong>💵 Kapıda Nakit</strong>
+            <small>Seçildiğinde müşteri ekranında gösterilir</small>
           </span>
         </label>
 
@@ -785,17 +795,6 @@ body.modal-open{
           <span>
             <strong>💳 Kapıda Kredi Kartı</strong>
             <small>Seçildiğinde müşteri ekranında ayrıca gösterilir</small>
-          </span>
-        </label>
-
-        <label class="payment-method-admin-option" id="settingPaymentTransferWrap" style="display:none;">
-          <input
-            id="settingPaymentTransfer"
-            type="checkbox"
-          >
-          <span>
-            <strong>🏦 Eft ve Havale</strong>
-            <small>Seçildiğinde müşteri ekranında gösterilir</small>
           </span>
         </label>
       </div>
@@ -1815,10 +1814,8 @@ async function loadAdminSettings(){
     if(instagram)instagram.value=appSettings.instagram_url||"";
     if(instagramLabel)instagramLabel.value=appSettings.instagram_label||"";
 
-    // Kapıda nakit sistemde zorunludur; admin tarafından kapatılamaz.
     if(paymentCash){
-      paymentCash.checked=true;
-      paymentCash.disabled=true;
+      paymentCash.checked=appSettings.payment_cash_enabled!==false;
     }
     if(paymentCard){
       paymentCard.checked=appSettings.payment_card_enabled===true;
@@ -1828,14 +1825,6 @@ async function loadAdminSettings(){
       paymentTransferWrap.style.display = 'block';
     } else if (paymentTransferWrap) {
       paymentTransferWrap.style.display = 'none';
-    }
-    
-    if(paymentTransfer){
-      if (appSettings.payment_transfer_enabled != null) {
-          paymentTransfer.checked = appSettings.payment_transfer_enabled === true;
-      } else {
-          paymentTransfer.checked = platformBusiness?.business_type === 'ecommerce';
-      }
     }
 
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
@@ -1933,8 +1922,9 @@ async function saveAppSettings(){
   const instagram_url=document.getElementById("settingInstagram").value.trim();
   const instagram_label=document.getElementById("settingInstagramLabel").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
+  const payment_cash_enabled=document.getElementById("settingPaymentCash")?.checked===true;
   const payment_card_enabled=document.getElementById("settingPaymentCard")?.checked===true;
-  const payment_transfer_enabled=document.getElementById("settingPaymentTransfer")?.checked===true;
+  const payment_transfer_enabled=platformBusiness?.business_type === 'ecommerce' ? true : false;
 
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
@@ -1949,7 +1939,7 @@ async function saveAppSettings(){
         instagram_url:instagram_url||null,
         instagram_label:instagram_label||null,
         background_color,
-        payment_cash_enabled:true,
+        payment_cash_enabled,
         payment_card_enabled,
         payment_transfer_enabled,
         updated_at:new Date().toISOString()
