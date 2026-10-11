@@ -735,7 +735,7 @@ body.modal-open{
         </div>
         <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🍽️"></div>
         <div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
-        <div><label>Instagram Profili</label><input id="settingInstagram" maxlength="180" placeholder="@cakmak-tatlici veya https://instagram.com/cakmak-tatlici"></div>
+        <div><label>Instagram Profili</label><input id="settingInstagram" maxlength="180" placeholder="https://instagram.com/cakmak-yazilim"></div>
         <div><label>Instagram Buton Yazısı</label><input id="settingInstagramLabel" maxlength="80" placeholder="@mehmet_cakmak_1907"></div>
         <div>
           <label>Uygulama arka plan rengi</label>
@@ -859,7 +859,7 @@ body.modal-open{
     <h2>Yeni Destek Talebi</h2>
     <div class="muted" style="margin-bottom:12px">Talebinizi mümkün olduğunca açık şekilde yazın.</div>
     <label>Talep Başlığı</label>
-    <input id="supportTicketTitle" maxlength="160" placeholder="Örn. Sipariş ekranında ürün görünmüyor">
+    <input id="supportTicketTitle" maxlength="160" placeholder="Talep başlığını yazınız...">
     <label>Talep Detayı</label>
     <textarea id="supportTicketDetail" maxlength="5000" style="width:100%;min-height:180px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Talebinizin detaylarını, hangi ekranda olduğunu ve beklediğiniz sonucu yazın."></textarea>
     <div id="supportTicketError" class="hidden" style="margin-top:10px;padding:12px;border-radius:10px;background:#ffebee;color:#a11"></div>
@@ -884,7 +884,7 @@ body.modal-open{
     <label>Ürün Detayı</label>
     <textarea id="productDetail" maxlength="2000"
       style="width:100%;min-height:100px;padding:12px;border:1px solid #ddd;border-radius:10px"
-      placeholder="Ürün açıklaması, kumaş bilgisi, kullanım bilgisi vb."></textarea>
+      placeholder="Ürün açıklaması, kullanım bilgisi..."></textarea>
 
 <label>Ürün Tipi</label>
 <select id="productType" onchange="toggleProductVariantFields()">
@@ -999,14 +999,14 @@ body.modal-open{
     <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeNotificationModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2 id="notificationModalTitle">Yeni Bildirim</h2>
     <input id="notificationId" type="hidden">
-    <label>Başlık</label><input id="notificationTitle" maxlength="120" placeholder="Örn. Hafta sonu kampanyası">
+    <label>Başlık</label><input id="notificationTitle" maxlength="120" placeholder="Örn. Günün Fırsatı">
     <label>Mesaj</label><textarea id="notificationMessage" maxlength="1000" style="width:100%;min-height:110px;padding:12px;border:1px solid #ddd;border-radius:10px" placeholder="Bildirim mesajı..."></textarea>
     <label>Bildirim türü</label>
     <select id="notificationType" onchange="toggleNotificationDiscountFields()"><option value="info">Bilgilendirme</option><option value="discount">İndirim / Kampanya</option></select>
     <div id="notificationDiscountFields" class="discount-admin-fields hidden">
       <div class="form-grid">
         <div><label>İndirim tipi</label><select id="notificationDiscountType"><option value="percent">Yüzde (%)</option><option value="fixed">Sabit TL</option></select></div>
-        <div><label>İndirim değeri</label><input id="notificationDiscountValue" type="number" min="0.01" step="0.01" placeholder="15"></div>
+        <div><label>İndirim değeri</label><input id="notificationDiscountValue" type="number" min="0.01" step="0.01" placeholder="20"></div>
         <div><label>İndirim kodu</label><input id="notificationCouponCode" disabled placeholder="Kaydedince otomatik oluşur" title="İndirim kodu otomatik üretilir ve sonradan değiştirilemez"></div>
       </div>
       <div class="muted">İndirim kodu otomatik üretilir, müşterinin bildiriminde gösterilir ve sonradan değiştirilemez.</div>
