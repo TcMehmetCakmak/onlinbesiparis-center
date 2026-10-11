@@ -10100,6 +10100,107 @@ setInterval(()=>{
         }
     }
   </script>
+
+<div id="shopAddressModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shopAddressTitle">
+    <div class="modal-card">
+        <div class="modal-x-anchor">
+            <button type="button" class="modal-persistent-x" onclick="closeShopAddressModal()" aria-label="Kapat">&times;</button>
+        </div>
+        <h2 id="shopAddressTitle" style="margin-top:0; font-size:20px; text-align:center;">📍 Şube Adresimiz</h2>
+        <div id="shopAddressContent" style="margin-top:16px; text-align:center;">
+            <p id="shopAddressText" style="font-size:16px; line-height:1.5; color:#333;">Yükleniyor...</p>
+            <div id="shopAddressQrContainer" style="margin:20px auto; width:150px; height:150px; background:#f5f5f5; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                <!-- QR Code -->
+            </div>
+            <a id="shopAddressGoogleMapsBtn" href="#" target="_blank" class="btn btn-primary" style="display:inline-block; margin-top:10px; width:100%; text-align:center; padding:12px; border-radius:12px; font-size:16px; text-decoration:none;">
+                🗺️ Google Maps'te Aç
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+let shopBranches = [];
+
+function openShopAddressModal() {
+    const modal = document.getElementById("shopAddressModal");
+    if(!modal) return;
+    
+    document.documentElement.classList.add("modal-open");
+    document.body.classList.add("modal-open");
+    modal.classList.remove("hidden");
+    
+    // Find main branch
+    const mainBranch = shopBranches.find(b => b.isMain) || shopBranches[0];
+    
+    const textEl = document.getElementById("shopAddressText");
+    const qrContainer = document.getElementById("shopAddressQrContainer");
+    const mapsBtn = document.getElementById("shopAddressGoogleMapsBtn");
+    
+    if(mainBranch) {
+        textEl.innerHTML = '<strong>' + (mainBranch.name || 'Şube') + '</strong><br><br>' + (mainBranch.address || 'Adres belirtilmemiş.');
+        
+        let mapsUrl = '';
+        if(mainBranch.lat && mainBranch.lng) {
+            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mainBranch.lat},${mainBranch.lng}`;
+        } else if(mainBranch.address) {
+            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mainBranch.address)}`;
+        }
+        
+        if(mapsUrl) {
+            mapsBtn.href = mapsUrl;
+            mapsBtn.style.display = 'inline-block';
+            
+            // Generate QR code
+            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mapsUrl)}" alt="Adres QR" style="width:100%; height:100%; border-radius:12px;">`;
+        } else {
+            mapsBtn.style.display = 'none';
+            qrContainer.innerHTML = '<span class="muted">Harita bilgisi yok</span>';
+        }
+    } else {
+        textEl.textContent = 'Henüz şube adresi eklenmemiş.';
+        mapsBtn.style.display = 'none';
+        qrContainer.innerHTML = '';
+    }
+}
+
+function closeShopAddressModal() {
+    const modal = document.getElementById("shopAddressModal");
+    if(modal) modal.classList.add("hidden");
+    document.documentElement.classList.remove("modal-open");
+    document.body.classList.remove("modal-open");
+}
+
+// Intercept loadAppSettings to load branches
+const originalLoadAppSettingsIndex = window.loadAppSettings;
+window.loadAppSettings = async function() {
+    await originalLoadAppSettingsIndex.apply(this, arguments);
+    try {
+        const {data, error} = await supabaseClient.from("app_settings").select("branches").eq("business_id", currentBusinessId).maybeSingle();
+        if(data && data.branches) {
+            shopBranches = data.branches;
+            
+            // Inject Address button to the header
+            if(shopBranches.length > 0) {
+                const headerActions = document.querySelector('.header-actions') || document.querySelector('.shop-header-actions') || document.querySelector('#shopName')?.parentNode;
+                if(headerActions && !document.getElementById('headerAddressBtn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'headerAddressBtn';
+                    btn.className = 'btn btn-light';
+                    btn.style.marginLeft = '10px';
+                    btn.style.padding = '8px 12px';
+                    btn.style.fontSize = '14px';
+                    btn.style.borderRadius = '20px';
+                    btn.innerHTML = '📍 Adres';
+                    btn.onclick = openShopAddressModal;
+                    headerActions.appendChild(btn);
+                }
+            }
+        }
+    } catch(e) { console.error(e); }
+};
+</script>
+
 </body>
 
 

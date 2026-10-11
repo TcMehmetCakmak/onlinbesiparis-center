@@ -746,6 +746,17 @@ body.modal-open{
         </div>
       </div>
 
+      
+      <div class="payment-method-admin-box" id="adminBranchesContainer">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin-bottom:0;">📍 Şube ve Adres Yönetimi</h3>
+          <button type="button" class="btn btn-primary" onclick="addBranch()">+ Şube Ekle</button>
+        </div>
+        <div class="muted" style="margin-bottom:12px">
+          İşletmenizin şubelerini buradan yönetebilirsiniz. Müşteri ekranında merkez şube (★) olarak seçtiğiniz adres görünür.
+        </div>
+        <div id="branchesList" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
       <div class="payment-method-admin-box">
         <h3 style="margin-bottom:6px">💳 Ödeme Yöntemleri</h3>
         <div class="muted" style="margin-bottom:12px">
@@ -4773,6 +4784,142 @@ function renderProductVariantRows(){
     </div>
   </div>
 </div>
+
+<script>
+let adminBranches = [];
+
+function renderBranches() {
+    const container = document.getElementById("branchesList");
+    if(!container) return;
+    container.innerHTML = "";
+    if (adminBranches.length === 0) {
+        container.innerHTML = '<div class="muted">Henüz şube eklenmemiş.</div>';
+        return;
+    }
+    
+    adminBranches.forEach((b, index) => {
+        const box = document.createElement("div");
+        box.style.border = "1px solid #ddd";
+        box.style.padding = "14px";
+        box.style.borderRadius = "12px";
+        box.style.background = "#fff";
+        box.style.position = "relative";
+        
+        box.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+                <input type="text" placeholder="Şube Adı (örn. Merkez Şube)" style="flex:1; min-width:200px; padding:10px; border:1px solid #ddd; border-radius:8px; font-weight:bold;" value="${b.name || ''}" onchange="updateBranch(${index}, 'name', this.value)">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    ${b.isMain 
+                        ? '<span style="color:#2e7d32; font-weight:bold; padding:8px; background:#e8f5e9; border-radius:8px;">★ Merkez Şube</span>' 
+                        : `<button type="button" class="btn btn-light" style="padding:8px 12px; font-size:13px;" onclick="setMainBranch(${index})">Merkez Şube Yap</button>`
+                    }
+                    <button type="button" class="btn btn-danger" style="padding:8px 12px; font-size:13px;" onclick="removeBranch(${index})">Sil</button>
+                </div>
+            </div>
+            <div>
+                <textarea placeholder="Şube açık adresi..." style="width:100%; padding:10px; margin-top:4px; height:80px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px;" onchange="updateBranch(${index}, 'address', this.value)">${b.address || ''}</textarea>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+                <button type="button" class="btn btn-dark" style="padding:8px 12px; font-size:13px; display:flex; align-items:center; gap:6px;" onclick="autoLocateBranch(${index})">
+                    <span style="font-size:16px;">📍</span> Otomatik Konum Bul
+                </button>
+                <span class="muted" style="font-size:13px;" id="branchStatus_${index}">${b.lat ? 'Konum: ' + b.lat.toFixed(4) + ', ' + b.lng.toFixed(4) : 'Konum seçilmedi'}</span>
+            </div>
+        `;
+        container.appendChild(box);
+    });
+}
+
+function addBranch() {
+    adminBranches.push({ id: Date.now().toString(), name: '', address: '', lat: null, lng: null, isMain: adminBranches.length === 0 });
+    renderBranches();
+}
+
+function updateBranch(index, field, value) {
+    adminBranches[index][field] = value;
+}
+
+function removeBranch(index) {
+    if(confirm('Bu şubeyi silmek istediğinize emin misiniz?')) {
+        adminBranches.splice(index, 1);
+        if(adminBranches.length > 0 && !adminBranches.some(b => b.isMain)) {
+            adminBranches[0].isMain = true;
+        }
+        renderBranches();
+    }
+}
+
+function setMainBranch(index) {
+    adminBranches.forEach((b, i) => b.isMain = (i === index));
+    renderBranches();
+}
+
+async function autoLocateBranch(index) {
+    const statusEl = document.getElementById('branchStatus_' + index);
+    if (!navigator.geolocation) {
+        statusEl.textContent = 'Tarayıcınız konum özelliğini desteklemiyor.';
+        return;
+    }
+    statusEl.textContent = 'Konum alınıyor... Lütfen bekleyin.';
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        adminBranches[index].lat = lat;
+        adminBranches[index].lng = lng;
+        
+        statusEl.textContent = 'Adres çözümleniyor...';
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=tr`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if(data && data.display_name) {
+                adminBranches[index].address = data.display_name;
+            }
+        } catch(e) {
+            console.error(e);
+        }
+        renderBranches();
+        toast("Şube konumu başarıyla alındı.");
+    }, (err) => {
+        statusEl.textContent = 'Konum alınamadı. İzin verdiğinizden emin olun.';
+    }, { enableHighAccuracy: true });
+}
+
+// Hook into save and load
+const originalSaveAppSettingsAdmin = window.saveAppSettings;
+window.saveAppSettings = async function() {
+    try {
+        const {data, error} = await supabaseClient.from("app_settings").update({ branches: adminBranches }).eq("business_id", currentBusinessId);
+        if(error) {
+            console.error("Branches save error:", error);
+            // Ignore error, might be due to missing column
+        }
+    } catch(e) { console.error(e); }
+    return originalSaveAppSettingsAdmin.apply(this, arguments);
+};
+
+// Polling interval to wait for loadAdminSettings definition
+let loadAdminSettingsHooked = false;
+const hookInterval = setInterval(() => {
+    if(typeof loadAdminSettings === 'function' && !loadAdminSettingsHooked) {
+        loadAdminSettingsHooked = true;
+        const originalLoadAdminSettings = window.loadAdminSettings;
+        window.loadAdminSettings = async function() {
+            await originalLoadAdminSettings.apply(this, arguments);
+            try {
+                const {data, error} = await supabaseClient.from("app_settings").select("branches").eq("business_id", currentBusinessId).maybeSingle();
+                if(data && data.branches) {
+                    adminBranches = data.branches;
+                    renderBranches();
+                }
+            } catch(e) { console.error(e); }
+        };
+        clearInterval(hookInterval);
+    }
+}, 500);
+</script>
+
 </body>
 
 </html>
