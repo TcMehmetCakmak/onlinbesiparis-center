@@ -2307,6 +2307,7 @@ async function confirmMedicineInform(){
 
 function productImagePublicUrl(storagePath){
   if(!storagePath)return "";
+  if(storagePath.startsWith("http")) return storagePath;
   const {data}=supabaseClient.storage.from("product-images").getPublicUrl(storagePath);
   return data?.publicUrl||"";
 }
@@ -2738,9 +2739,11 @@ async function deleteExistingProductImage(imageId){
       .eq("business_id",currentBusinessId);
     if(dbError)throw dbError;
 
-    const {error:storageError}=await supabaseClient.storage
-      .from("product-images")
-      .remove([image.storage_path]);
+    if(!image.storage_path.startsWith("http")){
+      const {error:storageError}=await supabaseClient.storage
+        .from("product-images")
+        .remove([image.storage_path]);
+    }
 
     currentProductImages=currentProductImages.filter(x=>String(x.id)!==String(image.id));
 
@@ -2844,20 +2847,22 @@ async function uploadPendingProductImages(productId){
     const webpBlob=await compressProductImage(item.file);
     const objectPath=`${currentBusinessId}/${productId}/${crypto.randomUUID()}.webp`;
 
-    const {error:uploadError}=await supabaseClient.storage
-      .from("product-images")
-      .upload(objectPath,webpBlob,{
-        contentType:"image/webp",
-        cacheControl:"31536000",
-        upsert:false
-      });
-    if(uploadError)throw uploadError;
+    const r2Response = await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`, {
+        method: "POST",
+        body: webpBlob
+    });
+    
+    if (!r2Response.ok) {
+        throw new Error("Cloudflare R2 yükleme hatası!");
+    }
+
+    const fullUrl = `https://pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev/${objectPath}`;
 
     const {data:inserted,error:insertError}=await supabaseClient.from("product_images")
       .insert({
         business_id:currentBusinessId,
         product_id:productId,
-        storage_path:objectPath,
+        storage_path:fullUrl,
         sort_order:existingCount+i,
         is_main:false
       })
@@ -2865,7 +2870,6 @@ async function uploadPendingProductImages(productId){
       .single();
 
     if(insertError){
-      await supabaseClient.storage.from("product-images").remove([objectPath]);
       throw insertError;
     }
 
@@ -3011,7 +3015,7 @@ async function deleteProduct(id){
     const product=products.find(p=>String(p.id)===String(id));
     const imagePaths=(product?.images||[])
       .map(x=>x.storage_path)
-      .filter(Boolean);
+      .filter(x => Boolean(x) && !x.startsWith("http"));
 
     // Ürün silinince product_images satırları FK ON DELETE CASCADE ile silinir.
     const {error}=await supabaseClient.from("products")
@@ -3892,6 +3896,7 @@ function downloadOrderPdf(id){
 
 function advertisementImagePublicUrl(storagePath){
   if(!storagePath)return "";
+  if(storagePath.startsWith("http")) return storagePath;
   const {data}=supabaseClient.storage.from("advertisement-images").getPublicUrl(storagePath);
   return data?.publicUrl||"";
 }
@@ -4073,9 +4078,11 @@ async function deleteExistingAdvertisementImage(imageId){
       .delete().eq("id",image.id).eq("business_id",currentBusinessId);
     if(error)throw error;
 
-    const {error:storageError}=await supabaseClient.storage
-      .from("advertisement-images").remove([image.storage_path]);
-    if(storageError)console.warn("Storage reklam fotoğrafı temizlenemedi:",storageError);
+    if(!image.storage_path.startsWith("http")){
+      const {error:storageError}=await supabaseClient.storage
+        .from("advertisement-images").remove([image.storage_path]);
+      if(storageError)console.warn("Storage reklam fotoğrafı temizlenemedi:",storageError);
+    }
 
     currentAdvertisementImages=currentAdvertisementImages
       .filter(x=>String(x.id)!==String(imageId));
@@ -4099,23 +4106,28 @@ async function uploadPendingAdvertisementImages(advertisementId){
     const webpBlob=await compressProductImage(item.file,1600,0.82);
     const objectPath=`${currentBusinessId}/${advertisementId}/${crypto.randomUUID()}.webp`;
 
-    const {error:uploadError}=await supabaseClient.storage
-      .from("advertisement-images")
-      .upload(objectPath,webpBlob,{contentType:"image/webp",cacheControl:"31536000",upsert:false});
-    if(uploadError)throw uploadError;
+    const r2Response = await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`, {
+        method: "POST",
+        body: webpBlob
+    });
+
+    if (!r2Response.ok) {
+        throw new Error("Cloudflare R2 yükleme hatası!");
+    }
+
+    const fullUrl = `https://pub-c51be861a66041fd8d2f5f27349b59ee.r2.dev/${objectPath}`;
 
     const {data:inserted,error:insertError}=await supabaseClient.from("advertisement_images")
       .insert({
         business_id:currentBusinessId,
         advertisement_id:advertisementId,
-        storage_path:objectPath,
+        storage_path:fullUrl,
         sort_order:existingCount+i
       })
       .select("id,business_id,advertisement_id,storage_path,sort_order,created_at")
       .single();
 
     if(insertError){
-      await supabaseClient.storage.from("advertisement-images").remove([objectPath]);
       throw insertError;
     }
     uploaded.push(inserted);
@@ -4188,7 +4200,7 @@ async function deleteAdvertisement(id){
   if(!ad)return;
   if(!confirm(`"${ad.title}" reklamı ve tüm fotoğrafları silinsin mi?`))return;
 
-  const paths=(ad.images||[]).map(x=>x.storage_path).filter(Boolean);
+  const paths=(ad.images||[]).map(x=>x.storage_path).filter(x => Boolean(x) && !x.startsWith("http"));
 
   try{
     const {error}=await supabaseClient.from("advertisements")

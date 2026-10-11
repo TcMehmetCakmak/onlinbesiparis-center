@@ -4700,6 +4700,7 @@ body{
 
     function productImagePublicUrl(storagePath) {
         if (!storagePath) return "";
+        if (storagePath.startsWith("http")) return storagePath;
         const { data } = supabaseClient.storage
             .from("product-images")
             .getPublicUrl(storagePath);
@@ -8055,6 +8056,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     function advertisementImagePublicUrl(storagePath) {
         if (!storagePath) return "";
+        if (storagePath.startsWith("http")) return storagePath;
         const { data } = supabaseClient.storage
             .from("advertisement-images")
             .getPublicUrl(storagePath);
