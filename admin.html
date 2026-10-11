@@ -1782,7 +1782,7 @@ async function requestPackage(tier) {
 async function loadAdminSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
-      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,business_id").eq("business_id",currentBusinessId).maybeSingle();
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,branches,business_id").eq("business_id",currentBusinessId).maybeSingle();
     if(error)throw error;
     if(data)appSettings=data;
     const icon=document.getElementById("settingShopIcon");
@@ -4500,7 +4500,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
-    .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
+    /* .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();}) */
     .on("postgres_changes",{event:"*",schema:"public",table:"medicine_requests",filter:businessFilter},async()=>{await loadMedicineRequests();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
@@ -4918,6 +4918,252 @@ const hookInterval = setInterval(() => {
         clearInterval(hookInterval);
     }
 }, 500);
+</script>
+
+
+<script id="admin-branch-address-logic">
+const ADMIN_TURKIYE_API_BASE = "https://api.turkiyeapi.dev/v2";
+
+function escapeHtmlAdmin(text) {
+    if (!text) return "";
+    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+async function fetchAdminTurkeyAddressData(path) {
+    const response = await fetch(ADMIN_TURKIYE_API_BASE + path, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+    });
+    if (!response.ok) throw new Error("API hatası");
+    const payload = await response.json();
+    return Array.isArray(payload?.data) ? payload.data : [];
+}
+
+async function fetchAdminTurkeyAddressDataWithFallback(paths) {
+    let lastError = null;
+    for (const path of paths) {
+        try {
+            const rows = await fetchAdminTurkeyAddressData(path);
+            if (rows.length) return rows;
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    if (lastError) throw lastError;
+    return [];
+}
+
+function fillAdminSelect(select, items, placeholder, selectedValue = "") {
+    if(!select) return;
+    select.innerHTML = '<option value="">' + placeholder + '</option>' + items.map(item =>
+        '<option value="' + escapeHtmlAdmin(String(item.id ?? item.name)) + '" data-name="' + escapeHtmlAdmin(item.name || "") + '" ' + (String(item.id ?? item.name) === String(selectedValue) ? "selected" : "") + '>' + escapeHtmlAdmin(item.name || "") + '</option>'
+    ).join("");
+}
+
+async function adminLoadProvinces(index, selectedProvinceId = "", selectedDistrictId = "", selectedNeighborhoodName = "") {
+    const select = document.getElementById("branchProvince_" + index);
+    if(!select) return;
+    try {
+        const provinces = await fetchAdminTurkeyAddressData("/provinces?fields=id,name&sort=name&limit=100");
+        fillAdminSelect(select, provinces, "İl seçin", selectedProvinceId);
+        if (selectedProvinceId) await adminLoadDistricts(index, selectedProvinceId, selectedDistrictId, selectedNeighborhoodName);
+    } catch (error) {
+        select.innerHTML = '<option value="">İl listesi yüklenemedi</option>';
+    }
+}
+
+async function adminLoadDistricts(index, provinceId, selectedDistrictId = "", selectedNeighborhoodName = "") {
+    const select = document.getElementById("branchDistrict_" + index);
+    const neighborhood = document.getElementById("branchNeighborhood_" + index);
+    if(!select || !neighborhood) return;
+    
+    select.disabled = true;
+    select.innerHTML = '<option value="">İlçeler yükleniyor...</option>';
+    neighborhood.disabled = true;
+    neighborhood.innerHTML = '<option value="">Önce ilçe seçin</option>';
+    try {
+        const id = encodeURIComponent(provinceId);
+        const districts = await fetchAdminTurkeyAddressDataWithFallback([
+            "/provinces/" + id + "/districts?fields=id,name&sort=name&limit=1000",
+            "/districts?provinceId=" + id + "&fields=id,name&sort=name&limit=1000"
+        ]);
+        fillAdminSelect(select, districts, "İlçe seçin", selectedDistrictId);
+        select.disabled = false;
+        if (selectedDistrictId) await adminLoadNeighborhoods(index, selectedDistrictId, selectedNeighborhoodName);
+    } catch (error) {
+        select.innerHTML = '<option value="">İlçeler yüklenemedi</option>';
+    }
+}
+
+async function adminLoadNeighborhoods(index, districtId, selectedNeighborhoodName = "") {
+    const select = document.getElementById("branchNeighborhood_" + index);
+    if(!select) return;
+    select.disabled = true;
+    select.innerHTML = '<option value="">Mahalleler yükleniyor...</option>';
+    try {
+        const id = encodeURIComponent(districtId);
+        const neighborhoods = await fetchAdminTurkeyAddressDataWithFallback([
+            "/districts/" + id + "/neighborhoods?fields=id,name&sort=name&limit=1000",
+            "/neighborhoods?districtId=" + id + "&fields=id,name&sort=name&limit=1000"
+        ]);
+        fillAdminSelect(select, neighborhoods, "Mahalle seçin", "");
+        if (selectedNeighborhoodName) {
+            const option = [...select.options].find(o => o.dataset.name === selectedNeighborhoodName || o.textContent === selectedNeighborhoodName);
+            if (option) option.selected = true;
+        }
+        select.disabled = false;
+    } catch (error) {
+        select.innerHTML = '<option value="">Mahalleler yüklenemedi</option>';
+    }
+}
+
+async function adminHandleProvinceChange(index) {
+    const province = document.getElementById("branchProvince_" + index);
+    const district = document.getElementById("branchDistrict_" + index);
+    const neighborhood = document.getElementById("branchNeighborhood_" + index);
+    
+    district.innerHTML = '<option value="">Önce il seçin</option>';
+    district.disabled = true;
+    neighborhood.innerHTML = '<option value="">Önce ilçe seçin</option>';
+    neighborhood.disabled = true;
+    
+    adminHandleManualAddressChange(index);
+    if (province.value) await adminLoadDistricts(index, province.value);
+}
+
+async function adminHandleDistrictChange(index) {
+    const district = document.getElementById("branchDistrict_" + index);
+    const neighborhood = document.getElementById("branchNeighborhood_" + index);
+    
+    neighborhood.innerHTML = '<option value="">Önce ilçe seçin</option>';
+    neighborhood.disabled = true;
+    
+    adminHandleManualAddressChange(index);
+    if (district.value) await adminLoadNeighborhoods(index, district.value);
+}
+
+function adminHandleNeighborhoodChange(index) {
+    adminHandleManualAddressChange(index);
+}
+
+function normalizeAdminStreetLabel(value) {
+    const street = String(value || "").trim();
+    if (!street) return "";
+    return /^\d+$/.test(street) ? street + " Sokak" : street;
+}
+
+function adminBuildAddressFromDraft(b) {
+    const parts = [];
+    if (b.neighborhoodName) parts.push(b.neighborhoodName + (b.neighborhoodName.toLocaleLowerCase("tr-TR").includes("mah") ? "" : " Mah."));
+    if (b.street) parts.push(normalizeAdminStreetLabel(b.street));
+    if (b.buildingNo) parts.push("No:" + b.buildingNo);
+    if (b.apartmentNo) parts.push("Daire:" + b.apartmentNo);
+    if (b.districtName || b.provinceName) parts.push([b.districtName, b.provinceName].filter(Boolean).join("/"));
+    return parts.join(", ");
+}
+
+function adminHandleManualAddressChange(index) {
+    const province = document.getElementById("branchProvince_" + index);
+    const district = document.getElementById("branchDistrict_" + index);
+    const neighborhood = document.getElementById("branchNeighborhood_" + index);
+    const street = document.getElementById("branchStreet_" + index);
+    const building = document.getElementById("branchBuilding_" + index);
+    const apartment = document.getElementById("branchApartment_" + index);
+    const detail = document.getElementById("branchDetail_" + index);
+    
+    if(!province) return;
+    
+    const pOpt = province.options[province.selectedIndex];
+    const dOpt = district.options[district.selectedIndex];
+    const nOpt = neighborhood.options[neighborhood.selectedIndex];
+    
+    adminBranches[index].provinceId = province.value || "";
+    adminBranches[index].provinceName = province.value ? (pOpt?.dataset?.name || pOpt?.textContent || "") : "";
+    adminBranches[index].districtId = district.value || "";
+    adminBranches[index].districtName = district.value ? (dOpt?.dataset?.name || dOpt?.textContent || "") : "";
+    adminBranches[index].neighborhoodName = neighborhood.value ? (nOpt?.dataset?.name || nOpt?.textContent || "") : "";
+    adminBranches[index].street = street.value.trim();
+    adminBranches[index].buildingNo = building.value.trim();
+    adminBranches[index].apartmentNo = apartment.value.trim();
+    adminBranches[index].addressDetail = detail.value.trim();
+    
+    adminBranches[index].address = adminBuildAddressFromDraft(adminBranches[index]);
+}
+
+async function autoLocateAdminBranch(index) {
+    const statusEl = document.getElementById('branchStatus_' + index);
+    if (!navigator.geolocation) {
+        statusEl.textContent = 'Tarayıcınız konum özelliğini desteklemiyor.';
+        return;
+    }
+    statusEl.textContent = 'Konum alınıyor... Lütfen bekleyin.';
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        adminBranches[index].lat = lat;
+        adminBranches[index].lng = lng;
+        
+        statusEl.textContent = 'Adres çözümleniyor...';
+        try {
+            const url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + lat + "&lon=" + lng + "&zoom=18&addressdetails=1&accept-language=tr";
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if(data && data.address) {
+                const a = data.address;
+                const province = a.province || a.state || a.region || "";
+                const district = a.town || a.district || a.county || a.city_district || "";
+                const neighborhood = a.neighbourhood || a.suburb || a.village || "";
+                const street = a.road || a.pedestrian || a.street || "";
+                const bNo = a.house_number || "";
+                
+                if (province) {
+                    const provSelect = document.getElementById("branchProvince_" + index);
+                    const opt = [...provSelect.options].find(o => o.text.toLowerCase().includes(province.toLowerCase().replace(" ili", "")));
+                    if (opt) {
+                        provSelect.value = opt.value;
+                        await adminHandleProvinceChange(index);
+                        
+                        if (district) {
+                            const distSelect = document.getElementById("branchDistrict_" + index);
+                            const dOpt = [...distSelect.options].find(o => o.text.toLowerCase().includes(district.toLowerCase().replace(" ilçesi", "")));
+                            if (dOpt) {
+                                distSelect.value = dOpt.value;
+                                await adminHandleDistrictChange(index);
+                                
+                                if (neighborhood) {
+                                    const neighSelect = document.getElementById("branchNeighborhood_" + index);
+                                    let nName = neighborhood.toLowerCase().replace(" mahallesi", "").replace(" mah.", "").replace(" mah", "");
+                                    const nOpt = [...neighSelect.options].find(o => o.text.toLowerCase().includes(nName));
+                                    if (nOpt) {
+                                        neighSelect.value = nOpt.value;
+                                        adminHandleNeighborhoodChange(index);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                document.getElementById("branchStreet_" + index).value = street;
+                document.getElementById("branchBuilding_" + index).value = bNo;
+                
+                adminHandleManualAddressChange(index);
+                statusEl.textContent = 'Konum: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+            } else {
+                statusEl.textContent = 'Adres detayları alınamadı. Sadece koordinat kaydedildi.';
+            }
+        } catch (err) {
+            console.error(err);
+            statusEl.textContent = 'Harita API hatası. Konum kaydedildi.';
+        }
+    }, (err) => {
+        statusEl.textContent = 'Konum izni verilmedi veya hata oluştu.';
+    }, { timeout: 10000, enableHighAccuracy: true });
+}
 </script>
 
 </body>
