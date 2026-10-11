@@ -1466,7 +1466,7 @@ async function loadAll(){
       loadAdminOrders(),
       loadAdminNotifications(),
       loadAdminAdvertisements(),
-      loadSubscription(), /* loadAdminSettings removed to prevent overwriting inputs */
+      loadAdminSettings(),
       loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions()
@@ -4552,7 +4552,7 @@ async function refreshAdminLiveData(force=false){
       loadAdminOrders(),
       loadAdminNotifications(),
       loadAdminAdvertisements(),
-      loadAdminSettings(),
+      /* loadAdminSettings() removed from live sync */
       loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions(),
