@@ -2520,7 +2520,8 @@ function updateSubscriptionBadge() {
   const currentPkg = SUBSCRIPTION_PACKAGES.find(x => x.tier === currentPackageTier) || SUBSCRIPTION_PACKAGES[0];
   const limit = currentPkg.limit;
   const count = products.length;
-  const pct = Math.min(100, Math.round((count / limit) * 100));
+  let pct = (count / limit) * 100;
+  pct = Math.min(100, Number(pct.toFixed(2)));
   
   badge.textContent = `%${pct} dolu`;
   badge.style.display = 'inline-block';
