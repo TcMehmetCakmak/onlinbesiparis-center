@@ -1292,7 +1292,10 @@ function applyAdminBusinessTypeUi(){
   const help=document.getElementById("productManagementHelp");
   const add=document.getElementById("newProductButton");
 
-  if(tab)tab.textContent=food ? "🍽️ Menü" : "📦 Ürünler";
+  if(tab){
+    const badgeHtml = tab.querySelector('#productTotalCount')?.outerHTML || '<span id="productTotalCount" class="badge badge-active hidden" style="margin-left:5px">0</span>';
+    tab.innerHTML = (food ? "🍽️ Menü" : "📦 Ürünler") + " " + badgeHtml;
+  }
   if(title)title.textContent=food ? "Menü Yönetimi" : "Ürün Yönetimi";
   if(help){
     help.textContent=food
