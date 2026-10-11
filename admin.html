@@ -1876,7 +1876,7 @@ async function loadPlatformBusiness(){
     }
 
     usePrettyTenantAdminUrl();
-    await loadAdminSettings();
+    /* await loadAdminSettings(); removed to prevent wipe */
     return data;
   }catch(e){
     console.error(e);
