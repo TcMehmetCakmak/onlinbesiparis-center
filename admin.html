@@ -4500,7 +4500,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
-    /* .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();}) */
+    /* /* .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();}) */ */
     .on("postgres_changes",{event:"*",schema:"public",table:"medicine_requests",filter:businessFilter},async()=>{await loadMedicineRequests();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
@@ -4804,10 +4804,11 @@ function renderBranches() {
         box.style.borderRadius = "12px";
         box.style.background = "#fff";
         box.style.position = "relative";
+        box.style.marginBottom = "15px";
         
         box.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
-                <input type="text" placeholder="Şube Adı (örn. Merkez Şube)" style="flex:1; min-width:200px; padding:10px; border:1px solid #ddd; border-radius:8px; font-weight:bold;" value="${b.name || ''}" onchange="updateBranch(${index}, 'name', this.value)">
+                <input type="text" placeholder="Şube Adı (örn. Merkez Şube)" style="flex:1; min-width:200px; padding:10px; border:1px solid #ddd; border-radius:8px; font-weight:bold; margin-bottom:0;" value="${b.name || ''}" onchange="updateBranch(${index}, 'name', this.value)">
                 <div style="display:flex; gap:8px; align-items:center;">
                     ${b.isMain 
                         ? '<span style="color:#2e7d32; font-weight:bold; padding:8px; background:#e8f5e9; border-radius:8px;">★ Merkez Şube</span>' 
@@ -4816,17 +4817,42 @@ function renderBranches() {
                     <button type="button" class="btn btn-danger" style="padding:8px 12px; font-size:13px;" onclick="removeBranch(${index})">Sil</button>
                 </div>
             </div>
-            <div>
-                <textarea placeholder="Şube açık adresi..." style="width:100%; padding:10px; margin-top:4px; height:80px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px;" onchange="updateBranch(${index}, 'address', this.value)">${b.address || ''}</textarea>
-            </div>
-            <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
-                <button type="button" class="btn btn-dark" style="padding:8px 12px; font-size:13px; display:flex; align-items:center; gap:6px;" onclick="autoLocateBranch(${index})">
-                    <span style="font-size:16px;">📍</span> Otomatik Konum Bul
-                </button>
-                <span class="muted" style="font-size:13px;" id="branchStatus_${index}">${b.lat ? 'Konum: ' + b.lat.toFixed(4) + ', ' + b.lng.toFixed(4) : 'Konum seçilmedi'}</span>
+            
+            <div style="margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:8px; border:1px solid #eee;">
+                <div style="margin-bottom:8px; font-weight:bold; font-size:14px; color:#555;">Şube Adresi</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <select id="branchProvince_${index}" onchange="adminHandleProvinceChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;">
+                        <option value="">İl seçin</option>
+                    </select>
+                    <select id="branchDistrict_${index}" onchange="adminHandleDistrictChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
+                        <option value="">Önce il seçin</option>
+                    </select>
+                    <select id="branchNeighborhood_${index}" onchange="adminHandleNeighborhoodChange(${index})" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" disabled>
+                        <option value="">Önce ilçe seçin</option>
+                    </select>
+                    <input id="branchStreet_${index}" type="text" placeholder="Cadde / sokak adı" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.street || ''}" onchange="adminHandleManualAddressChange(${index})">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <input id="branchBuilding_${index}" type="text" placeholder="Bina / Kapı No" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.buildingNo || ''}" onchange="adminHandleManualAddressChange(${index})">
+                        <input id="branchApartment_${index}" type="text" placeholder="Daire No (opsiyonel)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" value="${b.apartmentNo || ''}" onchange="adminHandleManualAddressChange(${index})">
+                    </div>
+                    <textarea id="branchDetail_${index}" placeholder="Site, blok, kat, tarif gibi ek adres bilgileri (opsiyonel)" style="width:100%; padding:10px; height:60px; resize:vertical; font:inherit; border:1px solid #ddd; border-radius:8px; font-size:14px; margin:0;" onchange="adminHandleManualAddressChange(${index})">${b.addressDetail || ''}</textarea>
+                </div>
+                
+                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="button" class="btn btn-dark" style="padding:8px 12px; font-size:13px; display:flex; align-items:center; gap:6px;" onclick="autoLocateAdminBranch(${index})">
+                            <span style="font-size:16px;">📍</span> Konumumu Bul
+                        </button>
+                        <span class="muted" style="font-size:13px;" id="branchStatus_${index}">${b.lat ? 'Konum: ' + b.lat.toFixed(4) + ', ' + b.lng.toFixed(4) : 'Konum seçilmedi'}</span>
+                    </div>
+                </div>
             </div>
         `;
         container.appendChild(box);
+        
+        setTimeout(() => {
+            adminLoadProvinces(index, b.provinceId, b.districtId, b.neighborhoodName);
+        }, 10);
     });
 }
 
@@ -4854,37 +4880,6 @@ function setMainBranch(index) {
     renderBranches();
 }
 
-async function autoLocateBranch(index) {
-    const statusEl = document.getElementById('branchStatus_' + index);
-    if (!navigator.geolocation) {
-        statusEl.textContent = 'Tarayıcınız konum özelliğini desteklemiyor.';
-        return;
-    }
-    statusEl.textContent = 'Konum alınıyor... Lütfen bekleyin.';
-    
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        adminBranches[index].lat = lat;
-        adminBranches[index].lng = lng;
-        
-        statusEl.textContent = 'Adres çözümleniyor...';
-        try {
-            const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=tr`;
-            const response = await fetch(url);
-            const data = await response.json();
-            if(data && data.display_name) {
-                adminBranches[index].address = data.display_name;
-            }
-        } catch(e) {
-            console.error(e);
-        }
-        renderBranches();
-        toast("Şube konumu başarıyla alındı.");
-    }, (err) => {
-        statusEl.textContent = 'Konum alınamadı. İzin verdiğinizden emin olun.';
-    }, { enableHighAccuracy: true });
-}
 
 // Hook into save and load
 const originalSaveAppSettingsAdmin = window.saveAppSettings;
