@@ -32,7 +32,7 @@ create unique index if not exists businesses_slug_ci_uq
 create table if not exists public.business_license_history (
   id bigserial primary key,
   business_id uuid not null references public.businesses(id) on delete cascade,
-  months_added integer not null check (months_added > 0),
+  months_added integer not null check (months_added != 0),
   previous_end_date date,
   new_end_date date not null,
   changed_by uuid references auth.users(id),
@@ -195,7 +195,7 @@ as $$
 declare b public.businesses%rowtype; v_base date; v_new date;
 begin
   if not public.is_super_admin() then raise exception 'Yetkisiz işlem.'; end if;
-  if coalesce(p_months,0)<1 then raise exception 'Ay sayısı en az 1 olmalı.'; end if;
+  if coalesce(p_months,0)=0 then raise exception 'Ay sayısı 0 olamaz.'; end if;
   select * into b from public.businesses where id=p_business_id for update;
   if not found then raise exception 'İşletme bulunamadı.'; end if;
   v_base:=case when b.license_end_date>=current_date then b.license_end_date else current_date end;
