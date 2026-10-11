@@ -787,6 +787,17 @@ body.modal-open{
             <small>Seçildiğinde müşteri ekranında ayrıca gösterilir</small>
           </span>
         </label>
+
+        <label class="payment-method-admin-option" id="settingPaymentTransferWrap" style="display:none;">
+          <input
+            id="settingPaymentTransfer"
+            type="checkbox"
+          >
+          <span>
+            <strong>🏦 Eft ve Havale</strong>
+            <small>Seçildiğinde müşteri ekranında gösterilir</small>
+          </span>
+        </label>
       </div>
 
       <div class="payment-method-admin-box">
@@ -1243,7 +1254,8 @@ let appSettings = {
   background_color:"#f5f5f5",
   phone:"",
   payment_cash_enabled:true,
-  payment_card_enabled:false
+  payment_card_enabled:false,
+  payment_transfer_enabled:undefined
 };
 let platformBusiness = null;
 let currentBusinessId = null;
@@ -1782,9 +1794,11 @@ async function requestPackage(tier) {
 async function loadAdminSettings(){
   try{
     const {data,error}=await supabaseClient.from("app_settings")
-      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,branches,business_id").eq("business_id",currentBusinessId).maybeSingle();
-    if(error)throw error;
-    if(data)appSettings=data;
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,payment_transfer_enabled,branches,business_id").eq("business_id",currentBusinessId).maybeSingle();
+    if(error && error.code !== "PGRST200") {
+        // Ignore column missing error if backend not migrated yet
+    }
+    if(data)appSettings={...appSettings, ...data};
     const icon=document.getElementById("settingShopIcon");
     const phone=document.getElementById("settingPhone");
     const instagram=document.getElementById("settingInstagram");
@@ -1793,6 +1807,8 @@ async function loadAdminSettings(){
     const colorText=document.getElementById("settingBackgroundColorText");
     const paymentCash=document.getElementById("settingPaymentCash");
     const paymentCard=document.getElementById("settingPaymentCard");
+    const paymentTransfer=document.getElementById("settingPaymentTransfer");
+    const paymentTransferWrap=document.getElementById("settingPaymentTransferWrap");
 
     if(icon)icon.value=appSettings.shop_icon||"";
     if(phone)phone.value=appSettings.phone||"";
@@ -1806,6 +1822,20 @@ async function loadAdminSettings(){
     }
     if(paymentCard){
       paymentCard.checked=appSettings.payment_card_enabled===true;
+    }
+    
+    if(paymentTransferWrap && platformBusiness?.business_type === 'ecommerce'){
+      paymentTransferWrap.style.display = 'block';
+    } else if (paymentTransferWrap) {
+      paymentTransferWrap.style.display = 'none';
+    }
+    
+    if(paymentTransfer){
+      if (appSettings.payment_transfer_enabled != null) {
+          paymentTransfer.checked = appSettings.payment_transfer_enabled === true;
+      } else {
+          paymentTransfer.checked = platformBusiness?.business_type === 'ecommerce';
+      }
     }
 
     const c=/^#[0-9a-fA-F]{6}$/.test(appSettings.background_color||"")?appSettings.background_color:"#f5f5f5";
@@ -1904,6 +1934,7 @@ async function saveAppSettings(){
   const instagram_label=document.getElementById("settingInstagramLabel").value.trim();
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
   const payment_card_enabled=document.getElementById("settingPaymentCard")?.checked===true;
+  const payment_transfer_enabled=document.getElementById("settingPaymentTransfer")?.checked===true;
 
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
@@ -1920,9 +1951,10 @@ async function saveAppSettings(){
         background_color,
         payment_cash_enabled:true,
         payment_card_enabled,
+        payment_transfer_enabled,
         updated_at:new Date().toISOString()
       },{onConflict:"business_id"})
-      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,business_id")
+      .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,payment_transfer_enabled,business_id")
       .single();
 
     if(error)throw error;
