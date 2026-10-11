@@ -1672,11 +1672,14 @@ async function loadAdminNotifications(){
   }
 }
 
+let pendingPackageTier = null;
 async function loadSubscription() {
   if(!platformClient || !currentBusinessId) return;
   try {
     const {data} = await platformClient.from("package_subscriptions").select("package_tier").eq("business_id", currentBusinessId).maybeSingle();
     currentPackageTier = data?.package_tier || 1;
+    const {data: reqData} = await platformClient.from("package_requests").select("requested_tier").eq("business_id", currentBusinessId).eq("status", "pending").maybeSingle();
+    pendingPackageTier = reqData?.requested_tier || null;
     renderSubscriptionCard();
   } catch(e) {
     console.warn("Abonelik bilgisi çekilemedi", e);
@@ -1686,14 +1689,24 @@ async function loadSubscription() {
 function renderSubscriptionCard() {
   const el = document.getElementById("subscriptionPackageGrid");
   if(!el) return;
-  el.innerHTML = SUBSCRIPTION_PACKAGES.map(pkg => `
-    <div class="card ${pkg.tier === currentPackageTier ? 'active-package' : ''}" style="border: 2px solid ${pkg.tier === currentPackageTier ? '#16803a' : '#e6e9ee'}; cursor:pointer" onclick="requestPackage(${pkg.tier})">
+  el.innerHTML = SUBSCRIPTION_PACKAGES.map(pkg => {
+    const isActive = pkg.tier === currentPackageTier;
+    const isPending = pkg.tier === pendingPackageTier;
+    let btnHtml = '';
+    if (isActive) {
+      btnHtml = '<div style="margin-top:10px; color:#16803a; font-weight:bold; font-size:13px">Mevcut Paketiniz</div>';
+    } else if (isPending) {
+      btnHtml = '<button class="btn btn-light" disabled style="margin-top:10px; width:100%; font-size:12px; cursor:not-allowed; opacity:0.7">Onay Bekleniyor</button>';
+    } else {
+      btnHtml = '<button class="btn btn-primary" style="margin-top:10px; width:100%; font-size:12px">Bu Pakete Geç</button>';
+    }
+    return `<div class="card ${isActive ? 'active-package' : ''}" style="border: 2px solid ${isActive ? '#16803a' : '#e6e9ee'}; cursor:${isActive || isPending ? 'default' : 'pointer'}" ${isActive || isPending ? '' : `onclick="requestPackage(${pkg.tier})"`}>
       <div style="font-weight:bold; font-size:16px; margin-bottom:8px">${pkg.name}</div>
       <div class="muted" style="margin-bottom:8px">Maksimum ${pkg.limit} Ürün</div>
       <div style="font-weight:bold; color:#2563eb">${pkg.price}</div>
-      ${pkg.tier === currentPackageTier ? '<div style="margin-top:10px; color:#16803a; font-weight:bold; font-size:13px">Mevcut Paketiniz</div>' : '<button class="btn btn-primary" style="margin-top:10px; width:100%; font-size:12px">Bu Pakete Geç</button>'}
-    </div>
-  `).join("");
+      ${btnHtml}
+    </div>`;
+  }).join("");
 }
 
 async function requestPackage(tier) {
@@ -1706,6 +1719,8 @@ async function requestPackage(tier) {
       status: "pending"
     });
     if(error) throw error;
+    pendingPackageTier = tier;
+    renderSubscriptionCard();
     alert("Paket talebiniz başarıyla alındı. Yönetici onayladığında limitiniz güncellenecektir.");
   } catch(e) {
     alert("Talep gönderilemedi: " + e.message);
@@ -4702,3 +4717,4 @@ function renderProductVariantRows(){
 </body>
 
 </html>
+
