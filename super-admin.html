@@ -96,7 +96,7 @@
     <div class="stat"><div class="stat-label">Deaktif</div><div id="statInactive" class="stat-value">0</div></div>
     <div class="stat"><div class="stat-label">Bekleyen İsim Talebi</div><div id="statPending" class="stat-value">0</div></div><div class="stat"><div class="stat-label">Bekleyen Destek Talebi</div><div id="statSupportPending" class="stat-value">0</div></div><div class="stat"><div class="stat-label">Bekleyen Bayilik Talebi</div><div id="statFranchisePending" class="stat-value">0</div></div>
   </div>
-  <div class="tabs"><button class="tab active" onclick="showTab('businesses',this)">🏪 İşletmeler</button><button class="tab" onclick="showTab('requests',this)">📝 İsim Talepleri</button><button class="tab" onclick="showTab('support',this)">🛠️ Destek Talepleri <span id="superSupportBadge" class="badge pending" style="margin-left:4px">0</span></button><button class="tab" onclick="showTab('franchise',this)">🏪 Bayilik Talepleri <span id="franchiseBadge" class="badge pending" style="margin-left:4px">0</span></button></div>
+  <div class="tabs"><button class="tab active" onclick="showTab('businesses',this)">🏪 İşletmeler</button><button class="tab" onclick="showTab('packages',this)">?? Paket Talepleri <span id="packageBadge" class="badge pending" style="margin-left:4px">0</span></button><button class="tab" onclick="showTab('requests',this)">📝 İsim Talepleri</button><button class="tab" onclick="showTab('support',this)">🛠️ Destek Talepleri <span id="superSupportBadge" class="badge pending" style="margin-left:4px">0</span></button><button class="tab" onclick="showTab('franchise',this)">🏪 Bayilik Talepleri <span id="franchiseBadge" class="badge pending" style="margin-left:4px">0</span></button></div>
   <section id="businessesTab">
     <div class="card"><div class="filters"><input id="search" oninput="renderBusinesses()" placeholder="İşletme sahibi / dükkan / slug ara"><select id="statusFilter" onchange="renderBusinesses()"><option value="all">Tüm durumlar</option><option value="active">Aktif</option><option value="inactive">Deaktif</option></select><select id="sortFilter" onchange="renderBusinesses()"><option value="newest">Yeniden eskiye</option><option value="license">Lisans sonuna göre</option><option value="name">Dükkan adına göre</option></select></div></div>
     <div id="businessList"></div>
@@ -168,11 +168,11 @@ async function checkSession(){const {data}=await db.auth.getSession();if(!data.s
 async function login(){const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;const {data,error}=await db.auth.signInWithPassword({email,password});if(error){document.getElementById('loginError').textContent=error.message;return}if(!await isSuper(data.user.id)){await db.auth.signOut();document.getElementById('loginError').textContent='Bu hesap süper admin olarak tanımlanmamış.';return}showApp()}
 async function logout(){await db.auth.signOut();location.reload()}
 function showApp(){document.getElementById('loginPage').classList.add('hidden');document.getElementById('app').classList.remove('hidden');loadAll()}
-async function loadAll(){await Promise.all([loadBusinesses(),loadRequests(),loadSupportTickets(),loadFranchiseRequests()]);renderStats()}
+async function loadAll(){await Promise.all([loadBusinesses(),loadRequests(),loadSupportTickets(),loadFranchiseRequests(),loadPackageRequests()]);renderStats()}
 async function loadBusinesses(){const {data,error}=await db.rpc('super_admin_list_businesses');if(error){toast(error.message);return}businesses=data||[];renderBusinesses();renderStats()}
 async function loadRequests(){const {data,error}=await db.rpc('super_admin_list_name_requests');if(error){toast(error.message);return}requests=data||[];renderRequests();renderStats()}
 async function loadSupportTickets(){const {data,error}=await db.rpc('super_admin_list_support_tickets');if(error){toast(error.message);return}supportTickets=data||[];renderSupportTickets();renderStats()}
-function renderStats(){document.getElementById('statTotal').textContent=businesses.length;document.getElementById('statActive').textContent=businesses.filter(x=>x.is_active).length;document.getElementById('statInactive').textContent=businesses.filter(x=>!x.is_active).length;document.getElementById('statPending').textContent=requests.filter(x=>x.status==='pending').length;const supportPending=supportTickets.filter(x=>x.status==='pending').length;document.getElementById('statSupportPending').textContent=supportPending;const badge=document.getElementById('superSupportBadge');if(badge)badge.textContent=supportPending;document.getElementById('statFranchisePending').textContent=franchiseRequests.filter(x=>x.status==='pending').length;const fbadge=document.getElementById('franchiseBadge');if(fbadge)fbadge.textContent=franchiseRequests.filter(x=>x.status==='pending').length}
+function renderStats(){document.getElementById('statTotal').textContent=businesses.length;document.getElementById('statActive').textContent=businesses.filter(x=>x.is_active).length;document.getElementById('statInactive').textContent=businesses.filter(x=>!x.is_active).length;document.getElementById('statPending').textContent=requests.filter(x=>x.status==='pending').length;const supportPending=supportTickets.filter(x=>x.status==='pending').length;document.getElementById('statSupportPending').textContent=supportPending;const badge=document.getElementById('superSupportBadge');if(badge)badge.textContent=supportPending;document.getElementById('statFranchisePending').textContent=franchiseRequests.filter(x=>x.status==='pending').length;const fbadge=document.getElementById('franchiseBadge');if(fbadge)fbadge.textContent=franchiseRequests.filter(x=>x.status==='pending').length; const pbadge=document.getElementById('packageBadge');if(pbadge)pbadge.textContent=packageRequests.filter(x=>x.status==='pending').length;}
 function renderBusinesses(){const q=document.getElementById('search').value.trim().toLocaleLowerCase('tr'),status=document.getElementById('statusFilter').value,sort=document.getElementById('sortFilter').value;let list=businesses.filter(b=>!q||[b.owner_name,b.shop_name,b.slug,b.tenant_project_ref].some(v=>String(v||'').toLocaleLowerCase('tr').includes(q))).filter(b=>status==='all'||(status==='active'?b.is_active:!b.is_active));if(sort==='license')list.sort((a,b)=>String(a.license_end_date).localeCompare(String(b.license_end_date)));else if(sort==='name')list.sort((a,b)=>String(a.shop_name).localeCompare(String(b.shop_name),'tr'));else list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));const el=document.getElementById('businessList');if(!list.length){el.innerHTML='<div class="card empty">İşletme bulunamadı.</div>';return}el.innerHTML=list.map(b=>`<div class="business card"><div class="business-head"><div><h3 style="margin:0">${esc(b.shop_name)}</h3><div class="muted">${esc(b.owner_name)} · ${esc(b.slug)}</div></div><span class="badge ${b.is_active?'active':'inactive'}">${b.is_active?'🟢 Aktif':'🔴 Deaktif'}</span></div><div class="meta"><div><div class="muted">Lisans başlangıcı</div><strong>${dateTR(b.license_start_date)}</strong></div><div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div><div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div><div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div></div><div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div><div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="openEditBusiness(\'${b.id}\')">✏️ Düzenle</button><button class="btn btn-success" onclick="extendLicense('${b.id}',1)">+1 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',3)">+3 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',6)">+6 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',12)">+12 Ay</button><button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button><button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button></div></div>`).join('')}
 function renderRequests(){const el=document.getElementById('requestList');if(!requests.length){el.innerHTML='<div class="empty">İsim değişikliği talebi yok.</div>';return}el.innerHTML=requests.map(r=>`<div class="request"><div class="business-head"><div><strong>${esc(r.owner_name)}</strong><div class="muted">${dateTimeTR(r.requested_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Onay Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Mevcut:</span> <strong>${esc(r.current_name)}</strong> → <span class="muted">İstenen:</span> <strong>${esc(r.requested_name)}</strong></div>${r.rejection_reason?`<div class="muted">Red nedeni: ${esc(r.rejection_reason)}</div>`:''}${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approveRequest(${r.id})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectRequest(${r.id})">✕ Reddet</button></div>`:''}</div>`).join('')}
 
@@ -365,6 +365,38 @@ setInterval(()=>refreshSuperAdminData(),3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSuperAdminData()});
 window.addEventListener('focus',()=>refreshSuperAdminData());
 checkSession();
+let packageRequests = [];
+async function loadPackageRequests() {
+  const {data, error} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
+  if(error){ toast(error.message); return; }
+  packageRequests = data || [];
+  renderPackageRequests();
+  renderStats();
+}
+function renderPackageRequests() {
+  const el = document.getElementById('packageList');
+  if(!el) return;
+  if(!packageRequests.length) { el.innerHTML = '<div class="empty">Paket talebi yok.</div>'; return; }
+  el.innerHTML = packageRequests.map(r => {
+    const b = businesses.find(x => x.id === r.business_id);
+    const shopName = b ? b.shop_name : 'Bilinmeyen İşletme';
+    return `<div class="request"><div class="business-head"><div><strong>${esc(shopName)}</strong><div class="muted">${dateTimeTR(r.created_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Talep Edilen Paket Seviyesi:</span> <strong>Tier ${r.requested_tier}</strong></div>${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approvePackage(${r.id}, '${r.business_id}', ${r.requested_tier})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectPackage(${r.id})">✕ Reddet</button></div>`:``}</div>`;
+  }).join('');
+}
+async function approvePackage(id, businessId, tier) {
+  if(!confirm('Bu paketi onaylamak istediğinize emin misiniz?')) return;
+  await db.from('package_requests').update({status: 'approved'}).eq('id', id);
+  await db.from('package_subscriptions').upsert({business_id: businessId, package_tier: tier, updated_at: new Date().toISOString()});
+  toast('Onaylandı');
+  loadPackageRequests();
+}
+async function rejectPackage(id) {
+  if(!confirm('Bu talebi reddetmek istediğinize emin misiniz?')) return;
+  await db.from('package_requests').update({status: 'rejected'}).eq('id', id);
+  toast('Reddedildi');
+  loadPackageRequests();
+}
 </script>
 </body>
 </html>
+

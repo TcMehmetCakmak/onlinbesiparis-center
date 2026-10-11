@@ -778,6 +778,16 @@ body.modal-open{
         </label>
       </div>
 
+      <div class="payment-method-admin-box">
+        <h3 style="margin-bottom:6px">🚀 Paket ve Abonelik</h3>
+        <div class="muted" style="margin-bottom:12px">
+          Güncel paketinizi aşağıdan görebilir ve yeni paket talebinde bulunabilirsiniz. Ürün limitinizi aşmanız durumunda yeni ürün yükleyemezsiniz.
+        </div>
+        <div id="subscriptionPackageGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top:16px;">
+           <!-- Paketler JS ile doldurulacak -->
+        </div>
+      </div>
+
       <div id="tenantLicenseInfo" style="margin-top:10px;padding:12px;border-radius:10px;background:#f5f5f5" class="muted">Merkezi lisans bilgisi yükleniyor...</div>
       <div class="actions" style="justify-content:flex-end;margin-top:8px">
         <button class="btn btn-primary" onclick="saveAppSettings()">Ayarları Kaydet</button>
@@ -1190,6 +1200,15 @@ const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.ke
     )
   : null;
 
+const SUBSCRIPTION_PACKAGES = [
+  { tier: 1, limit: 10, name: "Başlangıç", price: "Ücretsiz" },
+  { tier: 2, limit: 100, name: "Pro", price: "2.000 TL" },
+  { tier: 3, limit: 250, name: "Premium", price: "3.000 TL" },
+  { tier: 4, limit: 500, name: "Elite", price: "5.000 TL" },
+  { tier: 5, limit: 1000, name: "Ultimate", price: "8.000 TL" }
+];
+let currentPackageTier = 1;
+
 let products = [];
 let pendingProductFiles = [];
 let pendingMainImageIndex = null;
@@ -1419,6 +1438,7 @@ async function loadAll(){
       loadAdminNotifications(),
       loadAdminAdvertisements(),
       loadAdminSettings(),
+      loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions()
     ];
@@ -1649,6 +1669,46 @@ async function loadAdminNotifications(){
     console.error("Bildirimler yüklenemedi:",e);
     const el=document.getElementById("notificationAdminList");
     if(el)el.innerHTML='<div class="empty">Bildirimler yüklenemedi: '+escapeHtml(e.message||String(e))+'</div>';
+  }
+}
+
+async function loadSubscription() {
+  if(!platformClient || !currentBusinessId) return;
+  try {
+    const {data} = await platformClient.from("package_subscriptions").select("package_tier").eq("business_id", currentBusinessId).maybeSingle();
+    currentPackageTier = data?.package_tier || 1;
+    renderSubscriptionCard();
+  } catch(e) {
+    console.warn("Abonelik bilgisi çekilemedi", e);
+  }
+}
+
+function renderSubscriptionCard() {
+  const el = document.getElementById("subscriptionPackageGrid");
+  if(!el) return;
+  el.innerHTML = SUBSCRIPTION_PACKAGES.map(pkg => `
+    <div class="card ${pkg.tier === currentPackageTier ? 'active-package' : ''}" style="border: 2px solid ${pkg.tier === currentPackageTier ? '#16803a' : '#e6e9ee'}; cursor:pointer" onclick="requestPackage(${pkg.tier})">
+      <div style="font-weight:bold; font-size:16px; margin-bottom:8px">${pkg.name}</div>
+      <div class="muted" style="margin-bottom:8px">Maksimum ${pkg.limit} Ürün</div>
+      <div style="font-weight:bold; color:#2563eb">${pkg.price}</div>
+      ${pkg.tier === currentPackageTier ? '<div style="margin-top:10px; color:#16803a; font-weight:bold; font-size:13px">Mevcut Paketiniz</div>' : '<button class="btn btn-primary" style="margin-top:10px; width:100%; font-size:12px">Bu Pakete Geç</button>'}
+    </div>
+  `).join("");
+}
+
+async function requestPackage(tier) {
+  if(tier === currentPackageTier) return;
+  if(!confirm("Bu pakete geçiş talebi göndermek istediğinize emin misiniz? Platform yetkilisi onayladığında paketiniz yükseltilecektir.")) return;
+  try {
+    const {error} = await platformClient.from("package_requests").insert({
+      business_id: currentBusinessId,
+      requested_tier: tier,
+      status: "pending"
+    });
+    if(error) throw error;
+    alert("Paket talebiniz başarıyla alındı. Yönetici onayladığında limitiniz güncellenecektir.");
+  } catch(e) {
+    alert("Talep gönderilemedi: " + e.message);
   }
 }
 async function loadAdminSettings(){
@@ -2561,6 +2621,13 @@ function getFoodProductOptionsPayload(){
 }
 
 function openProductModal(p=null){
+  if (!p) {
+      const currentPkg = SUBSCRIPTION_PACKAGES.find(x => x.tier === currentPackageTier) || SUBSCRIPTION_PACKAGES[0];
+      if (products.length >= currentPkg.limit) {
+          alert(`Paket hakkınız doldu (Maksimum ${currentPkg.limit} ürün). Lütfen Genel Ayarlar'dan paketinizi yükseltiniz.`);
+          return;
+      }
+  }
   revokePendingPreviewUrls();
   pendingProductFiles=[];
   pendingMainImageIndex=null;
@@ -4418,6 +4485,7 @@ async function refreshAdminLiveData(force=false){
       loadAdminNotifications(),
       loadAdminAdvertisements(),
       loadAdminSettings(),
+      loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions(),
       loadPlatformBusiness(),
