@@ -10122,7 +10122,29 @@ setInterval(()=>{
 <script>
 let shopBranches = [];
 
-function openShopAddressModal() {
+
+window.renderAddressButton = function() {
+    const headerTools = document.querySelector('.header-tools');
+    if(headerTools && !document.getElementById('headerAddressBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'headerAddressBtn';
+        btn.className = 'notification-button'; 
+        btn.style.marginRight = '8px';
+        btn.innerHTML = '📍';
+        btn.title = 'Adresimiz';
+        btn.onclick = window.openShopAddressModal;
+        
+        // Find notification button
+        const notifBtn = headerTools.querySelector('button[onclick="openNotificationPage()"]') || headerTools.querySelector('.notification-button');
+        if(notifBtn) {
+            headerTools.insertBefore(btn, notifBtn);
+        } else {
+            headerTools.prepend(btn);
+        }
+    }
+};
+
+window.openShopAddressModal = function() {
     const modal = document.getElementById("shopAddressModal");
     if(!modal) return;
     
@@ -10164,7 +10186,7 @@ function openShopAddressModal() {
     }
 }
 
-function closeShopAddressModal() {
+window.closeShopAddressModal = function() {
     const modal = document.getElementById("shopAddressModal");
     if(modal) modal.classList.add("hidden");
     document.documentElement.classList.remove("modal-open");
@@ -10181,21 +10203,7 @@ window.loadAppSettings = async function() {
             shopBranches = data.branches;
             
             // Inject Address button to the header
-            if(shopBranches.length > 0) {
-                const headerActions = document.querySelector('.header-actions') || document.querySelector('.shop-header-actions') || document.querySelector('#shopName')?.parentNode;
-                if(headerActions && !document.getElementById('headerAddressBtn')) {
-                    const btn = document.createElement('button');
-                    btn.id = 'headerAddressBtn';
-                    btn.className = 'btn btn-light';
-                    btn.style.marginLeft = '10px';
-                    btn.style.padding = '8px 12px';
-                    btn.style.fontSize = '14px';
-                    btn.style.borderRadius = '20px';
-                    btn.innerHTML = '📍 Adres';
-                    btn.onclick = openShopAddressModal;
-                    headerActions.appendChild(btn);
-                }
-            }
+            if (shopBranches.length > 0) { window.renderAddressButton(); }
         }
     } catch(e) { console.error(e); }
 };
