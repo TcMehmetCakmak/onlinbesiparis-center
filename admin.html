@@ -1466,7 +1466,7 @@ async function loadAll(){
       loadAdminOrders(),
       loadAdminNotifications(),
       loadAdminAdvertisements(),
-      loadAdminSettings(),
+      loadSubscription(), /* loadAdminSettings removed to prevent overwriting inputs */
       loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions()
