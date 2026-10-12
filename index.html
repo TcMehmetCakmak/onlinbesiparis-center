@@ -3163,16 +3163,46 @@ body{
 
 <div id="rootLanding" class="root-landing hidden">
     <div class="root-landing-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <style>
+            .root-landing-header {
+                position: relative;
+                text-align: center;
+            }
+            .root-landing-actions {
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                display: flex;
+                gap: 8px;
+            }
+            @media (max-width: 600px) {
+                .root-landing-actions {
+                    position: static;
+                    transform: none;
+                    justify-content: center;
+                    margin-top: 12px;
+                }
+            }
+        </style>
+        <div class="root-landing-header">
             <h1 style="margin:0;">Online Sipariş</h1>
-            <button
-                type="button"
-                class="header-nav-button"
-                style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
-                onclick="openFranchisePage()"
-            >🏪 Bayilik Aç</button>
+            <div class="root-landing-actions">
+                <button
+                    type="button"
+                    class="header-nav-button"
+                    style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
+                    onclick="openPromoVideoModal('medya/tanitim-metni.mp4')"
+                >🎬 Tanıtım Videomuz</button>
+                <button
+                    type="button"
+                    class="header-nav-button"
+                    style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
+                    onclick="openFranchisePage()"
+                >🏪 Bayilik Aç</button>
+            </div>
         </div>
-        <div class="root-landing-muted">
+        <div class="root-landing-muted" style="margin-top: 8px;">
             Sipariş vermek istediğiniz işletmeyi seçin.
         </div>
         <div id="rootBusinessList" class="root-business-list">
@@ -10134,11 +10164,14 @@ setInterval(()=>{
   </div>
 
   <script>
-    function openPromoVideoModal() {
+    function openPromoVideoModal(overrideSrc) {
         var player = document.getElementById('promoVideoPlayer');
         if (player) {
-            var isFood = typeof currentBusinessIsFood === "function" ? currentBusinessIsFood() : false;
-            var videoSrc = isFood ? "medya/musteri-e-ticaret.mp4" : "medya/musteri.mp4";
+            var videoSrc = overrideSrc;
+            if (!videoSrc) {
+                var isFood = typeof currentBusinessIsFood === "function" ? currentBusinessIsFood() : false;
+                videoSrc = isFood ? "medya/musteri-e-ticaret.mp4" : "medya/musteri.mp4";
+            }
             
             var sourceEl = player.querySelector("source");
             if (sourceEl && sourceEl.getAttribute("src") !== videoSrc) {
