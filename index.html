@@ -3162,46 +3162,22 @@ body{
 
 
 <div id="rootLanding" class="root-landing hidden">
-    <div class="root-landing-card">
-        <style>
-            .root-landing-header {
-                position: relative;
-                text-align: center;
-            }
-            .root-landing-actions {
-                position: absolute;
-                right: 0;
-                top: 50%;
-                transform: translateY(-50%);
-                display: flex;
-                gap: 8px;
-            }
-            @media (max-width: 600px) {
-                .root-landing-actions {
-                    position: static;
-                    transform: none;
-                    justify-content: center;
-                    margin-top: 12px;
-                }
-            }
-        </style>
-        <div class="root-landing-header">
-            <div class="root-landing-actions">
-                <button
-                    type="button"
-                    class="header-nav-button"
-                    style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
-                    onclick="openPromoVideoModal('medya/tanitim-metni.mp4')"
-                >🎬 Tanıtım Videomuz</button>
-                <button
-                    type="button"
-                    class="header-nav-button"
-                    style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
-                    onclick="openFranchisePage()"
-                >🏪 Bayilik Aç</button>
-            </div>
-            <br>
-            <hr>
+    <div class="root-landing-card" style="position: relative; padding-top: 60px;">
+        <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 8px;">
+            <button
+                type="button"
+                class="header-nav-button"
+                style="margin:0; padding:8px 12px; font-size:13px; border-radius:10px; flex-shrink: 0;"
+                onclick="openPromoVideoModal('medya/tanitim-metni.mp4')"
+            >🎬 Tanıtım Videomuz</button>
+            <button
+                type="button"
+                class="header-nav-button"
+                style="margin:0; padding:8px 12px; font-size:13px; border-radius:10px; flex-shrink: 0;"
+                onclick="openFranchisePage()"
+            >🏪 Bayilik Aç</button>
+        </div>
+        <div class="root-landing-header" style="text-align: center;">
             <h1 style="margin:0;">Online Sipariş</h1>
         </div>
         <div class="root-landing-muted" style="margin-top: 8px;">
