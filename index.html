@@ -3163,24 +3163,53 @@ body{
 
 <div id="rootLanding" class="root-landing hidden">
     <div class="root-landing-card">
-        <h1>Online Sipariş</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <h1 style="margin:0;">Online Sipariş</h1>
+            <button
+                type="button"
+                class="header-nav-button"
+                style="margin:0; padding:8px 12px; font-size:14px; border-radius:10px; flex-shrink: 0;"
+                onclick="openFranchisePage()"
+            >🏪 Bayilik Aç</button>
+        </div>
         <div class="root-landing-muted">
             Sipariş vermek istediğiniz işletmeyi seçin.
         </div>
         <div id="rootBusinessList" class="root-business-list">
             <div class="root-business-empty">İşletmeler yükleniyor...</div>
         </div>
-        <div style="margin-top:24px;text-align:center;">
-            <button
-                type="button"
-                class="header-nav-button"
-                style="display:inline-flex; justify-content:center; width:100%; max-width:200px; padding:12px; margin:auto;"
-                onclick="openFranchisePage()"
-            >🏪 Bayilik Aç</button>
-        </div>
     </div>
 </div>
 
+<div id="franchisePage" class="franchise-page hidden">
+  <div class="franchise-page-inner">
+    <div class="franchise-page-header">
+      <button type="button" class="franchise-back" onclick="closeFranchisePage()" aria-label="Geri">‹</button>
+      <h2>🏪 Bayilik Talebi</h2>
+    </div>
+
+    <div class="card franchise-form-card">
+      <p class="small">Bayilik talebinizi bırakın, çalışma arkadaşlarımız sizinle iletişime geçsin.</p>
+
+      <label>Ad Soyad</label>
+      <input id="franchiseName" type="text" maxlength="120" placeholder="Adınız ve soyadınız">
+
+      <label>Telefon</label>
+      <input id="franchisePhone" type="tel" maxlength="30" placeholder="05xx xxx xx xx">
+
+      <label>E-posta (opsiyonel)</label>
+      <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
+
+      <label>Not (opsiyonel)</label>
+      <textarea id="franchiseNote" maxlength="1500" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
+
+      <div class="actions franchise-actions">
+        <button type="button" class="btn btn-light" onclick="closeFranchisePage()">Vazgeç</button>
+        <button type="button" class="btn btn-primary" onclick="submitFranchiseRequest()">Talebi Gönder</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="tenantAppContainer" class="container">
 
     <!-- =========================================
@@ -3288,35 +3317,6 @@ body{
 
         </div>
 
-<div id="franchisePage" class="franchise-page hidden">
-  <div class="franchise-page-inner">
-    <div class="franchise-page-header">
-      <button type="button" class="franchise-back" onclick="closeFranchisePage()" aria-label="Geri">‹</button>
-      <h2>🏪 Bayilik Talebi</h2>
-    </div>
-
-    <div class="card franchise-form-card">
-      <p class="small">Bayilik talebinizi bırakın, çalışma arkadaşlarımız sizinle iletişime geçsin.</p>
-
-      <label>Ad Soyad</label>
-      <input id="franchiseName" type="text" maxlength="120" placeholder="Adınız ve soyadınız">
-
-      <label>Telefon</label>
-      <input id="franchisePhone" type="tel" maxlength="30" placeholder="05xx xxx xx xx">
-
-      <label>E-posta (opsiyonel)</label>
-      <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
-
-      <label>Not (opsiyonel)</label>
-      <textarea id="franchiseNote" maxlength="1500" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
-
-      <div class="actions franchise-actions">
-        <button type="button" class="btn btn-light" onclick="closeFranchisePage()">Vazgeç</button>
-        <button type="button" class="btn btn-primary" onclick="submitFranchiseRequest()">Talebi Gönder</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div id="licenseBanner" class="card hidden" style="background:#ffe5e5;color:#9f1d1d;font-weight:bold;text-align:center;border:1px solid #ffc7c7;line-height:1.5"></div>
 
