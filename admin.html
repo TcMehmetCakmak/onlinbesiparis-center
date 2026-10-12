@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>İşletme Yönetim Paneli</title>
+<link rel="manifest" href="admin-manifest.json">
+<meta name="theme-color" content="#222222">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f5f7;color:#222}
@@ -1194,10 +1197,17 @@ function toggleLoginPassword(){
 </script>
 <script>
 const APP_ROOT_URL = new URL("./", location.href);
-const TENANT_SLUG = String(
-  new URLSearchParams(location.search).get("tenant") || ""
-).trim().toLowerCase();
+let paramTenant = new URLSearchParams(location.search).get("tenant");
+if (paramTenant) {
+  localStorage.setItem("last_admin_tenant", paramTenant);
+} else {
+  paramTenant = localStorage.getItem("last_admin_tenant");
+  if (paramTenant) {
+    location.replace("admin.html?tenant=" + encodeURIComponent(paramTenant));
+  }
+}
 
+const TENANT_SLUG = String(paramTenant || "").trim().toLowerCase();
 const PHARMACY_FEATURE_TENANT_SLUG = "sifa-eczane";
 
 if(!TENANT_SLUG){
@@ -5239,6 +5249,15 @@ async function autoLocateAdminBranch(index) {
 }
 </script>
 
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(err => {
+      console.error('Service Worker kaydı başarısız:', err);
+    });
+  });
+}
+</script>
 </body>
 
 </html>
