@@ -3237,14 +3237,17 @@ body{
         var player = document.getElementById('promoVideoPlayer');
         if (player) {
             var videoSrc = overrideSrc;
-            if (!videoSrc) {
+            if (!videoSrc || typeof videoSrc !== 'string') {
                 var isFood = typeof currentBusinessIsFood === "function" ? currentBusinessIsFood() : false;
                 videoSrc = isFood ? "medya/musteri-e-ticaret.mp4" : "medya/musteri.mp4";
             }
             
             var sourceEl = player.querySelector("source");
-            if (sourceEl && sourceEl.getAttribute("src") !== videoSrc) {
-                sourceEl.setAttribute("src", videoSrc);
+            var currentSrc = player.getAttribute("src") || (sourceEl ? sourceEl.getAttribute("src") : null);
+
+            if (currentSrc !== videoSrc) {
+                player.src = videoSrc;
+                if (sourceEl) sourceEl.setAttribute("src", videoSrc);
                 player.load();
             }
 
