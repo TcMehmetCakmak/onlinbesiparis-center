@@ -3161,6 +3161,94 @@ body{
 <body>
 
 
+<style id="root-landing-products-style">
+    .root-landing {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 auto !important;
+        padding: 16px 24px !important;
+    }
+    @media(max-width:700px){
+        .root-landing {
+            padding: 10px !important;
+        }
+    }
+    #rootBusinessList {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(180px, 1fr));
+        gap: 16px;
+    }
+    @media(max-width:1200px){
+        #rootBusinessList { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media(max-width:700px){
+        #rootBusinessList { grid-template-columns: repeat(2, 1fr); }
+    }
+    #rootBusinessList .product {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: space-between;
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 16px;
+        padding: 12px;
+        min-height: 360px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.06);
+        position: relative;
+        cursor: pointer;
+        transition: transform .22s ease, box-shadow .22s ease;
+    }
+    #rootBusinessList .product:hover {
+        transform: translateY(-3px);
+        box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.25);
+    }
+    #rootBusinessList .product-main {
+        display: block;
+    }
+    #rootBusinessList .product-main-image,
+    #rootBusinessList .product-no-image {
+        width: 100%;
+        height: 220px;
+        max-width: none;
+        border-radius: 12px;
+        object-fit: cover;
+    }
+    .root-product-business-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #1f7a4d;
+        background: #eef7f2;
+        border: 1px solid #d2ebdd;
+        padding: 4px 8px;
+        border-radius: 8px;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    #rootProductSearchInput {
+        width: 220px !important;
+        max-width: 44vw !important;
+        min-width: 150px;
+    }
+    @media(max-width:600px){
+        #rootProductSearchInput {
+            width: 165px !important;
+            max-width: 46vw !important;
+            min-width: 120px;
+            padding-left: 9px !important;
+            padding-right: 9px !important;
+            font-size: 13px !important;
+        }
+    }
+</style>
+
 <div id="rootLanding" class="root-landing hidden">
     <div class="root-landing-card" style="position: relative; padding-top: 60px;">
         <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 8px;">
@@ -3183,8 +3271,51 @@ body{
         <div class="root-landing-muted" style="margin-top: 8px;">
             Sipariş vermek istediğiniz işletmeyi seçin.
         </div>
+
+        <div class="order-heading-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px">
+            <h2 style="margin:0">Ürünler</h2>
+
+            <div class="product-search-tools">
+                <input
+                    id="rootProductSearchInput"
+                    type="search"
+                    placeholder="🔎 Ürün veya işletme ara..."
+                    autocomplete="off"
+                    aria-label="Ürün veya işletme ara"
+                    oninput="renderRootLandingProducts()"
+                    style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
+                >
+
+                <div class="product-filter-wrap">
+                    <button
+                        id="rootProductFilterButton"
+                        type="button"
+                        class="product-filter-button"
+                        onclick="toggleRootProductFilterMenu(event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        title="Ürünleri sırala"
+                    >
+                        ↕️ <span class="filter-label">En Yüksek Puanlılar</span>
+                    </button>
+
+                    <div id="rootProductFilterMenu" class="product-filter-menu hidden">
+                        <div class="product-filter-menu-title">Sıralama</div>
+                        <button type="button" class="product-filter-option root-filter-option selected" data-sort="rating_desc" onclick="setRootProductSort('rating_desc')">Puan: En yüksekten düşüğe</button>
+                        <button type="button" class="product-filter-option root-filter-option" data-sort="rating_asc" onclick="setRootProductSort('rating_asc')">Puan: En düşükten yükseğe</button>
+                        <button type="button" class="product-filter-option root-filter-option" data-sort="price_desc" onclick="setRootProductSort('price_desc')">Fiyat: Artandan azalana</button>
+                        <button type="button" class="product-filter-option root-filter-option" data-sort="price_asc" onclick="setRootProductSort('price_asc')">Fiyat: Azalandan artana</button>
+                        <button type="button" class="product-filter-option root-filter-option" data-sort="date_desc" onclick="setRootProductSort('date_desc')">Oluşturulma: Yeniden eskiye</button>
+                        <button type="button" class="product-filter-option root-filter-option" data-sort="name_asc" onclick="setRootProductSort('name_asc')">İsim: A'dan Z'ye</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr style="border:0;border-top:1px solid #e5e5e5;margin:14px 0 18px">
+
         <div id="rootBusinessList" class="root-business-list">
-            <div class="root-business-empty">İşletmeler yükleniyor...</div>
+            <div class="root-business-empty" style="grid-column: 1 / -1;">Ürünler yükleniyor...</div>
         </div>
     </div>
 </div>
@@ -8814,6 +8945,221 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         return div.innerHTML;
     }
 
+    let rootProductSortMode = "rating_desc";
+    let rootBusinessesById = new Map();
+
+    function toggleRootProductFilterMenu(event) {
+        event?.stopPropagation();
+        const menu = document.getElementById("rootProductFilterMenu");
+        const button = document.getElementById("rootProductFilterButton");
+        if (!menu || !button) return;
+        const willOpen = menu.classList.contains("hidden");
+        menu.classList.toggle("hidden", !willOpen);
+        button.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    }
+
+    function closeRootProductFilterMenu() {
+        const menu = document.getElementById("rootProductFilterMenu");
+        const button = document.getElementById("rootProductFilterButton");
+        menu?.classList.add("hidden");
+        button?.setAttribute("aria-expanded", "false");
+    }
+
+    document.addEventListener("click", event => {
+        if (!event.target.closest(".product-filter-wrap")) {
+            closeRootProductFilterMenu();
+        }
+    });
+
+    function setRootProductSort(mode) {
+        rootProductSortMode = String(mode || "rating_desc");
+        document.querySelectorAll(".root-filter-option").forEach(option => {
+            option.classList.toggle("selected", option.dataset.sort === rootProductSortMode);
+        });
+        const button = document.getElementById("rootProductFilterButton");
+        button?.classList.toggle("active", rootProductSortMode !== "rating_desc");
+        closeRootProductFilterMenu();
+        renderRootLandingProducts();
+    }
+
+    function getProductNumericRatingInfo(productId) {
+        const reviews = productReviewsCacheV32[String(productId)] || [];
+        if (!reviews.length) return { avg: 0, count: 0 };
+        const avg = reviews.reduce((a, r) => a + Number(r.rating || 0), 0) / reviews.length;
+        return { avg, count: reviews.length };
+    }
+
+    function sortRootVisibleProducts(productList) {
+        const sorted = [...productList];
+        switch (rootProductSortMode) {
+            case "rating_desc":
+                sorted.sort((a, b) => {
+                    const rA = getProductNumericRatingInfo(a.id);
+                    const rB = getProductNumericRatingInfo(b.id);
+                    if (rB.avg !== rA.avg) return rB.avg - rA.avg;
+                    if (rB.count !== rA.count) return rB.count - rA.count;
+                    return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
+                });
+                break;
+            case "rating_asc":
+                sorted.sort((a, b) => {
+                    const rA = getProductNumericRatingInfo(a.id);
+                    const rB = getProductNumericRatingInfo(b.id);
+                    if (rA.avg !== rB.avg) return rA.avg - rB.avg;
+                    if (rA.count !== rB.count) return rA.count - rB.count;
+                    return new Date(a?.created_at || 0) - new Date(b?.created_at || 0);
+                });
+                break;
+            case "price_desc":
+                sorted.sort((a, b) => getProductSortPrice(b) - getProductSortPrice(a));
+                break;
+            case "price_asc":
+                sorted.sort((a, b) => getProductSortPrice(a) - getProductSortPrice(b));
+                break;
+            case "date_desc":
+                sorted.sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+                break;
+            case "name_asc":
+                sorted.sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || ""), "tr", { sensitivity: "base" }));
+                break;
+        }
+        return sorted;
+    }
+
+    function navigateToBusinessProduct(product) {
+        if (!product || !product.business_slug) return;
+        const targetUrl = new URL(`${encodeURIComponent(product.business_slug)}/`, APP_ROOT_URL);
+        targetUrl.searchParams.set("product", product.id);
+        window.location.href = targetUrl.href;
+    }
+
+    function openRootProductDetail(productId) {
+        const product = products.find(p => String(p.id) === String(productId));
+        if (!product) return;
+        currentBusinessId = product.business_id;
+        platformBusiness = rootBusinessesById.get(String(product.business_id)) || null;
+        openProductDetail(productId);
+    }
+
+    function renderRootLandingProducts() {
+        const list = document.getElementById("rootBusinessList");
+        if (!list) return;
+
+        const searchInput = document.getElementById("rootProductSearchInput");
+        const searchText = String(searchInput?.value || "").trim().toLocaleLowerCase("tr-TR");
+
+        list.innerHTML = "";
+
+        let visibleProducts = products
+            .filter(product => product.active !== false)
+            .filter(product => {
+                if (!searchText) return true;
+                const pName = String(product.name || "").toLocaleLowerCase("tr-TR");
+                const bName = String(product.business_name || "").toLocaleLowerCase("tr-TR");
+                return pName.includes(searchText) || bName.includes(searchText);
+            });
+
+        visibleProducts = sortRootVisibleProducts(visibleProducts);
+
+        if (!visibleProducts.length) {
+            list.innerHTML = searchText
+                ? '<div class="root-business-empty" style="grid-column: 1 / -1;">Aramanızla eşleşen ürün veya işletme bulunamadı.</div>'
+                : '<div class="root-business-empty" style="grid-column: 1 / -1;">Şu anda aktif ürün bulunmuyor.</div>';
+            return;
+        }
+
+        visibleProducts.forEach(product => {
+            const row = document.createElement("div");
+            row.className = "product";
+            row.onclick = () => openRootProductDetail(product.id);
+
+            const left = document.createElement("div");
+            left.className = "product-main";
+
+            const mainImage = getProductMainImage(product);
+            if (mainImage) {
+                const image = document.createElement("img");
+                image.className = "product-main-image";
+                image.src = productImagePublicUrl(mainImage.storage_path);
+                image.alt = `${product.name} fotoğrafı`;
+                image.loading = "lazy";
+                image.decoding = "async";
+                image.onclick = (event) => {
+                    event.stopPropagation();
+                    openRootProductDetail(product.id);
+                };
+                left.appendChild(image);
+            } else {
+                const noImage = document.createElement("div");
+                noImage.className = "product-no-image";
+                noImage.textContent = "📷";
+                left.appendChild(noImage);
+            }
+
+            const info = document.createElement("div");
+            info.className = "product-info";
+
+            if (product.business_name) {
+                const badge = document.createElement("div");
+                badge.className = "root-product-business-badge";
+                badge.textContent = `🏪 ${product.business_name}`;
+                info.appendChild(badge);
+            }
+
+            const rating = getProductAverageRatingV29(product.id);
+            if (rating) {
+                const star = document.createElement("div");
+                star.className = "product-card-rating-v29";
+                star.textContent = `${getReviewStars(Math.round(rating.avg))} ${rating.avg} (${rating.count})`;
+                info.appendChild(star);
+            }
+
+            const name = document.createElement("div");
+            name.className = "product-name";
+            name.textContent = product.name;
+
+            const price = document.createElement("div");
+            price.className = "price";
+            price.textContent = product.product_type === "SIZE" && product.variants?.length
+                ? `${Math.min(...product.variants.map(v => Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
+                : `${Number(product.price).toLocaleString("tr-TR")} TL`;
+
+            info.appendChild(name);
+            info.appendChild(price);
+
+            if (product.detail) {
+                const detail = document.createElement("div");
+                detail.className = "product-detail-short";
+                detail.style.marginTop = "8px";
+                detail.style.fontSize = "13px";
+                detail.style.color = "#555";
+                detail.style.lineHeight = "1.4";
+                detail.style.display = "-webkit-box";
+                detail.style.webkitLineClamp = "3";
+                detail.style.webkitBoxOrient = "vertical";
+                detail.style.overflow = "hidden";
+                detail.textContent = product.detail;
+                info.appendChild(detail);
+            }
+
+            left.appendChild(info);
+            row.appendChild(left);
+
+            const viewBtn = document.createElement("button");
+            viewBtn.type = "button";
+            viewBtn.className = "product-add-button";
+            viewBtn.style.marginTop = "10px";
+            viewBtn.textContent = "Ürünü İncele";
+            viewBtn.onclick = (e) => {
+                e.stopPropagation();
+                openRootProductDetail(product.id);
+            };
+            row.appendChild(viewBtn);
+
+            list.appendChild(row);
+        });
+    }
+
     async function loadRootBusinessLanding() {
         const landing = document.getElementById("rootLanding");
         const appContainer = document.getElementById("tenantAppContainer");
@@ -8824,42 +9170,96 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
         if (!platformClient) {
             if (list) list.innerHTML =
-                '<div class="root-business-empty">Merkezi platform bağlantısı bulunamadı.</div>';
+                '<div class="root-business-empty" style="grid-column: 1 / -1;">Merkezi platform bağlantısı bulunamadı.</div>';
             return;
         }
 
         try {
-            const { data, error } = await platformClient
+            const { data: businesses, error: bizError } = await platformClient
                 .from("business_public")
-                .select("shop_name,slug,is_active")
-                .eq("is_active", true)
-                .order("shop_name", { ascending: true });
+                .select("business_id,shop_name,slug,business_type,is_active,license_end_date,manual_enabled")
+                .eq("is_active", true);
 
-            if (error) throw error;
+            if (bizError) throw bizError;
 
-            if (!data?.length) {
-                list.innerHTML =
-                    '<div class="root-business-empty">Şu anda aktif işletme bulunmuyor.</div>';
+            const activeBusinesses = (businesses || []).filter(b => b.business_id);
+            if (!activeBusinesses.length) {
+                if (list) list.innerHTML =
+                    '<div class="root-business-empty" style="grid-column: 1 / -1;">Şu anda aktif işletme bulunmuyor.</div>';
                 return;
             }
 
-            list.innerHTML = data.map(business => {
-                const href = new URL(
-                    `${encodeURIComponent(business.slug)}/`,
-                    APP_ROOT_URL
-                ).href;
+            rootBusinessesById = new Map();
+            activeBusinesses.forEach(b => rootBusinessesById.set(String(b.business_id), b));
+            const businessIds = activeBusinesses.map(b => b.business_id);
 
-                return `
-                    <a class="root-business-link" href="${href}">
-                        <span class="root-business-name">${escapeLandingHtml(business.shop_name)}</span>
-                        <span class="root-business-arrow">›</span>
-                    </a>
-                `;
-            }).join("");
+            const [productResult, variantResult, imageResult, reviewResult] = await Promise.all([
+                supabaseClient
+                    .from("products")
+                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+                    .in("business_id", businessIds)
+                    .eq("active", true),
+                supabaseClient
+                    .from("product_variants")
+                    .select("id,product_id,variant_name,price"),
+                supabaseClient
+                    .from("product_images")
+                    .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
+                    .in("business_id", businessIds)
+                    .order("sort_order", { ascending: true })
+                    .order("created_at", { ascending: true }),
+                supabaseClient
+                    .from("product_reviews")
+                    .select("product_id,rating")
+                    .in("business_id", businessIds)
+            ]);
+
+            if (productResult.error) throw productResult.error;
+
+            const variantsByProduct = new Map();
+            if (!variantResult.error) {
+                (variantResult.data || []).forEach(v => {
+                    const key = String(v.product_id);
+                    if (!variantsByProduct.has(key)) variantsByProduct.set(key, []);
+                    variantsByProduct.get(key).push(v);
+                });
+            }
+
+            const imagesByProduct = new Map();
+            if (!imageResult.error) {
+                (imageResult.data || []).forEach(img => {
+                    const key = String(img.product_id);
+                    if (!imagesByProduct.has(key)) imagesByProduct.set(key, []);
+                    imagesByProduct.get(key).push(img);
+                });
+            }
+
+            productReviewsCacheV32 = {};
+            if (!reviewResult.error) {
+                (reviewResult.data || []).forEach(rev => {
+                    const key = String(rev.product_id);
+                    if (!productReviewsCacheV32[key]) productReviewsCacheV32[key] = [];
+                    productReviewsCacheV32[key].push(rev);
+                });
+            }
+
+            products = (productResult.data || []).map(p => {
+                const biz = rootBusinessesById.get(String(p.business_id));
+                return {
+                    ...p,
+                    business_name: biz?.shop_name || "İşletme",
+                    business_slug: biz?.slug || "",
+                    business_type: biz?.business_type || "ecommerce",
+                    variants: variantsByProduct.get(String(p.id)) || [],
+                    images: imagesByProduct.get(String(p.id)) || []
+                };
+            });
+
+            renderRootLandingProducts();
         } catch (error) {
-            console.error("İşletme listesi yüklenemedi:", error);
+            console.error("Tüm ürünler yüklenemedi:", error);
             if (list) list.innerHTML =
-                '<div class="root-business-empty">İşletmeler yüklenemedi.</div>';
+                '<div class="root-business-empty" style="grid-column: 1 / -1;">Ürünler yüklenemedi.</div>';
         }
     }
 
@@ -8868,6 +9268,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     ========================================= */
 
     async function bootstrapTenantApp() {
+        const targetProductId = new URLSearchParams(window.location.search).get("product");
+
         loadOrder();
 
         await loadPlatformBusiness();
@@ -8886,6 +9288,10 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             loadNotifications(),
             loadAdvertisements()
         ]);
+
+        if (targetProductId && products.some(p => String(p.id) === String(targetProductId))) {
+            openProductDetail(targetProductId);
+        }
     }
 
     if (TENANT_SLUG) {
@@ -9567,6 +9973,20 @@ function openProductDetail(productId){
  detailSelectedVariant=null;
 
  document.getElementById("detailProductName").textContent=product.name;
+ let detailBizBadge = document.getElementById("detailBusinessBadge");
+ if (!TENANT_SLUG && product.business_name) {
+   if (!detailBizBadge) {
+     detailBizBadge = document.createElement("div");
+     detailBizBadge.id = "detailBusinessBadge";
+     detailBizBadge.className = "root-product-business-badge";
+     detailBizBadge.style.marginBottom = "8px";
+     document.getElementById("detailProductName").insertAdjacentElement("beforebegin", detailBizBadge);
+   }
+   detailBizBadge.textContent = `🏪 ${product.business_name}`;
+   detailBizBadge.style.display = "inline-flex";
+ } else if (detailBizBadge) {
+   detailBizBadge.style.display = "none";
+ }
  document.getElementById("detailProductText").textContent=product.detail || "";
  const detailPrice=document.getElementById("detailPrice");
  if(detailPrice){
@@ -9623,6 +10043,7 @@ function openProductDetail(productId){
  const detailCard=document.querySelector("#productDetailModal .product-detail-card");
  const questionButton=document.getElementById("detailQuestionButton");
  const ecommerceAddButton=document.getElementById("detailAddButtonEcommerce");
+ const foodAddButton=document.getElementById("detailAddButton");
  if(currentBusinessIsFood()){
    if(questionButton) questionButton.style.display="none";
    if(ecommerceAddButton) ecommerceAddButton.style.display="none";
@@ -9659,28 +10080,45 @@ function openProductDetail(productId){
  }
  loadProductQuestionsV1(product.id,false);
 
- document.getElementById("detailAddButton").onclick=()=>{
-   const selection={
-     bread:document.getElementById("foodBreadSelection")?.value||"",
-     sideSelections:getFoodCheckedSelections("side"),
-     drinkSelections:getFoodCheckedSelections("drink")
-   };
-   if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !detailSelectedVariant){
-     alert("Lütfen beden seçiniz.");
-     return;
+ if (!TENANT_SLUG) {
+   const redirectLabel = `🏪 ${product.business_name || "İşletme"} Sayfasına Git ve Sepete Ekle`;
+   if (foodAddButton) {
+     foodAddButton.textContent = "🏪 İşletmeye Git";
+     foodAddButton.onclick = () => navigateToBusinessProduct(product);
    }
-   addFoodProductToCart(product,foodDetailQuantity,selection,detailSelectedVariant);
-   closeProductDetail();
- };
-
- document.getElementById("detailAddButtonEcommerce").onclick=()=>{
-   if(product.product_type==="SIZE" && !detailSelectedVariant){
-      alert("Lütfen beden seçiniz.");
-      return;
+   if (ecommerceAddButton) {
+     ecommerceAddButton.textContent = redirectLabel;
+     ecommerceAddButton.onclick = () => navigateToBusinessProduct(product);
    }
-   addProductToCart(product.id, detailSelectedVariant);
-   closeProductDetail();
- };
+ } else {
+   if (foodAddButton) {
+     foodAddButton.textContent = "Sepete Ekle";
+     foodAddButton.onclick=()=>{
+       const selection={
+         bread:document.getElementById("foodBreadSelection")?.value||"",
+         sideSelections:getFoodCheckedSelections("side"),
+         drinkSelections:getFoodCheckedSelections("drink")
+       };
+       if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !detailSelectedVariant){
+         alert("Lütfen beden seçiniz.");
+         return;
+       }
+       addFoodProductToCart(product,foodDetailQuantity,selection,detailSelectedVariant);
+       closeProductDetail();
+     };
+   }
+   if (ecommerceAddButton) {
+     ecommerceAddButton.textContent = "Sepete Ekle";
+     ecommerceAddButton.onclick=()=>{
+       if(product.product_type==="SIZE" && !detailSelectedVariant){
+          alert("Lütfen beden seçiniz.");
+          return;
+       }
+       addProductToCart(product.id, detailSelectedVariant);
+       closeProductDetail();
+     };
+   }
+ }
 
  document.getElementById("productDetailModal").classList.remove("hidden");
 }
