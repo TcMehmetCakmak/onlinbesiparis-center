@@ -6877,13 +6877,14 @@ body{
                     document.getElementById(
                         "locationQRPage"
                     ).src =
-
-                        "https://api.qrserver.com/v1/create-qr-code/" +
-                        "?size=600x600" +
-                        "&data=" +
-                        encodeURIComponent(
-                            googleMapsUrl
-                        );
+                        typeof window.getCustomerQrCodeDataUrl === "function"
+                            ? window.getCustomerQrCodeDataUrl(
+                                `https://maps.google.com/?q=${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`,
+                                6,
+                                2
+                              )
+                            : "https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=10&data=" +
+                              encodeURIComponent(googleMapsUrl);
 
 
                 } catch (error) {
@@ -6952,13 +6953,14 @@ body{
                     document.getElementById(
                         "locationQRPage"
                     ).src =
-
-                        "https://api.qrserver.com/v1/create-qr-code/" +
-                        "?size=600x600" +
-                        "&data=" +
-                        encodeURIComponent(
-                            googleMapsUrl
-                        );
+                        typeof window.getCustomerQrCodeDataUrl === "function"
+                            ? window.getCustomerQrCodeDataUrl(
+                                `https://maps.google.com/?q=${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`,
+                                6,
+                                2
+                              )
+                            : "https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=10&data=" +
+                              encodeURIComponent(googleMapsUrl);
 
 
                     /*
@@ -7112,17 +7114,16 @@ body{
            QR KODU
         */
 
+        const shortCoordsUrl =
+            (order.latitude && order.longitude)
+                ? `https://maps.google.com/?q=${Number(order.latitude).toFixed(5)},${Number(order.longitude).toFixed(5)}`
+                : googleMapsUrl;
+
         qr.src =
-
-            "https://api.qrserver.com/v1/create-qr-code/" +
-
-            "?size=600x600" +
-
-            "&data=" +
-
-            encodeURIComponent(
-                googleMapsUrl
-            );
+            typeof window.getCustomerQrCodeDataUrl === "function"
+                ? window.getCustomerQrCodeDataUrl(shortCoordsUrl, 6, 2)
+                : "https://api.qrserver.com/v1/create-qr-code/?size=600x600&ecc=H&margin=10&data=" +
+                  encodeURIComponent(googleMapsUrl);
 
 
         /*
@@ -10676,9 +10677,41 @@ setInterval(()=>{
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
 let shopBranches = [];
+const customerQrCache = new Map();
 
+window.getCustomerQrCodeDataUrl = function(text, cellSize = 5, margin = 2) {
+    const key = `${text}|${cellSize}|${margin}|H`;
+    if (customerQrCache.has(key)) return customerQrCache.get(key);
+    try {
+        if (typeof window.qrcode === 'function') {
+            const qr = window.qrcode(0, 'H');
+            qr.addData(String(text || ''));
+            qr.make();
+            const dataUrl = qr.createDataURL(cellSize, margin);
+            customerQrCache.set(key, dataUrl);
+            return dataUrl;
+        }
+    } catch (e) {
+        console.warn('QR oluşturma hatası:', e);
+    }
+    const fallback = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=H&margin=10&data=${encodeURIComponent(text)}`;
+    customerQrCache.set(key, fallback);
+    return fallback;
+};
+
+function buildBranchMapsUrl(branch) {
+    if (!branch) return '';
+    if (branch.lat && branch.lng) {
+        return `https://maps.google.com/?q=${Number(branch.lat).toFixed(5)},${Number(branch.lng).toFixed(5)}`;
+    }
+    if (branch.address) {
+        return `https://maps.google.com/?q=${encodeURIComponent(branch.address.trim())}`;
+    }
+    return '';
+}
 
 window.renderAddressButton = function() {
     const headerTools = document.querySelector('.header-tools');
@@ -10718,19 +10751,23 @@ window.openShopAddressModal = function() {
     if(mainBranch) {
         textEl.innerHTML = '<strong>' + (mainBranch.name || 'Şube') + '</strong><br><br>' + (mainBranch.address || 'Adres belirtilmemiş.');
         
-        let mapsUrl = '';
-        if(mainBranch.lat && mainBranch.lng) {
-            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mainBranch.lat},${mainBranch.lng}`;
-        } else if(mainBranch.address) {
-            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mainBranch.address)}`;
-        }
+        const mapsUrl = buildBranchMapsUrl(mainBranch);
         
         if(mapsUrl) {
             mapsBtn.href = mapsUrl;
             mapsBtn.style.display = 'inline-block';
             
-            // Generate QR code
-            qrContainer.innerHTML = `<div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mapsUrl)}" alt="Adres QR" style="width:100%; height:100%; border-radius:12px; display:block;"><img src="medya/AbcSepeti-ikon.png" alt="AbcSepeti" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50px; height:50px; padding:2px; border-radius:6px; border:2px solid #000; outline:3px solid #fff; background:#fff; box-shadow:none; object-fit:contain; pointer-events:none;"></div>`;
+            // Uzun adreslerde QR kodun yoğunlaşıp bozulmaması için super-admin'deki gibi kısa yönlendirme URL'si kullan
+            let qrTargetUrl = mapsUrl;
+            if (mapsUrl.length > 58 && window.location.protocol.startsWith('http')) {
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.set('open_shop_map', '1');
+                qrTargetUrl = cleanUrl.href;
+            }
+            const qrSrc = window.getCustomerQrCodeDataUrl(qrTargetUrl, 5, 2);
+
+            // Generate QR code (super-admin ile birebir aynı yapı, boyutlar korunarak)
+            qrContainer.innerHTML = `<div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;"><img src="${qrSrc}" alt="Adres QR" style="width:100%; height:100%; border-radius:12px; border:1px solid #edf0f4; background:#fff; object-fit:contain; display:block;"><img src="medya/AbcSepeti-ikon.png" alt="AbcSepeti" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50px; height:50px; padding:2px; border-radius:6px; border:2px solid #000; outline:3px solid #fff; background:#fff; box-shadow:none; object-fit:contain; pointer-events:none;"></div>`;
         } else {
             mapsBtn.style.display = 'none';
             qrContainer.innerHTML = '<span class="muted">Harita bilgisi yok</span>';
@@ -10758,6 +10795,16 @@ window.loadAppSettings = async function() {
         if(data && data.branches) {
             shopBranches = data.branches;
             
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('open_shop_map') === '1' && shopBranches.length > 0) {
+                const mainBranch = shopBranches.find(b => b.isMain) || shopBranches[0];
+                const redirectMapsUrl = buildBranchMapsUrl(mainBranch);
+                if (redirectMapsUrl) {
+                    window.location.replace(redirectMapsUrl);
+                    return;
+                }
+            }
+
             // Inject Address button to the header
             if (shopBranches.length > 0) { window.renderAddressButton(); }
         }
