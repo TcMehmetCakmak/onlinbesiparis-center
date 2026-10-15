@@ -1,4 +1,4 @@
-const CACHE_NAME = "online-siparis-pwa-v15";
+const CACHE_NAME = "online-siparis-pwa-v16";
 const STATIC_ASSETS = [
   "./manifest.json",
   "./icon-192.png",

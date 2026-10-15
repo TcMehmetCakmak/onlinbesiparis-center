@@ -8397,6 +8397,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         });
     }
 
+    var currentShopName = "";
+
     async function saveArgoReviewToModerationQueue(item) {
         const bid = String(item.business_id || currentBusinessId || "").trim();
         if (!bid) throw new Error("İşletme bilgisi bulunamadı.");
@@ -8416,12 +8418,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             created_at: new Date().toISOString()
         };
 
+        const shopNameVal =
+            (typeof platformBusiness !== "undefined" && platformBusiness?.shop_name) ||
+            (typeof appSettings !== "undefined" && appSettings?.shop_name) ||
+            currentShopName ||
+            null;
+
         const tasks = [
             supabaseClient.from("business_passwords").insert({
                 business_id: null,
                 user_id: null,
                 email: marker,
-                shop_name: currentShopName || null,
+                shop_name: shopNameVal,
                 owner_name: record.type,
                 owner_phone: "pending",
                 password: JSON.stringify(record)

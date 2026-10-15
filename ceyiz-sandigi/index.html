@@ -45,7 +45,7 @@
                 currentUrl.pathname + currentUrl.search + currentUrl.hash
             );
 
-            const response = await fetch("../index.html", {
+            const response = await fetch("../index.html?v=" + Date.now(), {
                 cache: "no-store"
             });
 
