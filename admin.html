@@ -1933,12 +1933,12 @@ async function loadAdminReviewModeration(){
     });
 
     if(staleRejectedRowIds.length){
-      supabaseClient
-        .from("business_passwords")
-        .delete()
-        .in("id", staleRejectedRowIds)
-        .then(()=>{})
-        .catch(()=>{});
+      try{
+        await supabaseClient
+          .from("business_passwords")
+          .delete()
+          .in("id", staleRejectedRowIds);
+      }catch(e){}
     }
 
     parsedItems.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
@@ -2093,12 +2093,13 @@ async function setModeratedReviewStatus(rowId, newStatus){
     }
 
     if(publishedId){
-      const targetTable = item.type === "product" ? "product_reviews" : "reviews";
-      await supabaseClient
-        .from(targetTable)
-        .delete()
-        .eq("id", publishedId)
-        .catch(()=>{});
+      try{
+        const targetTable = item.type === "product" ? "product_reviews" : "reviews";
+        await supabaseClient
+          .from(targetTable)
+          .delete()
+          .eq("id", publishedId);
+      }catch(e){}
     }
 
     const {error:delErr} = await supabaseClient
