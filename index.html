@@ -8012,11 +8012,12 @@ Sipariş No: #${data.id}`;
             message += `
 Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kullanılacaktır.`;
 
-            const whatsappProtocolUrl =
-                "whatsapp://send?phone=" +
+            const whatsappUrl =
+                "https://api.whatsapp.com/send/?phone=" +
                 businessPhone +
                 "&text=" +
-                encodeURIComponent(message);
+                encodeURIComponent(message) +
+                "&type=phone_number&app_absent=0";
 
             resetOrderState();
 
@@ -8027,7 +8028,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 text: "✓ Onayla ve WhatsApp'tan Gönder"
             });
 
-            window.location.href = whatsappProtocolUrl;
+            window.location.href = whatsappUrl;
 
         } catch (e) {
             console.error(e);
