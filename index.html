@@ -10295,6 +10295,25 @@ function openProductDetail(productId){
    }
    detailBizBadge.textContent = `🏪 ${product.business_name}`;
    detailBizBadge.style.display = "inline-flex";
+   if (product.business_slug) {
+     detailBizBadge.title = `${product.business_name} müşteri sayfasına git`;
+     detailBizBadge.setAttribute("role", "link");
+     detailBizBadge.tabIndex = 0;
+     detailBizBadge.onclick = (event) => {
+       event.stopPropagation();
+       navigateToBusinessCustomerPage(product.business_slug);
+     };
+     detailBizBadge.onkeydown = (event) => {
+       if (event.key === "Enter" || event.key === " ") {
+         event.preventDefault();
+         event.stopPropagation();
+         navigateToBusinessCustomerPage(product.business_slug);
+       }
+     };
+   } else {
+     detailBizBadge.onclick = null;
+     detailBizBadge.onkeydown = null;
+   }
  } else if (detailBizBadge) {
    detailBizBadge.style.display = "none";
  }
