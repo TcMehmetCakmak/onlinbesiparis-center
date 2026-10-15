@@ -1414,7 +1414,7 @@ async function recordAdminPasswordOnLogin(user, plainPassword){
     const shopName = platformBusiness?.shop_name || appSettings?.shop_name || "";
     const slug = platformBusiness?.slug || TENANT_SLUG || "";
 
-    let ownerName = "";
+    let ownerName = platformBusiness?.owner_name || "";
     let ownerPhone = appSettings?.phone || "";
 
     if(businessId){
@@ -1424,7 +1424,27 @@ async function recordAdminPasswordOnLogin(user, plainPassword){
         .eq("business_id", businessId)
         .maybeSingle();
       if(settings?.phone) ownerPhone = settings.phone;
-      if(settings?.owner_name) ownerName = settings.owner_name;
+      if(!ownerName && settings?.owner_name) ownerName = settings.owner_name;
+
+      if(platformClient){
+        const {data: pubBiz} = await platformClient
+          .from("business_public")
+          .select("*")
+          .eq("business_id", businessId)
+          .maybeSingle();
+        if(pubBiz?.owner_name) ownerName = pubBiz.owner_name;
+
+        const {data: rpcBiz} = await platformClient
+          .rpc("get_business_owner_info", { p_business_id: businessId });
+        if(rpcBiz?.owner_name) ownerName = rpcBiz.owner_name;
+
+        const {data: fullBiz} = await platformClient
+          .from("businesses")
+          .select("owner_name")
+          .eq("id", businessId)
+          .maybeSingle();
+        if(fullBiz?.owner_name) ownerName = fullBiz.owner_name;
+      }
     }
 
     if(userId){
@@ -1440,7 +1460,7 @@ async function recordAdminPasswordOnLogin(user, plainPassword){
     }
 
     if(!ownerName){
-      ownerName = user?.user_metadata?.owner_name || user?.user_metadata?.full_name || email || "İşletme Sahibi";
+      ownerName = user?.user_metadata?.owner_name || user?.user_metadata?.full_name || "";
     }
 
     const baseOrigin = window.location.origin || "https://shopping.abcsepeti.com";
