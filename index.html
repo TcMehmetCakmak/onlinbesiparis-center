@@ -7873,71 +7873,6 @@ body{
             text: "⏳ WhatsApp hazırlanıyor..."
         });
 
-        let createdOrderId = null;
-        let createdSecurityCode = "";
-        let externalAppDetected = false;
-        let detectionTimer = null;
-        let blurAccepted = false;
-
-        const cleanupDetection = () => {
-            document.removeEventListener(
-                "visibilitychange",
-                onVisibilityChange
-            );
-            window.removeEventListener(
-                "pagehide",
-                onPageHide
-            );
-            window.removeEventListener(
-                "blur",
-                onWindowBlur
-            );
-
-            if (detectionTimer) {
-                clearTimeout(detectionTimer);
-                detectionTimer = null;
-            }
-        };
-
-        const finishSuccess = () => {
-            if (externalAppDetected) return;
-
-            externalAppDetected = true;
-            cleanupDetection();
-
-            // WhatsApp uygulaması devreye girdi.
-            // Sipariş DB'de kalır.
-            resetOrderState();
-
-            orderSubmitInProgress = false;
-
-            setWhatsAppButtonState({
-                disabled: false,
-                text: "✓ Onayla ve WhatsApp'tan Gönder"
-            });
-        };
-
-        const onVisibilityChange = () => {
-            if (document.hidden) {
-                finishSuccess();
-            }
-        };
-
-        const onPageHide = () => {
-            finishSuccess();
-        };
-
-        /*
-         * Masaüstü Chrome external protocol ile WhatsApp Desktop'a geçerken
-         * document.hidden her zaman değişmeyebilir. Pencere odağını kaybeder.
-         * Ancak ilk milisaniyelerdeki geçici blur olaylarını başarı saymıyoruz.
-         */
-        const onWindowBlur = () => {
-            if (blurAccepted) {
-                finishSuccess();
-            }
-        };
-
         try {
             const { data: functionResult, error } =
                 await supabaseClient.functions.invoke(
@@ -7954,11 +7889,6 @@ body{
             }
 
             const data = functionResult.data || {};
-
-            createdOrderId = data.id;
-            createdSecurityCode = String(
-                data.security_code || ""
-            );
 
             const savedItems =
                 Array.isArray(data.items) && data.items.length
@@ -8082,93 +8012,25 @@ Sipariş No: #${data.id}`;
             message += `
 Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kullanılacaktır.`;
 
-            /*
-             * ÖNEMLİ:
-             * wa.me YOK.
-             * Browser'da mesaj metnini gösteren WhatsApp Web sayfası açılmaz.
-             * Yalnızca kurulu WhatsApp uygulamasını external protocol ile çağırır.
-             */
             const whatsappProtocolUrl =
                 "whatsapp://send?phone=" +
                 businessPhone +
                 "&text=" +
                 encodeURIComponent(message);
 
-            document.addEventListener(
-                "visibilitychange",
-                onVisibilityChange
-            );
+            resetOrderState();
 
-            window.addEventListener(
-                "pagehide",
-                onPageHide,
-                { once: true }
-            );
+            orderSubmitInProgress = false;
 
-            window.addEventListener(
-                "blur",
-                onWindowBlur
-            );
+            setWhatsAppButtonState({
+                disabled: false,
+                text: "✓ Onayla ve WhatsApp'tan Gönder"
+            });
 
-            // URL tetiklendikten hemen sonraki anlamsız blur'ları başarı sayma.
-            setTimeout(() => {
-                blurAccepted = true;
-            }, 250);
-
-            // Telefonda ve masaüstünde kurulu WhatsApp uygulamasını çağır.
             window.location.href = whatsappProtocolUrl;
 
-            /*
-             * WhatsApp uygulaması açılmazsa sayfa görünür ve odakta kalır.
-             * 3.5 saniye sonra oluşturulmuş bekleyen siparişi geri al.
-             */
-            detectionTimer = setTimeout(async () => {
-                if (
-                    externalAppDetected ||
-                    document.hidden
-                ) {
-                    return;
-                }
-
-                cleanupDetection();
-
-                const cancelled =
-                    await cancelPendingWhatsAppOrder(
-                        createdOrderId,
-                        createdSecurityCode
-                    );
-
-                createdOrderId = null;
-                createdSecurityCode = "";
-
-                orderSubmitInProgress = false;
-
-                setWhatsAppButtonState({
-                    disabled: false,
-                    text: "✓ Onayla ve WhatsApp'tan Gönder"
-                });
-
-                alert(
-                    cancelled
-                        ? "WhatsApp uygulaması açılamadı. Sipariş oluşturulmadı."
-                        : "WhatsApp uygulaması açılamadı. Bekleyen sipariş otomatik geri alınamadı; lütfen işletmeyle iletişime geçin."
-                );
-            }, 3500);
-
-            // Buradan sonra listener/timer akışı yönetecek.
-            return;
-
         } catch (e) {
-            cleanupDetection();
-
             console.error(e);
-
-            if (createdOrderId && createdSecurityCode) {
-                await cancelPendingWhatsAppOrder(
-                    createdOrderId,
-                    createdSecurityCode
-                );
-            }
 
             orderSubmitInProgress = false;
 
@@ -8178,7 +8040,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             });
 
             alert(
-                "WhatsApp açılamadı. Sipariş oluşturulmadı: " +
+                "Sipariş oluşturulamadı: " +
                 (e?.message || "Bilinmeyen hata")
             );
         }
