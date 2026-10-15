@@ -1019,8 +1019,8 @@ body.modal-open{
     <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeAdvertisementModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
     <h2 id="advertisementModalTitle">Yeni Reklam</h2>
     <input id="advertisementId" type="hidden">
-    <label>Reklam başlığı</label>
-    <input id="advertisementTitle" maxlength="120" placeholder="Örn. Yeni Sezon">
+    <label>Reklam başlığı <span class="muted" style="font-weight:normal;font-size:12px">(En fazla 2 kelime, maks. 13 harf)</span></label>
+    <input id="advertisementTitle" maxlength="13" placeholder="Örn. Yeni Sezon" oninput="enforceAdvertisementTitleLimit(this)">
     <label style="display:flex;align-items:center;gap:8px;font-weight:normal;margin-top:14px">
       <input id="advertisementActive" type="checkbox" checked style="width:auto">
       Aktif – Müşteri ekranında göster
@@ -4799,14 +4799,40 @@ async function uploadPendingAdvertisementImages(advertisementId){
   return uploaded;
 }
 
+function enforceAdvertisementTitleLimit(input){
+  if(!input)return;
+  let val=String(input.value||"").replace(/^\s+/,"").replace(/\s{2,}/g," ");
+  const parts=val.split(" ");
+  if(parts.length>2){
+    val=parts.slice(0,2).join(" ");
+  }
+  if(val.length>13){
+    val=val.slice(0,13);
+  }
+  if(input.value!==val){
+    input.value=val;
+  }
+}
+
 async function saveAdvertisement(){
   if(advertisementImageBusy)return;
 
   const id=document.getElementById("advertisementId").value;
-  const title=document.getElementById("advertisementTitle").value.trim();
+  const title=document.getElementById("advertisementTitle").value.trim().replace(/\s+/g," ");
   const active=document.getElementById("advertisementActive").checked;
 
   if(!title){toast("Reklam başlığı zorunludur.");return;}
+  const titleWords=title.split(" ").filter(Boolean);
+  if(titleWords.length>2){
+    setAdvertisementGalleryStatus("Reklam başlığı en fazla 2 kelime olmalıdır.",true);
+    toast("Reklam başlığı en fazla 2 kelime olmalıdır.");
+    return;
+  }
+  if(title.length>13){
+    setAdvertisementGalleryStatus("Reklam başlığı en fazla 13 harf olmalıdır.",true);
+    toast("Reklam başlığı en fazla 13 harf olmalıdır.");
+    return;
+  }
   if(currentAdvertisementImages.length+pendingAdvertisementFiles.length===0){
     setAdvertisementGalleryStatus("Reklam için en az bir fotoğraf seçin.",true);
     return;
