@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Platform Süper Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
 </style>
 <style>
 .login-password-wrap{position:relative}
@@ -303,16 +303,22 @@ async function loadBusinessPasswords(){
   }
 }
 
+function isInactiveViewsCounterRow(r){
+  return Boolean(r&&typeof r.email==='string'&&r.email.startsWith('__inactive_views__:'));
+}
+
 function getBusinessPasswordRow(b){
   if(!b||!businessPasswords.length)return null;
+  const pwdRows=businessPasswords.filter(r=>!isInactiveViewsCounterRow(r));
+  if(!pwdRows.length)return null;
   const bid=String(b.id||'').trim();
   if(bid){
-    const byId=businessPasswords.find(r=>r.business_id&&String(r.business_id).trim()===bid);
+    const byId=pwdRows.find(r=>r.business_id&&String(r.business_id).trim()===bid);
     if(byId)return byId;
   }
   const slug=String(b.slug||'').trim().toLowerCase();
   if(slug){
-    const bySlug=businessPasswords.find(r=>{
+    const bySlug=pwdRows.find(r=>{
       const u=String(r.customer_page_url||'').toLowerCase();
       return u.includes('/'+slug+'/') || u.endsWith('/'+slug);
     });
@@ -320,15 +326,50 @@ function getBusinessPasswordRow(b){
   }
   const shop=String(b.shop_name||'').trim().toLocaleLowerCase('tr');
   if(shop){
-    const byShop=businessPasswords.find(r=>String(r.shop_name||'').trim().toLocaleLowerCase('tr')===shop);
+    const byShop=pwdRows.find(r=>String(r.shop_name||'').trim().toLocaleLowerCase('tr')===shop);
     if(byShop)return byShop;
   }
   const owner=String(b.owner_name||'').trim().toLocaleLowerCase('tr');
   if(owner){
-    const byOwner=businessPasswords.find(r=>String(r.owner_name||'').trim().toLocaleLowerCase('tr')===owner);
+    const byOwner=pwdRows.find(r=>String(r.owner_name||'').trim().toLocaleLowerCase('tr')===owner);
     if(byOwner)return byOwner;
   }
   return null;
+}
+
+function getBusinessInactiveViewStats(b){
+  if(!b)return {count:0,lastViewedAt:null};
+  const bid=String(b.id||'').trim();
+  const marker=`__inactive_views__:${bid}`;
+  const matching=businessPasswords.filter(r=>r&&r.email===marker);
+  let maxCount=Math.max(0,parseInt(b.inactive_view_count,10)||0);
+  let lastViewedAt=b.last_inactive_view_at||null;
+  matching.forEach(r=>{
+    const c=Math.max(0,parseInt(r.password,10)||0);
+    if(c>=maxCount){
+      maxCount=c;
+      if(r.owner_phone)lastViewedAt=r.owner_phone;
+    }
+  });
+  return {count:maxCount,lastViewedAt};
+}
+
+async function resetBusinessInactiveViews(businessId,silent=false){
+  const bid=String(businessId||'').trim();
+  if(!bid)return;
+  const marker=`__inactive_views__:${bid}`;
+  try{
+    db.rpc('reset_inactive_business_views',{p_business_id:bid}).catch(()=>{});
+  }catch{}
+  const tasks=[
+    db.from('business_passwords').update({password:'0',owner_phone:null}).eq('email',marker)
+  ];
+  if(tenantDb){
+    tasks.push(tenantDb.from('business_passwords').update({password:'0',owner_phone:null}).eq('email',marker));
+  }
+  await Promise.allSettled(tasks);
+  await loadBusinessPasswords();
+  if(!silent)toast('Deaktif süre görüntüleme sayacı sıfırlandı.');
 }
 
 function updateVisibleBusinessPasswordInputs(){
@@ -662,6 +703,7 @@ function renderBusinesses(){
     const pwdRow=getBusinessPasswordRow(b);
     const currentPassword=pwdRow?.password||'';
     const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
+    const inactiveViews=getBusinessInactiveViewStats(b);
     return `<div class="business card">
       <div class="business-head">
         <div>
@@ -675,6 +717,14 @@ function renderBusinesses(){
         <div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div>
         <div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div>
         <div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div>
+        <div style="${inactiveViews.count>0?'background:#fff5f5;border:1px solid #fecaca':''}">
+          <div class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <span>Deaktif Sürede Görüntüleme</span>
+            ${inactiveViews.count>0?`<button type="button" class="btn btn-light" style="padding:2px 6px;font-size:11px;border-radius:6px" onclick="resetBusinessInactiveViews('${b.id}')">Sıfırla</button>`:''}
+          </div>
+          <strong style="color:${inactiveViews.count>0?'#c62828':'#1f2937'}">👁️ ${inactiveViews.count.toLocaleString('tr-TR')} kişi</strong>
+          ${inactiveViews.lastViewedAt&&inactiveViews.count>0?`<div class="muted" style="font-size:11px;margin-top:2px">Son: ${dateTimeTR(inactiveViews.lastViewedAt)}</div>`:''}
+        </div>
       </div>
       <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
 
@@ -875,12 +925,32 @@ async function saveBusinessEdit(){
   });
   if(error){toast(error.message);return}
   closeEditBusiness();
+  if(enabled)await resetBusinessInactiveViews(id,true);
   toast('İşletme güncellendi.');
   await refreshSuperAdminData();
 }
 
-async function extendLicense(id,m){const {error}=await db.rpc('super_admin_extend_license',{p_business_id:id,p_months:m});if(error)toast(error.message);else{toast(`Lisans ${m>0?'+':''}${m} ay güncellendi.`);await loadBusinesses()}}
-async function setEnabled(id,val){const {error}=await db.rpc('super_admin_set_business_enabled',{p_business_id:id,p_enabled:val});if(error)toast(error.message);else{toast('İşletme durumu güncellendi.');await loadBusinesses()}}
+async function extendLicense(id,m){
+  const wasInactive=businesses.find(x=>String(x.id)===String(id))?.is_active===false;
+  const {error}=await db.rpc('super_admin_extend_license',{p_business_id:id,p_months:m});
+  if(error)toast(error.message);
+  else{
+    toast(`Lisans ${m>0?'+':''}${m} ay güncellendi.`);
+    await loadBusinesses();
+    const nowActive=businesses.find(x=>String(x.id)===String(id))?.is_active===true;
+    if(wasInactive&&nowActive)await resetBusinessInactiveViews(id,true);
+  }
+}
+async function setEnabled(id,val){
+  const {error}=await db.rpc('super_admin_set_business_enabled',{p_business_id:id,p_enabled:val});
+  if(error)toast(error.message);
+  else{
+    toast('İşletme durumu güncellendi.');
+    await loadBusinesses();
+    const nowActive=businesses.find(x=>String(x.id)===String(id))?.is_active===true;
+    if(val&&nowActive)await resetBusinessInactiveViews(id,true);
+  }
+}
 async function rotateToken(id){if(!confirm('Bu işletmenin bağlantı tokenı yenilensin mi? Eski token hemen geçersiz olur.'))return;const {data,error}=await db.rpc('super_admin_rotate_business_token',{p_business_id:id});if(error){toast(error.message);return}document.getElementById('createdPublicKey').textContent=businesses.find(x=>x.id===id)?.public_key||'-';document.getElementById('createdToken').textContent=data.business_token;document.getElementById('createdLicenseEnd').textContent='Token yenilendi — tenant secret güncellenmeli';document.getElementById('tokenModal').classList.remove('hidden')}
 async function approveRequest(id){if(!confirm('Bu dükkan adı değişikliğini onaylıyor musunuz?'))return;const {error}=await db.rpc('super_admin_approve_name_request',{p_request_id:id});if(error)toast(error.message);else{toast('Dükkan adı onaylandı.');await loadAll()}}
 async function rejectRequest(id){const reason=prompt('Red nedeni (opsiyonel):','')??null;if(reason===null)return;const {error}=await db.rpc('super_admin_reject_name_request',{p_request_id:id,p_reason:reason||null});if(error)toast(error.message);else{toast('Talep reddedildi.');await loadRequests()}}

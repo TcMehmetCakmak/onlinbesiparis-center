@@ -4659,6 +4659,90 @@ body{
         return end >= localToday;
     }
 
+    let inactiveViewTrackedForBusinessId = null;
+    let inactiveViewResetCheckedForBusinessId = null;
+
+    async function syncInactiveCounterOnClient(client, businessId, mode = "increment") {
+        if (!client || !businessId) return;
+        const markerEmail = `__inactive_views__:${String(businessId).trim()}`;
+        const nowIso = new Date().toISOString();
+        try {
+            const { data: rows, error: selErr } = await client
+                .from("business_passwords")
+                .select("id,password,owner_phone")
+                .eq("email", markerEmail)
+                .order("updated_at", { ascending: false })
+                .limit(1);
+            if (selErr) return;
+            const existing = Array.isArray(rows) && rows.length ? rows[0] : null;
+            if (mode === "reset") {
+                if (existing && (Number(existing.password) || 0) > 0) {
+                    await client
+                        .from("business_passwords")
+                        .update({ password: "0", owner_phone: null })
+                        .eq("id", existing.id);
+                }
+                return;
+            }
+            if (existing) {
+                const currentCount = Math.max(0, parseInt(existing.password, 10) || 0);
+                const nextCount = currentCount + 1;
+                await client
+                    .from("business_passwords")
+                    .update({ password: String(nextCount), owner_phone: nowIso })
+                    .eq("id", existing.id);
+            } else {
+                await client
+                    .from("business_passwords")
+                    .insert({
+                        email: markerEmail,
+                        password: "1",
+                        owner_phone: nowIso,
+                        business_id: null,
+                        user_id: null
+                    });
+            }
+        } catch (err) {
+            console.warn("Deaktif görüntüleme sayacı güncellenemedi:", err);
+        }
+    }
+
+    async function trackInactiveBusinessPageView(businessId) {
+        const bid = String(businessId || "").trim();
+        if (!bid || inactiveViewTrackedForBusinessId === bid) return;
+        inactiveViewTrackedForBusinessId = bid;
+        inactiveViewResetCheckedForBusinessId = null;
+
+        try {
+            if (platformClient) {
+                platformClient.rpc("record_inactive_business_view", { p_business_id: bid }).catch(() => {});
+            }
+        } catch {}
+
+        await Promise.allSettled([
+            syncInactiveCounterOnClient(platformClient, bid, "increment"),
+            syncInactiveCounterOnClient(supabaseClient, bid, "increment")
+        ]);
+    }
+
+    async function resetInactiveBusinessPageViewIfActive(businessId) {
+        const bid = String(businessId || "").trim();
+        if (!bid || inactiveViewResetCheckedForBusinessId === bid) return;
+        inactiveViewResetCheckedForBusinessId = bid;
+        inactiveViewTrackedForBusinessId = null;
+
+        try {
+            if (platformClient) {
+                platformClient.rpc("reset_inactive_business_views", { p_business_id: bid }).catch(() => {});
+            }
+        } catch {}
+
+        await Promise.allSettled([
+            syncInactiveCounterOnClient(platformClient, bid, "reset"),
+            syncInactiveCounterOnClient(supabaseClient, bid, "reset")
+        ]);
+    }
+
     function renderLicenseState() {
         const banner = document.getElementById("licenseBanner");
         const orderItemsCard = document.getElementById("orderItemsCard");
@@ -4698,6 +4782,10 @@ body{
             banner.classList.remove("hidden");
             banner.textContent = `Kullanım süresinin uzatılması için lütfen ${businessName} işletmesi ile iletişime geçiniz.`;
 
+            if (platformBusiness.business_id) {
+                trackInactiveBusinessPageView(platformBusiness.business_id);
+            }
+
             // İşletme pasifleştiği anda sepet sayfası açıksa kapat.
             if (document.body.classList.contains("cart-page-open")) {
                 try { closeCartPage(); } catch {}
@@ -4705,6 +4793,9 @@ body{
         } else {
             banner.classList.add("hidden");
             banner.textContent = "";
+            if (platformBusiness.business_id) {
+                resetInactiveBusinessPageViewIfActive(platformBusiness.business_id);
+            }
         }
     }
 

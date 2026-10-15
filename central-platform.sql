@@ -67,6 +67,12 @@ create table if not exists public.business_public (
   updated_at timestamptz not null default now()
 );
 
+alter table public.businesses add column if not exists business_type text not null default 'ecommerce';
+alter table public.businesses add column if not exists inactive_view_count integer not null default 0;
+alter table public.businesses add column if not exists last_inactive_view_at timestamptz;
+alter table public.business_public add column if not exists business_type text not null default 'ecommerce';
+alter table public.business_public add column if not exists owner_name text;
+
 create or replace function public.is_super_admin()
 returns boolean
 language sql stable security definer
@@ -82,15 +88,17 @@ set search_path=public
 as $$
 begin
   insert into public.business_public(
-    business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active,updated_at
+    business_id,public_key,owner_name,shop_name,slug,business_type,license_end_date,manual_enabled,is_active,updated_at
   )
-  select b.id,b.public_key,b.shop_name,b.slug,b.license_end_date,b.manual_enabled,
+  select b.id,b.public_key,b.owner_name,b.shop_name,b.slug,coalesce(b.business_type,'ecommerce'),b.license_end_date,b.manual_enabled,
          (b.manual_enabled and b.license_end_date >= current_date),now()
   from public.businesses b where b.id=p_business_id
   on conflict (business_id) do update set
     public_key=excluded.public_key,
+    owner_name=excluded.owner_name,
     shop_name=excluded.shop_name,
     slug=excluded.slug,
+    business_type=excluded.business_type,
     license_end_date=excluded.license_end_date,
     manual_enabled=excluded.manual_enabled,
     is_active=excluded.is_active,
@@ -127,15 +135,18 @@ $$;
 
 drop trigger if exists trg_businesses_public_sync on public.businesses;
 create trigger trg_businesses_public_sync
-after insert or update of shop_name,slug,license_end_date,manual_enabled,public_key
+after insert or update of owner_name,shop_name,slug,business_type,license_end_date,manual_enabled,public_key
 on public.businesses
 for each row execute function public.businesses_after_write_public_trigger();
 
+drop function if exists public.super_admin_list_businesses();
 create or replace function public.super_admin_list_businesses()
 returns table(
   id uuid, public_key uuid, owner_name text, shop_name text, slug text, tenant_project_ref text,
-  license_start_date date, license_end_date date, total_license_months integer,
-  active_months numeric, manual_enabled boolean, is_active boolean, created_at timestamptz, updated_at timestamptz
+  business_type text, license_start_date date, license_end_date date, total_license_months integer,
+  active_months numeric, manual_enabled boolean, is_active boolean,
+  inactive_view_count integer, last_inactive_view_at timestamptz,
+  created_at timestamptz, updated_at timestamptz
 )
 language plpgsql security definer set search_path=public
 as $$
@@ -143,9 +154,12 @@ begin
   if not public.is_super_admin() then raise exception 'Yetkisiz işlem.'; end if;
   return query
   select b.id,b.public_key,b.owner_name,b.shop_name,b.slug,b.tenant_project_ref,
+         coalesce(b.business_type,'ecommerce'),
          b.license_start_date,b.license_end_date,b.total_license_months,
          round((greatest(0,(least(current_date,b.license_end_date)-b.license_start_date))::numeric / 30.44),1),
-         b.manual_enabled,(b.manual_enabled and b.license_end_date>=current_date),b.created_at,b.updated_at
+         b.manual_enabled,(b.manual_enabled and b.license_end_date>=current_date),
+         coalesce(b.inactive_view_count,0),b.last_inactive_view_at,
+         b.created_at,b.updated_at
   from public.businesses b order by b.created_at desc;
 end;
 $$;
@@ -218,6 +232,7 @@ begin
 end;
 $$;
 
+drop function if exists public.super_admin_list_name_requests();
 create or replace function public.super_admin_list_name_requests()
 returns table(
   id bigint,business_id uuid,current_name text,requested_name text,status text,requested_at timestamptz,
@@ -274,6 +289,7 @@ revoke all on public.super_admin_profiles,public.businesses,public.business_lice
 revoke all on public.business_public from anon,authenticated;
 grant select on public.business_public to anon,authenticated;
 
+drop policy if exists business_public_read on public.business_public;
 create policy business_public_read on public.business_public for select to anon,authenticated using (true);
 
 revoke all on function public.super_admin_list_businesses() from public;
@@ -293,13 +309,13 @@ grant execute on function public.super_admin_reject_name_request(bigint,text) to
 
 
 -- Existing rows are also projected when this migration is re-run.
-insert into public.business_public(business_id,public_key,shop_name,slug,license_end_date,manual_enabled,is_active,updated_at)
-select b.id,b.public_key,b.shop_name,b.slug,b.license_end_date,b.manual_enabled,
+insert into public.business_public(business_id,public_key,owner_name,shop_name,slug,business_type,license_end_date,manual_enabled,is_active,updated_at)
+select b.id,b.public_key,b.owner_name,b.shop_name,b.slug,coalesce(b.business_type,'ecommerce'),b.license_end_date,b.manual_enabled,
        (b.manual_enabled and b.license_end_date >= current_date),now()
 from public.businesses b
 on conflict (business_id) do update set
-  public_key=excluded.public_key, shop_name=excluded.shop_name, slug=excluded.slug,
-  license_end_date=excluded.license_end_date, manual_enabled=excluded.manual_enabled,
+  public_key=excluded.public_key, owner_name=excluded.owner_name, shop_name=excluded.shop_name, slug=excluded.slug,
+  business_type=excluded.business_type, license_end_date=excluded.license_end_date, manual_enabled=excluded.manual_enabled,
   is_active=excluded.is_active, updated_at=now();
 
 -- Super admin SELECT policies are required for Realtime subscriptions in super-admin.html.
@@ -352,3 +368,39 @@ end;
 $$;
 revoke all on function public.super_admin_rotate_business_token(uuid) from public;
 grant execute on function public.super_admin_rotate_business_token(uuid) to authenticated;
+
+-- Deaktif işletme müşteri sayfası görüntüleme sayacı
+alter table public.businesses add column if not exists inactive_view_count integer not null default 0;
+alter table public.businesses add column if not exists last_inactive_view_at timestamptz;
+
+create or replace function public.record_inactive_business_view(p_business_id uuid)
+returns integer
+language plpgsql security definer set search_path=public
+as $$
+declare v_count integer;
+begin
+  update public.businesses
+     set inactive_view_count = coalesce(inactive_view_count, 0) + 1,
+         last_inactive_view_at = now()
+   where id = p_business_id
+     and (not manual_enabled or license_end_date < current_date)
+  returning inactive_view_count into v_count;
+  return coalesce(v_count, 0);
+end;
+$$;
+
+create or replace function public.reset_inactive_business_views(p_business_id uuid)
+returns void
+language plpgsql security definer set search_path=public
+as $$
+begin
+  update public.businesses
+     set inactive_view_count = 0,
+         last_inactive_view_at = null
+   where id = p_business_id;
+end;
+$$;
+
+grant execute on function public.record_inactive_business_view(uuid) to anon, authenticated;
+grant execute on function public.reset_inactive_business_views(uuid) to anon, authenticated;
+
