@@ -376,7 +376,7 @@ function getQrCodeDataUrl(text,cellSize=5,margin=2){
 }
 
 const abcQrLogoImg=new Image();
-abcQrLogoImg.src='medya/AbcSepeti-ikon.jfif';
+abcQrLogoImg.src='medya/AbcSepeti-ikon.png';
 
 function buildQrPngCanvas(text,size=560){
   if(typeof window.qrcode!=='function')return null;
@@ -449,7 +449,7 @@ function printBusinessQrPdf(businessId){
   if(!b){toast('İşletme bulunamadı.');return}
   const customerUrl=getBusinessCustomerUrl(b);
   const qrImgSrc=getQrCodeDataUrl(customerUrl,10,3);
-  const logoUrl=new URL('medya/AbcSepeti-ikon.jfif',window.location.href).href;
+  const logoUrl=new URL('medya/AbcSepeti-ikon.png',window.location.href).href;
 
   const printWin=window.open('','_blank','width=820,height=920');
   if(!printWin){
@@ -696,7 +696,7 @@ function renderBusinesses(){
         <div class="business-qr-box">
           <div class="business-qr-img-wrap">
             <img class="business-qr-img" src="${qrSrc}" alt="${esc(b.shop_name)} QR Kodu" title="${esc(customerUrl)}">
-            <img class="business-qr-center-logo" src="medya/AbcSepeti-ikon.jfif" alt="AbcSepeti">
+            <img class="business-qr-center-logo" src="medya/AbcSepeti-ikon.png" alt="AbcSepeti">
           </div>
           <div class="business-qr-actions">
             <button type="button" class="btn btn-dark" onclick="printBusinessQrPdf('${b.id}')">🖨️ QR PDF Yazdır</button>
