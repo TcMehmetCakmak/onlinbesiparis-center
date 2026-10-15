@@ -122,15 +122,34 @@
   border-radius:12px;
   padding:10px 12px;
 }
-.business-qr-img{
+.business-qr-img-wrap{
+  position:relative;
   width:96px;
   height:96px;
   min-width:96px;
+}
+.business-qr-img{
+  width:100%;
+  height:100%;
   border-radius:8px;
   border:1px solid #edf0f4;
   background:#fff;
   object-fit:contain;
   display:block;
+}
+.business-qr-center-logo{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:20px;
+  height:20px;
+  border-radius:5px;
+  border:2px solid #fff;
+  background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+  object-fit:cover;
+  pointer-events:none;
 }
 .business-qr-actions{
   display:flex;
@@ -354,6 +373,9 @@ function getQrCodeDataUrl(text,cellSize=5,margin=2){
   return fallback;
 }
 
+const abcQrLogoImg=new Image();
+abcQrLogoImg.src='medya/AbcSepeti-ikon.jfif';
+
 function buildQrPngCanvas(text,size=560){
   if(typeof window.qrcode!=='function')return null;
   const qr=window.qrcode(0,'M');
@@ -381,6 +403,17 @@ function buildQrPngCanvas(text,size=560){
       }
     }
   }
+  if(abcQrLogoImg.complete&&abcQrLogoImg.naturalWidth>0){
+    try{
+      const logoSize=Math.round(size*0.16);
+      const pad=Math.round(size*0.015);
+      const lx=Math.round((size-logoSize)/2);
+      const ly=Math.round((size-logoSize)/2);
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(lx-pad,ly-pad,logoSize+pad*2,logoSize+pad*2);
+      ctx.drawImage(abcQrLogoImg,lx,ly,logoSize,logoSize);
+    }catch(e){}
+  }
   return canvas;
 }
 
@@ -406,8 +439,8 @@ function printBusinessQrPdf(businessId){
   const b=businesses.find(x=>String(x.id)===String(businessId));
   if(!b){toast('İşletme bulunamadı.');return}
   const customerUrl=getBusinessCustomerUrl(b);
-  const canvas=buildQrPngCanvas(customerUrl,640);
-  const qrImgSrc=canvas ? canvas.toDataURL('image/png') : getQrCodeDataUrl(customerUrl,10,3);
+  const qrImgSrc=getQrCodeDataUrl(customerUrl,10,3);
+  const logoUrl=new URL('medya/AbcSepeti-ikon.jfif',window.location.href).href;
 
   const printWin=window.open('','_blank','width=820,height=920');
   if(!printWin){
@@ -474,16 +507,30 @@ function printBusinessQrPdf(businessId){
     margin-bottom: 28px;
   }
   .qr-frame {
+    position: relative;
     display: inline-block;
     padding: 18px;
     border: 2px dashed #cbd5e1;
     border-radius: 20px;
     background: #fff;
   }
-  .qr-frame img {
+  .qr-frame img.qr-main {
     width: 340px;
     height: 340px;
     display: block;
+  }
+  .qr-frame img.qr-center-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    border: 3px solid #ffffff;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    object-fit: cover;
   }
   .url-box {
     margin-top: 26px;
@@ -517,7 +564,8 @@ function printBusinessQrPdf(businessId){
     <h1 class="shop-title">${esc(b.shop_name)}</h1>
     <div class="subtitle">Online sipariş vermek ve ürünleri incelemek için QR kodu okutun</div>
     <div class="qr-frame">
-      <img src="${qrImgSrc}" alt="${esc(b.shop_name)} QR Kodu">
+      <img class="qr-main" src="${qrImgSrc}" alt="${esc(b.shop_name)} QR Kodu">
+      <img class="qr-center-logo" src="${esc(logoUrl)}" alt="AbcSepeti">
     </div>
     <div class="url-box">${esc(customerUrl)}</div>
     <div class="footer-note">Kameranızla QR kodu okutarak doğrudan sipariş sayfasına ulaşabilirsiniz.</div>
@@ -635,7 +683,10 @@ function renderBusinesses(){
           </div>
         </div>
         <div class="business-qr-box">
-          <img class="business-qr-img" src="${qrSrc}" alt="${esc(b.shop_name)} QR Kodu" title="${esc(customerUrl)}">
+          <div class="business-qr-img-wrap">
+            <img class="business-qr-img" src="${qrSrc}" alt="${esc(b.shop_name)} QR Kodu" title="${esc(customerUrl)}">
+            <img class="business-qr-center-logo" src="medya/AbcSepeti-ikon.jfif" alt="AbcSepeti">
+          </div>
           <div class="business-qr-actions">
             <button type="button" class="btn btn-dark" onclick="printBusinessQrPdf('${b.id}')">🖨️ QR PDF Yazdır</button>
             <button type="button" class="btn btn-whatsapp" onclick="sendBusinessQrWhatsapp('${b.id}')">💬 WhatsApp'tan Gönder</button>

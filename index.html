@@ -474,6 +474,14 @@
             margin-top: 8px;
         }
 
+        .qr-logo-wrap {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            max-width: 100%;
+            margin: 15px auto;
+        }
+
         .qr-big-container img {
             display: block;
             width: 280px;
@@ -485,6 +493,29 @@
             border: 1px solid #ddd;
             border-radius: 12px;
             object-fit: contain;
+        }
+
+        .qr-logo-wrap img#locationQRPage {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        .qr-big-container img.qr-center-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            border: 2px solid #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+            object-fit: cover;
+            pointer-events: none;
         }
 
         .maps-button {
@@ -1138,9 +1169,15 @@
                 padding: 18px;
             }
 
-            .qr-big-container img {
+            .qr-big-container img,
+            .qr-logo-wrap {
                 width: 240px;
                 height: 240px;
+            }
+
+            .qr-big-container img.qr-center-logo {
+                width: 38px;
+                height: 38px;
             }
 
             .review-item-header {
@@ -4014,11 +4051,18 @@ body{
                     QR kodu telefon kamerasıyla okutun.
                 </p>
 
-                <img
-                    id="locationQRPage"
-                    src=""
-                    alt="Google Maps Konum QR Kodu"
-                >
+                <div class="qr-logo-wrap">
+                    <img
+                        id="locationQRPage"
+                        src=""
+                        alt="Google Maps Konum QR Kodu"
+                    >
+                    <img
+                        class="qr-center-logo"
+                        src="medya/AbcSepeti-ikon.jfif"
+                        alt="AbcSepeti"
+                    >
+                </div>
 
             </div>
 
@@ -10685,7 +10729,7 @@ window.openShopAddressModal = function() {
             mapsBtn.style.display = 'inline-block';
             
             // Generate QR code
-            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mapsUrl)}" alt="Adres QR" style="width:100%; height:100%; border-radius:12px;">`;
+            qrContainer.innerHTML = `<div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mapsUrl)}" alt="Adres QR" style="width:100%; height:100%; border-radius:12px; display:block;"><img src="medya/AbcSepeti-ikon.jfif" alt="AbcSepeti" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:6px; border:2px solid #fff; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.18); object-fit:cover; pointer-events:none;"></div>`;
         } else {
             mapsBtn.style.display = 'none';
             qrContainer.innerHTML = '<span class="muted">Harita bilgisi yok</span>';
