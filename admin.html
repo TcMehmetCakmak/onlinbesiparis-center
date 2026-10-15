@@ -2032,32 +2032,38 @@ async function setModeratedReviewStatus(rowId, newStatus){
 
     if(newStatus === "approved"){
       if(!publishedId){
-        if(item.type === "product"){
-          const {data:insProd, error:errProd} = await supabaseClient
-            .from("product_reviews")
-            .insert({
-              business_id: currentBusinessId,
-              product_id: item.product_id,
-              rating: Number(item.rating || 5),
-              comment: String(item.comment || "").substring(0, 500)
-            })
-            .select("id")
-            .single();
-          if(errProd) throw errProd;
-          publishedId = insProd?.id || null;
-        }else{
-          const {data:insBiz, error:errBiz} = await supabaseClient
-            .from("reviews")
-            .insert({
-              business_id: currentBusinessId,
-              name: String(item.name || "Müşteri").substring(0, 50),
-              rating: Number(item.rating || 5),
-              comment: String(item.comment || "").substring(0, 500)
-            })
-            .select("id")
-            .single();
-          if(errBiz) throw errBiz;
-          publishedId = insBiz?.id || null;
+        try{
+          if(item.type === "product"){
+            const {data:insProd, error:errProd} = await supabaseClient
+              .from("product_reviews")
+              .insert({
+                business_id: currentBusinessId,
+                product_id: item.product_id,
+                rating: Number(item.rating || 5),
+                comment: String(item.comment || "").substring(0, 500)
+              })
+              .select("id")
+              .single();
+            if(!errProd && insProd?.id){
+              publishedId = insProd.id;
+            }
+          }else{
+            const {data:insBiz, error:errBiz} = await supabaseClient
+              .from("reviews")
+              .insert({
+                business_id: currentBusinessId,
+                name: String(item.name || "Müşteri").substring(0, 50),
+                rating: Number(item.rating || 5),
+                comment: String(item.comment || "").substring(0, 500)
+              })
+              .select("id")
+              .single();
+            if(!errBiz && insBiz?.id){
+              publishedId = insBiz.id;
+            }
+          }
+        }catch(pubErr){
+          console.warn("Tabloya doğrudan ekleme atlandı (onay kuyruğu üzerinden yayınlanacak):", pubErr);
         }
       }
 

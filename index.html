@@ -8359,41 +8359,76 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         }
     }
 
-    function filterCustomerVisibleReviews(rawReviews, modItems, reviewType) {
+    function filterCustomerVisibleReviews(rawReviews, modItems, reviewType, filterProductId) {
         const list = Array.isArray(rawReviews) ? rawReviews : [];
         const mods = Array.isArray(modItems) ? modItems : [];
 
         const blockedPublishedIds = new Set();
         const approvedPublishedIds = new Set();
         const approvedSignatures = new Set();
+        const approvedModList = [];
 
         mods.forEach(m => {
             if (reviewType && m.type && m.type !== reviewType) return;
+            if (filterProductId != null && String(m.product_id || "") !== String(filterProductId)) return;
             const pubId = m.published_id != null ? String(m.published_id) : "";
             const sig = `${String(m.product_id || "")}|${String(m.name || "").trim()}|${Number(m.rating || 0)}|${String(m.comment || "").trim()}`;
             if (m.status === "approved") {
                 if (pubId) approvedPublishedIds.add(pubId);
                 approvedSignatures.add(sig);
+                approvedModList.push(m);
             } else {
                 if (pubId) blockedPublishedIds.add(pubId);
             }
         });
 
-        return list.filter(r => {
+        const existingIds = new Set();
+        const existingSigs = new Set();
+
+        const filtered = list.filter(r => {
             if (r?.status && r.status !== "approved") return false;
             const rid = r?.id != null ? String(r.id) : "";
             if (rid && blockedPublishedIds.has(rid)) return false;
-            if (rid && approvedPublishedIds.has(rid)) return true;
-
             const sig = `${String(r?.product_id || "")}|${String(r?.name || "").trim()}|${Number(r?.rating || 0)}|${String(r?.comment || "").trim()}`;
-            if (approvedSignatures.has(sig)) return true;
+
+            if (rid && approvedPublishedIds.has(rid)) {
+                existingIds.add(rid);
+                existingSigs.add(sig);
+                return true;
+            }
+            if (approvedSignatures.has(sig)) {
+                if (rid) existingIds.add(rid);
+                existingSigs.add(sig);
+                return true;
+            }
 
             const argoMatches = detectArgoWordsInReview(r?.name, r?.comment);
             if (argoMatches.length > 0) {
                 return false;
             }
+            if (rid) existingIds.add(rid);
+            existingSigs.add(sig);
             return true;
         });
+
+        approvedModList.forEach(m => {
+            const pubId = m.published_id != null ? String(m.published_id) : "";
+            const sig = `${String(m.product_id || "")}|${String(m.name || "").trim()}|${Number(m.rating || 0)}|${String(m.comment || "").trim()}`;
+            if ((pubId && existingIds.has(pubId)) || existingSigs.has(sig)) return;
+            existingSigs.add(sig);
+            filtered.push({
+                id: m.published_id || m.id,
+                business_id: m.business_id,
+                product_id: m.product_id || null,
+                name: m.name || "Müşteri",
+                rating: Number(m.rating || 5),
+                comment: m.comment || "",
+                created_at: m.created_at || new Date().toISOString()
+            });
+        });
+
+        filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        return filtered;
     }
 
     var currentShopName = "";
@@ -10874,7 +10909,7 @@ async function loadProductReviewsV31(productId){
         return;
     }
 
-    const reviews=filterCustomerVisibleReviews(reviewRes.data || [], modItems, "product");
+    const reviews=filterCustomerVisibleReviews(reviewRes.data || [], modItems, "product", productId);
 
     setProductReviewCountV32(productId,reviews);
     renderProducts();

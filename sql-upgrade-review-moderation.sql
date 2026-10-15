@@ -26,6 +26,28 @@ do $$
 begin
   if not exists (
     select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'reviews' and policyname = 'reviews_select_moderation_policy'
+  ) then
+    create policy reviews_select_moderation_policy
+      on public.reviews
+      for select
+      to anon, authenticated
+      using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'reviews' and policyname = 'reviews_insert_moderation_policy'
+  ) then
+    create policy reviews_insert_moderation_policy
+      on public.reviews
+      for insert
+      to anon, authenticated
+      with check (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
     where schemaname = 'public' and tablename = 'reviews' and policyname = 'reviews_update_moderation_policy'
   ) then
     create policy reviews_update_moderation_policy
@@ -45,6 +67,28 @@ begin
       for delete
       to anon, authenticated
       using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'product_reviews' and policyname = 'product_reviews_select_moderation_policy'
+  ) then
+    create policy product_reviews_select_moderation_policy
+      on public.product_reviews
+      for select
+      to anon, authenticated
+      using (true);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'product_reviews' and policyname = 'product_reviews_insert_moderation_policy'
+  ) then
+    create policy product_reviews_insert_moderation_policy
+      on public.product_reviews
+      for insert
+      to anon, authenticated
+      with check (true);
   end if;
 
   if not exists (
