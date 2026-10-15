@@ -3269,6 +3269,12 @@ body{
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+    .root-product-business-badge:hover {
+        background: #dcf0e4;
+        border-color: #b4dfc7;
     }
     #rootProductSearchInput {
         width: 220px !important;
@@ -9300,6 +9306,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         window.location.href = targetUrl.href;
     }
 
+    function navigateToBusinessCustomerPage(slug) {
+        const cleanSlug = String(slug || "").trim();
+        if (!cleanSlug) return;
+        const targetUrl = new URL(`${encodeURIComponent(cleanSlug)}/`, APP_ROOT_URL);
+        window.location.href = targetUrl.href;
+    }
+
     function openRootProductDetail(productId) {
         const product = products.find(p => String(p.id) === String(productId));
         if (!product) return;
@@ -9370,6 +9383,22 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 const badge = document.createElement("div");
                 badge.className = "root-product-business-badge";
                 badge.textContent = `🏪 ${product.business_name}`;
+                if (product.business_slug) {
+                    badge.title = `${product.business_name} müşteri sayfasına git`;
+                    badge.setAttribute("role", "link");
+                    badge.tabIndex = 0;
+                    badge.onclick = (event) => {
+                        event.stopPropagation();
+                        navigateToBusinessCustomerPage(product.business_slug);
+                    };
+                    badge.onkeydown = (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            navigateToBusinessCustomerPage(product.business_slug);
+                        }
+                    };
+                }
                 info.appendChild(badge);
             }
 
