@@ -1420,20 +1420,21 @@ async function recordAdminPasswordOnLogin(user, plainPassword){
     if(businessId){
       const {data: settings} = await supabaseClient
         .from("app_settings")
-        .select("shop_name,phone")
+        .select("*")
         .eq("business_id", businessId)
         .maybeSingle();
       if(settings?.phone) ownerPhone = settings.phone;
+      if(settings?.owner_name) ownerName = settings.owner_name;
     }
 
     if(userId){
       const {data: prof} = await supabaseClient
         .from("profiles")
-        .select("full_name,name,phone")
+        .select("*")
         .eq("id", userId)
         .maybeSingle();
       if(prof){
-        ownerName = prof.full_name || prof.name || "";
+        if(!ownerName) ownerName = prof.owner_name || prof.full_name || prof.name || "";
         if(!ownerPhone && prof.phone) ownerPhone = prof.phone;
       }
     }
