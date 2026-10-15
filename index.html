@@ -8364,15 +8364,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         const mods = Array.isArray(modItems) ? modItems : [];
 
         const blockedPublishedIds = new Set();
-        const pendingSignatures = new Set();
+        const approvedPublishedIds = new Set();
+        const approvedSignatures = new Set();
 
         mods.forEach(m => {
             if (reviewType && m.type && m.type !== reviewType) return;
-            if (m.status !== "approved") {
-                const pubId = m.published_id != null ? String(m.published_id) : "";
+            const pubId = m.published_id != null ? String(m.published_id) : "";
+            const sig = `${String(m.product_id || "")}|${String(m.name || "").trim()}|${Number(m.rating || 0)}|${String(m.comment || "").trim()}`;
+            if (m.status === "approved") {
+                if (pubId) approvedPublishedIds.add(pubId);
+                approvedSignatures.add(sig);
+            } else {
                 if (pubId) blockedPublishedIds.add(pubId);
-                const sig = `${String(m.product_id || "")}|${String(m.name || "").trim()}|${Number(m.rating || 0)}|${String(m.comment || "").trim()}`;
-                pendingSignatures.add(sig);
             }
         });
 
@@ -8380,8 +8383,15 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             if (r?.status && r.status !== "approved") return false;
             const rid = r?.id != null ? String(r.id) : "";
             if (rid && blockedPublishedIds.has(rid)) return false;
+            if (rid && approvedPublishedIds.has(rid)) return true;
+
             const sig = `${String(r?.product_id || "")}|${String(r?.name || "").trim()}|${Number(r?.rating || 0)}|${String(r?.comment || "").trim()}`;
-            if (pendingSignatures.has(sig)) return false;
+            if (approvedSignatures.has(sig)) return true;
+
+            const argoMatches = detectArgoWordsInReview(r?.name, r?.comment);
+            if (argoMatches.length > 0) {
+                return false;
+            }
             return true;
         });
     }

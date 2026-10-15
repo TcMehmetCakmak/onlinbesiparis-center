@@ -1911,32 +1911,32 @@ async function loadAdminReviewModeration(){
 
     const rows = Array.isArray(data) ? data : [];
     const parsedItems = [];
-    const staleCompletedRowIds = [];
+    const staleRejectedRowIds = [];
 
     rows.forEach(row=>{
       try{
         const p=JSON.parse(row.password||"{}");
         if(p && typeof p==="object"){
           const st = p.status || "pending";
-          if(st === "approved" || st === "rejected"){
-            staleCompletedRowIds.push(row.id);
+          if(st === "rejected"){
+            staleRejectedRowIds.push(row.id);
             return;
           }
           parsedItems.push({
             ...p,
             _row_id: row.id,
-            status: "pending",
+            status: st,
             created_at: p.created_at || row.created_at
           });
         }
       }catch(e){}
     });
 
-    if(staleCompletedRowIds.length){
+    if(staleRejectedRowIds.length){
       supabaseClient
         .from("business_passwords")
         .delete()
-        .in("id", staleCompletedRowIds)
+        .in("id", staleRejectedRowIds)
         .then(()=>{})
         .catch(()=>{});
     }
@@ -1956,7 +1956,7 @@ function renderAdminReviewModeration(){
   const list=document.getElementById("reviewModerationAdminList");
   if(!list)return;
 
-  const pendingCount = adminReviewModerations.length;
+  const pendingCount = adminReviewModerations.filter(x => (x.status || "pending") === "pending").length;
   const badge = document.getElementById("reviewModerationPendingCount");
   if(badge){
     badge.textContent = String(pendingCount);
@@ -1964,11 +1964,13 @@ function renderAdminReviewModeration(){
   }
 
   if(!adminReviewModerations.length){
-    list.innerHTML = '<div class="empty">Onay bekleyen argo içerikli yorum bulunmuyor.</div>';
+    list.innerHTML = '<div class="empty">Argo içerikli yorum kaydı bulunmuyor.</div>';
     return;
   }
 
   list.innerHTML = adminReviewModerations.map(item => {
+    const st = item.status || "pending";
+    const isApproved = st === "approved";
     const isProduct = item.type === "product";
     const targetTitle = isProduct
       ? `📦 Ürün Yorumu: ${item.product_name || adminQuestionProductName(item.product_id)}`
@@ -1985,8 +1987,8 @@ function renderAdminReviewModeration(){
           <div class="product-question-admin-product">${escapeHtml(targetTitle)}</div>
           <div class="muted">${escapeHtml(formatDateTime(item.created_at))} · <span style="color:#f5a623;font-weight:800">${stars} (${ratingNum}/5)</span></div>
         </div>
-        <span class="badge product-question-status-pending">
-          Onay Bekliyor · Yayında Değil
+        <span class="badge ${isApproved ? "product-question-status-answered" : "product-question-status-pending"}">
+          ${isApproved ? "Onaylandı · Yayında" : "Onay Bekliyor · Yayında Değil"}
         </span>
       </div>
 
@@ -2000,12 +2002,17 @@ function renderAdminReviewModeration(){
       </div>
 
       <div class="actions" style="justify-content:flex-end;margin-top:12px;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn btn-success" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','approved')">
-          ✓ Onayla ve Yayınla
-        </button>
-        <button type="button" class="btn btn-danger" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','rejected')">
-          ✕ Reddet
-        </button>
+        ${isApproved
+          ? `<button type="button" class="btn btn-danger" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','delete')">
+               🗑️ Sil
+             </button>`
+          : `<button type="button" class="btn btn-success" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','approved')">
+               ✓ Onayla ve Yayınla
+             </button>
+             <button type="button" class="btn btn-danger" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','rejected')">
+               ✕ Reddet
+             </button>`
+        }
       </div>
     </div>`;
   }).join("");
@@ -2053,7 +2060,33 @@ async function setModeratedReviewStatus(rowId, newStatus){
           publishedId = insBiz?.id || null;
         }
       }
-    }else if(newStatus === "rejected" && publishedId){
+
+      const updatedPayload = {
+        ...item,
+        status: "approved",
+        published_id: publishedId,
+        updated_at: new Date().toISOString()
+      };
+      delete updatedPayload._row_id;
+
+      const {error:updErr} = await supabaseClient
+        .from("business_passwords")
+        .update({
+          owner_phone: "approved",
+          password: JSON.stringify(updatedPayload)
+        })
+        .eq("id", item._row_id);
+
+      if(updErr) throw updErr;
+
+      item.status = "approved";
+      item.published_id = publishedId;
+      renderAdminReviewModeration();
+      toast("Yorum onaylandı ve müşteri sayfasında yayına alındı.");
+      return;
+    }
+
+    if(publishedId){
       const targetTable = item.type === "product" ? "product_reviews" : "reviews";
       await supabaseClient
         .from(targetTable)
@@ -2072,8 +2105,8 @@ async function setModeratedReviewStatus(rowId, newStatus){
     adminReviewModerations = adminReviewModerations.filter(x => String(x._row_id) !== String(rowId));
     renderAdminReviewModeration();
 
-    if(newStatus === "approved"){
-      toast("Yorum onaylanarak yayına alındı ve onay listesinden silindi.");
+    if(newStatus === "delete"){
+      toast("Yorum onay listesinden ve veritabanından silindi.");
     }else{
       toast("Yorum reddedildi ve veritabanından silindi.");
     }
