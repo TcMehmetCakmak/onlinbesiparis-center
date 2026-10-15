@@ -4749,6 +4749,7 @@ body{
         const customerInfoCard = document.getElementById("customerInfoCard");
         const cartOpenButton = document.getElementById("cartOpenButton");
         const medicineFeature = document.getElementById("medicineRequestFeature");
+        const headerAddressBtn = document.getElementById("headerAddressBtn");
         if (!banner) return;
 
         // Merkezi lisans bilgisi gelene kadar sipariş alanlarını ve sepet butonunu göstermiyoruz.
@@ -4756,6 +4757,7 @@ body{
             orderItemsCard?.classList.add("hidden");
             customerInfoCard?.classList.add("hidden");
             cartOpenButton?.classList.add("hidden");
+            headerAddressBtn?.classList.add("hidden");
             medicineFeature?.classList.remove("sifa-visible");
             medicineFeature?.classList.add("hidden");
             banner.classList.add("hidden");
@@ -4770,6 +4772,11 @@ body{
         orderItemsCard?.classList.toggle("hidden", inactive);
         customerInfoCard?.classList.toggle("hidden", inactive);
         cartOpenButton?.classList.toggle("hidden", inactive);
+        if (typeof window.renderAddressButton === "function") {
+            window.renderAddressButton();
+        } else {
+            headerAddressBtn?.classList.toggle("hidden", inactive);
+        }
         const showMedicineRequest =
             TENANT_SLUG === PHARMACY_FEATURE_TENANT_SLUG &&
             !inactive;
@@ -4786,9 +4793,12 @@ body{
                 trackInactiveBusinessPageView(platformBusiness.business_id);
             }
 
-            // İşletme pasifleştiği anda sepet sayfası açıksa kapat.
+            // İşletme pasifleştiği anda sepet veya şube adres modalı açıksa kapat.
             if (document.body.classList.contains("cart-page-open")) {
                 try { closeCartPage(); } catch {}
+            }
+            if (typeof window.closeShopAddressModal === "function") {
+                try { window.closeShopAddressModal(); } catch {}
             }
         } else {
             banner.classList.add("hidden");
@@ -10809,8 +10819,19 @@ function buildBranchMapsUrl(branch) {
 
 window.renderAddressButton = function() {
     const headerTools = document.querySelector('.header-tools');
-    if(headerTools && !document.getElementById('headerAddressBtn')) {
-        const btn = document.createElement('button');
+    if(!headerTools) return;
+
+    const shouldShow = Boolean(
+        platformBusiness &&
+        platformBusinessActive &&
+        Array.isArray(shopBranches) &&
+        shopBranches.length > 0
+    );
+
+    let btn = document.getElementById('headerAddressBtn');
+    if(!btn) {
+        if(!shouldShow) return;
+        btn = document.createElement('button');
         btn.id = 'headerAddressBtn';
         btn.className = 'notification-button'; 
         btn.innerHTML = '📍';
@@ -10825,9 +10846,12 @@ window.renderAddressButton = function() {
             headerTools.prepend(btn);
         }
     }
+
+    btn.classList.toggle('hidden', !shouldShow);
 };
 
 window.openShopAddressModal = function() {
+    if (!platformBusiness || !platformBusinessActive) return;
     const modal = document.getElementById("shopAddressModal");
     if(!modal) return;
     
@@ -10884,22 +10908,19 @@ async function fetchAndApplyShopBranches() {
     if (!currentBusinessId) return;
     try {
         const {data, error} = await supabaseClient.from("app_settings").select("branches").eq("business_id", currentBusinessId).maybeSingle();
-        if(data && data.branches) {
-            shopBranches = data.branches;
-            
-            const params = new URLSearchParams(window.location.search);
-            if ((initialOpenShopMapRequest || params.get('open_shop_map') === '1') && shopBranches.length > 0) {
-                const mainBranch = shopBranches.find(b => b.isMain) || shopBranches[0];
-                const redirectMapsUrl = buildBranchMapsUrl(mainBranch);
-                if (redirectMapsUrl) {
-                    window.location.replace(redirectMapsUrl);
-                    return;
-                }
-            }
+        shopBranches = (data && Array.isArray(data.branches)) ? data.branches : [];
 
-            // Inject Address button to the header
-            if (shopBranches.length > 0) { window.renderAddressButton(); }
+        const params = new URLSearchParams(window.location.search);
+        if (platformBusinessActive && (initialOpenShopMapRequest || params.get('open_shop_map') === '1') && shopBranches.length > 0) {
+            const mainBranch = shopBranches.find(b => b.isMain) || shopBranches[0];
+            const redirectMapsUrl = buildBranchMapsUrl(mainBranch);
+            if (redirectMapsUrl) {
+                window.location.replace(redirectMapsUrl);
+                return;
+            }
         }
+
+        window.renderAddressButton();
     } catch(e) { console.error(e); }
 }
 
