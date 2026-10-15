@@ -124,9 +124,9 @@
 }
 .business-qr-img-wrap{
   position:relative;
-  width:96px;
-  height:96px;
-  min-width:96px;
+  width:112px;
+  height:112px;
+  min-width:112px;
 }
 .business-qr-img{
   width:100%;
@@ -142,13 +142,15 @@
   top:50%;
   left:50%;
   transform:translate(-50%,-50%);
-  width:20px;
-  height:20px;
-  border-radius:5px;
-  border:2px solid #fff;
+  width:35px;
+  height:35px;
+  padding:2px;
+  border-radius:6px;
+  border:2px solid #000;
+  outline:3px solid #fff;
   background:#fff;
-  box-shadow:0 1px 4px rgba(0,0,0,.18);
-  object-fit:cover;
+  box-shadow:none;
+  object-fit:contain;
   pointer-events:none;
 }
 .business-qr-actions{
@@ -354,11 +356,11 @@ function getBusinessCustomerUrl(b){
 }
 
 function getQrCodeDataUrl(text,cellSize=5,margin=2){
-  const key=`${text}|${cellSize}|${margin}`;
+  const key=`${text}|${cellSize}|${margin}|H`;
   if(qrDataUrlCache.has(key))return qrDataUrlCache.get(key);
   try{
     if(typeof window.qrcode==='function'){
-      const qr=window.qrcode(0,'M');
+      const qr=window.qrcode(0,'H');
       qr.addData(String(text||''));
       qr.make();
       const dataUrl=qr.createDataURL(cellSize,margin);
@@ -368,7 +370,7 @@ function getQrCodeDataUrl(text,cellSize=5,margin=2){
   }catch(e){
     console.warn('QR oluşturma hatası:',e);
   }
-  const fallback=`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(text)}`;
+  const fallback=`https://api.qrserver.com/v1/create-qr-code/?size=240x240&ecc=H&margin=10&data=${encodeURIComponent(text)}`;
   qrDataUrlCache.set(key,fallback);
   return fallback;
 }
@@ -378,7 +380,7 @@ abcQrLogoImg.src='medya/AbcSepeti-ikon.jfif';
 
 function buildQrPngCanvas(text,size=560){
   if(typeof window.qrcode!=='function')return null;
-  const qr=window.qrcode(0,'M');
+  const qr=window.qrcode(0,'H');
   qr.addData(String(text||''));
   qr.make();
   const count=qr.getModuleCount();
@@ -405,13 +407,20 @@ function buildQrPngCanvas(text,size=560){
   }
   if(abcQrLogoImg.complete&&abcQrLogoImg.naturalWidth>0){
     try{
-      const logoSize=Math.round(size*0.16);
-      const pad=Math.round(size*0.015);
-      const lx=Math.round((size-logoSize)/2);
-      const ly=Math.round((size-logoSize)/2);
+      const logoSize=Math.round(size*0.17);
+      const innerPad=Math.round(size*0.012);
+      const borderW=Math.max(3,Math.round(size*0.008));
+      const quietPad=Math.round(size*0.016);
+      const boxSize=logoSize+innerPad*2;
+      const bx=Math.round((size-boxSize)/2);
+      const by=Math.round((size-boxSize)/2);
       ctx.fillStyle='#ffffff';
-      ctx.fillRect(lx-pad,ly-pad,logoSize+pad*2,logoSize+pad*2);
-      ctx.drawImage(abcQrLogoImg,lx,ly,logoSize,logoSize);
+      ctx.fillRect(bx-borderW-quietPad,by-borderW-quietPad,boxSize+(borderW+quietPad)*2,boxSize+(borderW+quietPad)*2);
+      ctx.fillStyle='#000000';
+      ctx.fillRect(bx-borderW,by-borderW,boxSize+borderW*2,boxSize+borderW*2);
+      ctx.fillStyle='#ffffff';
+      ctx.fillRect(bx,by,boxSize,boxSize);
+      ctx.drawImage(abcQrLogoImg,bx+innerPad,by+innerPad,logoSize,logoSize);
     }catch(e){}
   }
   return canvas;
@@ -524,13 +533,15 @@ function printBusinessQrPdf(businessId){
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 52px;
-    height: 52px;
+    width: 64px;
+    height: 64px;
+    padding: 4px;
     border-radius: 10px;
-    border: 3px solid #ffffff;
+    border: 3px solid #000000;
+    outline: 5px solid #ffffff;
     background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    object-fit: cover;
+    box-shadow: none;
+    object-fit: contain;
   }
   .url-box {
     margin-top: 26px;
