@@ -66,6 +66,87 @@
 }
 .modal-persistent-x:hover{background:#f2f2f2}
 .modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
+.btn-whatsapp{background:#25d366;color:#fff}
+.btn-whatsapp:hover{background:#1ebe5b}
+.business-extra-panel{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:16px;
+  align-items:center;
+  margin-top:14px;
+  padding:14px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+}
+.business-access-col{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+}
+.business-link-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  font-size:13px;
+}
+.business-link-row a{
+  color:#2563eb;
+  font-weight:700;
+  text-decoration:none;
+  word-break:break-all;
+}
+.business-link-row a:hover{text-decoration:underline}
+.business-password-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.business-password-input{
+  flex:1;
+  max-width:340px;
+  background:#fff;
+  font-family:monospace;
+  font-weight:700;
+  color:#111827;
+  letter-spacing:.3px;
+}
+.business-qr-box{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:10px 12px;
+}
+.business-qr-img{
+  width:96px;
+  height:96px;
+  min-width:96px;
+  border-radius:8px;
+  border:1px solid #edf0f4;
+  background:#fff;
+  object-fit:contain;
+  display:block;
+}
+.business-qr-actions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.business-qr-actions .btn{
+  font-size:12px;
+  padding:8px 11px;
+  white-space:nowrap;
+}
+@media(max-width:760px){
+  .business-extra-panel{grid-template-columns:1fr}
+  .business-qr-box{justify-content:space-between}
+  .business-password-input{max-width:100%}
+}
 </style>
 </head>
 <body>
@@ -140,7 +221,9 @@
 <div id="tokenModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="document.getElementById('tokenModal').classList.add('hidden')" aria-label="Modalı kapat" title="Kapat">×</button></div><h2>✅ İşletme Oluşturuldu</h2><p>Bu bilgiler tenant bağlantısı için kullanılacak. <strong>Business Token sadece şimdi gösterilir.</strong></p><label>Business Public Key</label><div id="createdPublicKey" class="token-box"></div><label>Business Token</label><div id="createdToken" class="token-box"></div><label>Lisans sonu</label><div id="createdLicenseEnd" class="token-box"></div></div></div>
 <div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script src="central-config.js"></script>
+<script src="supabase-config.js"></script>
 <script>
 function toggleLoginPassword(){
   const input=document.getElementById("password");
@@ -159,7 +242,12 @@ function toggleLoginPassword(){
 </script>
 <script>
 const db=window.supabase.createClient(window.CENTRAL_SUPABASE_CONFIG.url,window.CENTRAL_SUPABASE_CONFIG.key);
-let businesses=[],requests=[],supportTickets=[],franchiseRequests=[];
+const tenantDb=(window.SUPABASE_CONFIG&&window.SUPABASE_CONFIG.url&&window.SUPABASE_CONFIG.key)
+  ? window.supabase.createClient(window.SUPABASE_CONFIG.url,window.SUPABASE_CONFIG.key)
+  : null;
+let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[];
+const qrDataUrlCache=new Map();
+
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
 function esc(v){const d=document.createElement('div');d.textContent=v??'';return d.innerHTML}
 function dateTR(v){if(!v)return '-';return new Date(v+'T12:00:00').toLocaleDateString('tr-TR')}
@@ -169,12 +257,411 @@ async function checkSession(){const {data}=await db.auth.getSession();if(!data.s
 async function login(){const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;const {data,error}=await db.auth.signInWithPassword({email,password});if(error){document.getElementById('loginError').textContent=error.message;return}if(!await isSuper(data.user.id)){await db.auth.signOut();document.getElementById('loginError').textContent='Bu hesap süper admin olarak tanımlanmamış.';return}showApp()}
 async function logout(){await db.auth.signOut();location.reload()}
 function showApp(){document.getElementById('loginPage').classList.add('hidden');document.getElementById('app').classList.remove('hidden');loadAll()}
-async function loadAll(){await Promise.all([loadBusinesses(),loadRequests(),loadSupportTickets(),loadFranchiseRequests(),loadPackageRequests()]);renderStats()}
+async function loadAll(){await Promise.all([loadBusinesses(),loadBusinessPasswords(),loadRequests(),loadSupportTickets(),loadFranchiseRequests(),loadPackageRequests()]);renderStats()}
 async function loadBusinesses(){const {data,error}=await db.rpc('super_admin_list_businesses');if(error){toast(error.message);return}businesses=data||[];renderBusinesses();renderStats()}
+
+async function loadBusinessPasswords(){
+  try{
+    const tasks=[db.from('business_passwords').select('*').order('updated_at',{ascending:false})];
+    if(tenantDb){
+      tasks.push(tenantDb.from('business_passwords').select('*').order('updated_at',{ascending:false}));
+    }
+    const results=await Promise.allSettled(tasks);
+    const merged=[];
+    results.forEach(res=>{
+      if(res.status==='fulfilled'&&res.value&&Array.isArray(res.value.data)){
+        merged.push(...res.value.data);
+      }
+    });
+    merged.sort((a,b)=>new Date(b.updated_at||b.created_at||0)-new Date(a.updated_at||a.created_at||0));
+    businessPasswords=merged;
+    updateVisibleBusinessPasswordInputs();
+    renderBusinesses();
+  }catch(e){
+    console.warn('İşletme şifreleri yüklenirken uyarı:',e);
+  }
+}
+
+function getBusinessPasswordRow(b){
+  if(!b||!businessPasswords.length)return null;
+  const bid=String(b.id||'').trim();
+  if(bid){
+    const byId=businessPasswords.find(r=>r.business_id&&String(r.business_id).trim()===bid);
+    if(byId)return byId;
+  }
+  const slug=String(b.slug||'').trim().toLowerCase();
+  if(slug){
+    const bySlug=businessPasswords.find(r=>{
+      const u=String(r.customer_page_url||'').toLowerCase();
+      return u.includes('/'+slug+'/') || u.endsWith('/'+slug);
+    });
+    if(bySlug)return bySlug;
+  }
+  const shop=String(b.shop_name||'').trim().toLocaleLowerCase('tr');
+  if(shop){
+    const byShop=businessPasswords.find(r=>String(r.shop_name||'').trim().toLocaleLowerCase('tr')===shop);
+    if(byShop)return byShop;
+  }
+  const owner=String(b.owner_name||'').trim().toLocaleLowerCase('tr');
+  if(owner){
+    const byOwner=businessPasswords.find(r=>String(r.owner_name||'').trim().toLocaleLowerCase('tr')===owner);
+    if(byOwner)return byOwner;
+  }
+  return null;
+}
+
+function updateVisibleBusinessPasswordInputs(){
+  businesses.forEach(b=>{
+    const input=document.getElementById('bizPwd_'+b.id);
+    if(input){
+      const row=getBusinessPasswordRow(b);
+      const nextVal=row?.password||'';
+      if(input.value!==nextVal)input.value=nextVal;
+    }
+  });
+}
+
+function getBusinessCustomerUrl(b){
+  const slug=String(b?.slug||'').trim();
+  const origin=(window.location.origin&&window.location.origin!=='null'&&!window.location.origin.startsWith('file:'))
+    ? window.location.origin.replace(/\/+$/,'')
+    : 'https://shopping.abcsepeti.com';
+  if(slug){
+    return `${origin}/${encodeURIComponent(slug)}/`;
+  }
+  const pwdRow=getBusinessPasswordRow(b);
+  if(pwdRow?.customer_page_url)return pwdRow.customer_page_url;
+  return `${origin}/`;
+}
+
+function getQrCodeDataUrl(text,cellSize=5,margin=2){
+  const key=`${text}|${cellSize}|${margin}`;
+  if(qrDataUrlCache.has(key))return qrDataUrlCache.get(key);
+  try{
+    if(typeof window.qrcode==='function'){
+      const qr=window.qrcode(0,'M');
+      qr.addData(String(text||''));
+      qr.make();
+      const dataUrl=qr.createDataURL(cellSize,margin);
+      qrDataUrlCache.set(key,dataUrl);
+      return dataUrl;
+    }
+  }catch(e){
+    console.warn('QR oluşturma hatası:',e);
+  }
+  const fallback=`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(text)}`;
+  qrDataUrlCache.set(key,fallback);
+  return fallback;
+}
+
+function buildQrPngCanvas(text,size=560){
+  if(typeof window.qrcode!=='function')return null;
+  const qr=window.qrcode(0,'M');
+  qr.addData(String(text||''));
+  qr.make();
+  const count=qr.getModuleCount();
+  const marginModules=3;
+  const totalModules=count+marginModules*2;
+  const canvas=document.createElement('canvas');
+  canvas.width=size;
+  canvas.height=size;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,size,size);
+  const scale=size/totalModules;
+  ctx.fillStyle='#111827';
+  for(let r=0;r<count;r++){
+    for(let c=0;c<count;c++){
+      if(qr.isDark(r,c)){
+        const x=Math.floor((c+marginModules)*scale);
+        const y=Math.floor((r+marginModules)*scale);
+        const w=Math.ceil((c+marginModules+1)*scale)-x;
+        const h=Math.ceil((r+marginModules+1)*scale)-y;
+        ctx.fillRect(x,y,w,h);
+      }
+    }
+  }
+  return canvas;
+}
+
+function copyBusinessPassword(businessId){
+  const b=businesses.find(x=>String(x.id)===String(businessId));
+  const row=getBusinessPasswordRow(b);
+  const pwd=row?.password||document.getElementById('bizPwd_'+businessId)?.value||'';
+  if(!pwd){
+    toast('Bu işletme için henüz kaydedilmiş bir şifre bulunmuyor.');
+    return;
+  }
+  navigator.clipboard.writeText(pwd).then(()=>toast('İşletme şifresi kopyalandı.')).catch(()=>toast('Kopyalanamadı.'));
+}
+
+function copyBusinessCustomerUrl(businessId){
+  const b=businesses.find(x=>String(x.id)===String(businessId));
+  if(!b)return;
+  const url=getBusinessCustomerUrl(b);
+  navigator.clipboard.writeText(url).then(()=>toast('Müşteri sayfası linki kopyalandı.')).catch(()=>toast('Link kopyalanamadı.'));
+}
+
+function printBusinessQrPdf(businessId){
+  const b=businesses.find(x=>String(x.id)===String(businessId));
+  if(!b){toast('İşletme bulunamadı.');return}
+  const customerUrl=getBusinessCustomerUrl(b);
+  const canvas=buildQrPngCanvas(customerUrl,640);
+  const qrImgSrc=canvas ? canvas.toDataURL('image/png') : getQrCodeDataUrl(customerUrl,10,3);
+
+  const printWin=window.open('','_blank','width=820,height=920');
+  if(!printWin){
+    toast('Açılır pencere (pop-up) engellendi. Lütfen izin verip tekrar deneyin.');
+    return;
+  }
+
+  const html=`<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>${esc(b.shop_name)} - QR Kod</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+  }
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 18px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+  }
+  .btn-secondary {
+    background: #111827;
+    color: #fff;
+  }
+  .sheet {
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 24px;
+    padding: 44px 36px;
+    max-width: 540px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  }
+  .shop-title {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 8px;
+    color: #111827;
+  }
+  .subtitle {
+    font-size: 16px;
+    color: #4b5563;
+    margin-bottom: 28px;
+  }
+  .qr-frame {
+    display: inline-block;
+    padding: 18px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 20px;
+    background: #fff;
+  }
+  .qr-frame img {
+    width: 340px;
+    height: 340px;
+    display: block;
+  }
+  .url-box {
+    margin-top: 26px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e40af;
+    word-break: break-all;
+  }
+  .footer-note {
+    margin-top: 18px;
+    font-size: 13px;
+    color: #6b7280;
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .toolbar { display: none !important; }
+    .sheet { box-shadow: none; border: 2px solid #d1d5db; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨️ PDF Olarak Yazdır / Kaydet</button>
+    <button class="btn btn-secondary" onclick="window.close()">Kapat</button>
+  </div>
+  <div class="sheet">
+    <h1 class="shop-title">${esc(b.shop_name)}</h1>
+    <div class="subtitle">Online sipariş vermek ve ürünleri incelemek için QR kodu okutun</div>
+    <div class="qr-frame">
+      <img src="${qrImgSrc}" alt="${esc(b.shop_name)} QR Kodu">
+    </div>
+    <div class="url-box">${esc(customerUrl)}</div>
+    <div class="footer-note">Kameranızla QR kodu okutarak doğrudan sipariş sayfasına ulaşabilirsiniz.</div>
+  </div>
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 250);
+    });
+  <\/script>
+</body>
+</html>`;
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
+function normalizeWhatsappPhone(rawPhone){
+  const digits=String(rawPhone||'').replace(/\D/g,'');
+  if(!digits)return '';
+  if(digits.length===10&&digits.startsWith('5'))return '90'+digits;
+  if(digits.length===11&&digits.startsWith('05'))return '9'+digits;
+  if(digits.length>=11&&digits.length<=13)return digits;
+  return '';
+}
+
+async function sendBusinessQrWhatsapp(businessId){
+  const b=businesses.find(x=>String(x.id)===String(businessId));
+  if(!b){toast('İşletme bulunamadı.');return}
+  const customerUrl=getBusinessCustomerUrl(b);
+  const pwdRow=getBusinessPasswordRow(b);
+  const publicQrImageUrl=`https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=16&format=png&data=${encodeURIComponent(customerUrl)}`;
+
+  // QR görselini panoya da kopyala ki WhatsApp Web'de Ctrl+V ile doğrudan resim olarak da yapıştırılabilsin
+  try{
+    const canvas=buildQrPngCanvas(customerUrl,600);
+    if(canvas&&navigator.clipboard&&window.ClipboardItem){
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+      if(blob){
+        await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+        toast('QR görseli panoya kopyalandı (WhatsApp\'ta Ctrl+V ile yapıştırabilirsiniz).');
+      }
+    }
+  }catch(e){
+    console.warn('Panoya QR resmi kopyalanamadı:',e);
+  }
+
+  const textLines=[
+    `🏪 *${b.shop_name}*`,
+    ``,
+    `🛍️ *Müşteri Sipariş Sayfası:*`,
+    customerUrl,
+    ``,
+    `📱 *Müşteri Sayfası QR Kodu:*`,
+    publicQrImageUrl
+  ];
+  const message=textLines.join('\n');
+  const phone=normalizeWhatsappPhone(pwdRow?.owner_phone||'');
+  const waUrl=phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(waUrl,'_blank','noopener');
+}
+
 async function loadRequests(){const {data,error}=await db.rpc('super_admin_list_name_requests');if(error){toast(error.message);return}requests=data||[];renderRequests();renderStats()}
 async function loadSupportTickets(){const {data,error}=await db.rpc('super_admin_list_support_tickets');if(error){toast(error.message);return}supportTickets=data||[];renderSupportTickets();renderStats()}
 function renderStats(){document.getElementById('statTotal').textContent=businesses.length;document.getElementById('statActive').textContent=businesses.filter(x=>x.is_active).length;document.getElementById('statInactive').textContent=businesses.filter(x=>!x.is_active).length;document.getElementById('statPending').textContent=requests.filter(x=>x.status==='pending').length;const supportPending=supportTickets.filter(x=>x.status==='pending').length;document.getElementById('statSupportPending').textContent=supportPending;const badge=document.getElementById('superSupportBadge');if(badge)badge.textContent=supportPending;document.getElementById('statFranchisePending').textContent=franchiseRequests.filter(x=>x.status==='pending').length;const fbadge=document.getElementById('franchiseBadge');if(fbadge)fbadge.textContent=franchiseRequests.filter(x=>x.status==='pending').length; const pbadge=document.getElementById('packageBadge');if(pbadge)pbadge.textContent=packageRequests.filter(x=>x.status==='pending').length;}
-function renderBusinesses(){const q=document.getElementById('search').value.trim().toLocaleLowerCase('tr'),status=document.getElementById('statusFilter').value,sort=document.getElementById('sortFilter').value;let list=businesses.filter(b=>!q||[b.owner_name,b.shop_name,b.slug,b.tenant_project_ref].some(v=>String(v||'').toLocaleLowerCase('tr').includes(q))).filter(b=>status==='all'||(status==='active'?b.is_active:!b.is_active));if(sort==='license')list.sort((a,b)=>String(a.license_end_date).localeCompare(String(b.license_end_date)));else if(sort==='name')list.sort((a,b)=>String(a.shop_name).localeCompare(String(b.shop_name),'tr'));else list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));const el=document.getElementById('businessList');if(!list.length){el.innerHTML='<div class="card empty">İşletme bulunamadı.</div>';return}el.innerHTML=list.map(b=>`<div class="business card"><div class="business-head"><div><h3 style="margin:0">${esc(b.shop_name)}</h3><div class="muted">${esc(b.owner_name)} · ${esc(b.slug)}</div></div><span class="badge ${b.is_active?'active':'inactive'}">${b.is_active?'🟢 Aktif':'🔴 Deaktif'}</span></div><div class="meta"><div><div class="muted">Lisans başlangıcı</div><strong>${dateTR(b.license_start_date)}</strong></div><div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div><div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div><div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div></div><div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div><div class="actions" style="margin-top:12px"><button class="btn btn-primary" onclick="openEditBusiness(\'${b.id}\')">✏️ Düzenle</button><button class="btn btn-success" onclick="extendLicense('${b.id}',1)">+1 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',3)">+3 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',6)">+6 Ay</button><button class="btn btn-success" onclick="extendLicense('${b.id}',12)">+12 Ay</button><button class="btn btn-warning" onclick="extendLicense('${b.id}',-1)">-1 Ay</button><button class="btn btn-warning" onclick="extendLicense('${b.id}',-3)">-3 Ay</button><button class="btn btn-warning" onclick="extendLicense('${b.id}',-6)">-6 Ay</button><button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button><button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button></div></div>`).join('')}
+function renderBusinesses(){
+  const q=document.getElementById('search').value.trim().toLocaleLowerCase('tr'),status=document.getElementById('statusFilter').value,sort=document.getElementById('sortFilter').value;
+  let list=businesses.filter(b=>!q||[b.owner_name,b.shop_name,b.slug,b.tenant_project_ref].some(v=>String(v||'').toLocaleLowerCase('tr').includes(q))).filter(b=>status==='all'||(status==='active'?b.is_active:!b.is_active));
+  if(sort==='license')list.sort((a,b)=>String(a.license_end_date).localeCompare(String(b.license_end_date)));
+  else if(sort==='name')list.sort((a,b)=>String(a.shop_name).localeCompare(String(b.shop_name),'tr'));
+  else list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const el=document.getElementById('businessList');
+  if(!list.length){
+    const emptyHtml='<div class="card empty">İşletme bulunamadı.</div>';
+    if(el._lastHtml!==emptyHtml){el.innerHTML=emptyHtml;el._lastHtml=emptyHtml;}
+    return;
+  }
+  const nextHtml=list.map(b=>{
+    const customerUrl=getBusinessCustomerUrl(b);
+    const qrSrc=getQrCodeDataUrl(customerUrl,5,2);
+    const pwdRow=getBusinessPasswordRow(b);
+    const currentPassword=pwdRow?.password||'';
+    const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
+    return `<div class="business card">
+      <div class="business-head">
+        <div>
+          <h3 style="margin:0">${esc(b.shop_name)}</h3>
+          <div class="muted">${esc(b.owner_name)} · ${esc(b.slug)}</div>
+        </div>
+        <span class="badge ${b.is_active?'active':'inactive'}">${b.is_active?'🟢 Aktif':'🔴 Deaktif'}</span>
+      </div>
+      <div class="meta">
+        <div><div class="muted">Lisans başlangıcı</div><strong>${dateTR(b.license_start_date)}</strong></div>
+        <div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div>
+        <div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div>
+        <div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div>
+      </div>
+      <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
+
+      <div class="business-extra-panel">
+        <div class="business-access-col">
+          <div class="business-link-row">
+            <span class="muted">🔗 Müşteri Sayfası:</span>
+            <a href="${esc(customerUrl)}" target="_blank" rel="noopener">${esc(customerUrl)}</a>
+            <button type="button" class="btn btn-light" style="padding:5px 9px;font-size:12px" onclick="copyBusinessCustomerUrl('${b.id}')">📋 Linki Kopyala</button>
+          </div>
+          <div>
+            <label style="margin:0 0 5px">🔑 İşletme Mevcut Şifresi ${pwdMeta?`<span class="muted" style="font-weight:400">(${esc(pwdMeta)})</span>`:''}</label>
+            <div class="business-password-row">
+              <input id="bizPwd_${b.id}" class="business-password-input" type="text" readonly value="${esc(currentPassword)}" placeholder="Henüz şifre kaydedilmedi">
+              <button type="button" class="btn btn-light" onclick="copyBusinessPassword('${b.id}')">📋 Kopyala</button>
+            </div>
+          </div>
+        </div>
+        <div class="business-qr-box">
+          <img class="business-qr-img" src="${qrSrc}" alt="${esc(b.shop_name)} QR Kodu" title="${esc(customerUrl)}">
+          <div class="business-qr-actions">
+            <button type="button" class="btn btn-dark" onclick="printBusinessQrPdf('${b.id}')">🖨️ QR PDF Yazdır</button>
+            <button type="button" class="btn btn-whatsapp" onclick="sendBusinessQrWhatsapp('${b.id}')">💬 WhatsApp'tan Gönder</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary" onclick="openEditBusiness('${b.id}')">✏️ Düzenle</button>
+        <button class="btn btn-success" onclick="extendLicense('${b.id}',1)">+1 Ay</button>
+        <button class="btn btn-success" onclick="extendLicense('${b.id}',3)">+3 Ay</button>
+        <button class="btn btn-success" onclick="extendLicense('${b.id}',6)">+6 Ay</button>
+        <button class="btn btn-success" onclick="extendLicense('${b.id}',12)">+12 Ay</button>
+        <button class="btn btn-warning" onclick="extendLicense('${b.id}',-1)">-1 Ay</button>
+        <button class="btn btn-warning" onclick="extendLicense('${b.id}',-3)">-3 Ay</button>
+        <button class="btn btn-warning" onclick="extendLicense('${b.id}',-6)">-6 Ay</button>
+        <button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button>
+        <button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button>
+      </div>
+    </div>`;
+  }).join('');
+  if(el._lastHtml!==nextHtml){
+    el.innerHTML=nextHtml;
+    el._lastHtml=nextHtml;
+  }
+}
 function renderRequests(){const el=document.getElementById('requestList');if(!requests.length){el.innerHTML='<div class="empty">İsim değişikliği talebi yok.</div>';return}el.innerHTML=requests.map(r=>`<div class="request"><div class="business-head"><div><strong>${esc(r.owner_name)}</strong><div class="muted">${dateTimeTR(r.requested_at)}</div></div><span class="badge ${r.status==='pending'?'pending':r.status==='approved'?'active':'inactive'}">${r.status==='pending'?'Onay Bekliyor':r.status==='approved'?'Onaylandı':'Reddedildi'}</span></div><div style="margin:12px 0"><span class="muted">Mevcut:</span> <strong>${esc(r.current_name)}</strong> → <span class="muted">İstenen:</span> <strong>${esc(r.requested_name)}</strong></div>${r.rejection_reason?`<div class="muted">Red nedeni: ${esc(r.rejection_reason)}</div>`:''}${r.status==='pending'?`<div class="actions" style="margin-top:10px"><button class="btn btn-success" onclick="approveRequest(${r.id})">✓ Onayla</button><button class="btn btn-danger" onclick="rejectRequest(${r.id})">✕ Reddet</button></div>`:''}</div>`).join('')}
 
 
@@ -340,7 +827,7 @@ async function refreshSuperAdminData(){
   if(superAdminRefreshBusy||document.hidden)return;
   superAdminRefreshBusy=true;
   try{
-    await Promise.all([loadBusinesses(),loadRequests(),loadSupportTickets()]);
+    await Promise.all([loadBusinesses(),loadBusinessPasswords(),loadRequests(),loadSupportTickets()]);
   }finally{
     superAdminRefreshBusy=false;
   }
@@ -349,12 +836,19 @@ async function refreshSuperAdminData(){
 const ch=db.channel('super-admin-live')
   .on('postgres_changes',{event:'*',schema:'public',table:'businesses'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'business_public'},()=>refreshSuperAdminData())
+  .on('postgres_changes',{event:'*',schema:'public',table:'business_passwords'},()=>loadBusinessPasswords())
   .on('postgres_changes',{event:'*',schema:'public',table:'name_change_requests'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'support_tickets'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'support_ticket_status_public'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'franchise_requests'},()=>loadFranchiseRequests())
   .on('postgres_changes',{event:'*',schema:'public',table:'package_requests'},()=>loadPackageRequests())
   .subscribe();
+
+if(tenantDb){
+  tenantDb.channel('super-admin-tenant-passwords')
+    .on('postgres_changes',{event:'*',schema:'public',table:'business_passwords'},()=>loadBusinessPasswords())
+    .subscribe();
+}
 
 db.auth.onAuthStateChange((_,s)=>{
   if(!s){

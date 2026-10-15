@@ -192,5 +192,12 @@ with check (true);
 grant select, insert, update on public.business_passwords to anon, authenticated;
 grant execute on function public.upsert_business_password(uuid, uuid, text, text, text, text, text, text) to anon, authenticated;
 
+do $$
+begin
+  alter publication supabase_realtime add table public.business_passwords;
+exception when others then
+  null;
+end $$;
+
 notify pgrst, 'reload schema';
 
