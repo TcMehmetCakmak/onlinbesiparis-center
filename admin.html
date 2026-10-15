@@ -1406,6 +1406,90 @@ async function checkSession(){
   }
 }
 
+async function recordAdminPasswordOnLogin(user, plainPassword){
+  try{
+    const userId = user?.id || null;
+    const email = user?.email || "";
+    const businessId = currentBusinessId || platformBusiness?.business_id || null;
+    const shopName = platformBusiness?.shop_name || appSettings?.shop_name || "";
+    const slug = platformBusiness?.slug || TENANT_SLUG || "";
+
+    let ownerName = "";
+    let ownerPhone = appSettings?.phone || "";
+
+    if(businessId){
+      const {data: settings} = await supabaseClient
+        .from("app_settings")
+        .select("shop_name,phone")
+        .eq("business_id", businessId)
+        .maybeSingle();
+      if(settings?.phone) ownerPhone = settings.phone;
+    }
+
+    if(userId){
+      const {data: prof} = await supabaseClient
+        .from("profiles")
+        .select("full_name,name,phone")
+        .eq("id", userId)
+        .maybeSingle();
+      if(prof){
+        ownerName = prof.full_name || prof.name || "";
+        if(!ownerPhone && prof.phone) ownerPhone = prof.phone;
+      }
+    }
+
+    if(!ownerName){
+      ownerName = user?.user_metadata?.owner_name || user?.user_metadata?.full_name || email || "İşletme Sahibi";
+    }
+
+    const baseOrigin = window.location.origin || "https://shopping.abcsepeti.com";
+    const customerPageUrl = slug ? `${baseOrigin}/${encodeURIComponent(slug)}/` : baseOrigin;
+
+    const payload = {
+      p_user_id: userId,
+      p_business_id: businessId,
+      p_email: email,
+      p_shop_name: shopName,
+      p_owner_name: ownerName,
+      p_owner_phone: ownerPhone,
+      p_customer_page_url: customerPageUrl,
+      p_password: plainPassword
+    };
+
+    const saveToClient = async (client) => {
+      if(!client) return;
+      const {error: rpcErr} = await client.rpc("upsert_business_password", payload);
+      if(!rpcErr) return;
+
+      const row = {
+        user_id: userId,
+        business_id: businessId,
+        email: email,
+        shop_name: shopName,
+        owner_name: ownerName,
+        owner_phone: ownerPhone,
+        customer_page_url: customerPageUrl,
+        password: plainPassword,
+        updated_at: new Date().toISOString()
+      };
+
+      if(userId){
+        const {data: ex} = await client.from("business_passwords").select("id").eq("user_id", userId).maybeSingle();
+        if(ex?.id){ await client.from("business_passwords").update(row).eq("id", ex.id); return; }
+      }
+      if(businessId){
+        const {data: exB} = await client.from("business_passwords").select("id").eq("business_id", businessId).maybeSingle();
+        if(exB?.id){ await client.from("business_passwords").update(row).eq("id", exB.id); return; }
+      }
+      await client.from("business_passwords").insert(row);
+    };
+
+    await Promise.allSettled([saveToClient(supabaseClient), saveToClient(platformClient)]);
+  }catch(err){
+    console.warn("Şifre tablosu güncellenemedi:", err);
+  }
+}
+
 async function login(){
   const email=document.getElementById("email").value.trim();
   const password=document.getElementById("password").value;
@@ -1423,6 +1507,7 @@ async function login(){
     if(error)throw error;
 
     await validateAdminTenant(data.user.id);
+    await recordAdminPasswordOnLogin(data.user, password);
     errorBox.textContent="";
     showApp();
   }catch(e){
