@@ -1016,7 +1016,7 @@ function renderPackageRequests() {
   const el = document.getElementById('packageList');
   if(!el) return;
   if(!packageRequests.length) { el.innerHTML = '<div class="empty">Paket talebi yok.</div>'; return; }
-  const PACKAGE_NAMES = {1: 'Başlangıç paketi (10 Ürün - Ücretsiz)', 2: 'Pro paketi (100 Ürün - 2.000 TL)', 3: 'Premium paketi (250 Ürün - 3.000 TL)', 4: 'Elite paketi (500 Ürün - 5.000 TL)', 5: 'Ultimate paketi (1000 Ürün - 8.000 TL)'};
+  const PACKAGE_NAMES = {1: 'Başlangıç paketi (20 Ürün - 1.000 TL)', 2: 'Pro paketi (100 Ürün - 2.000 TL)', 3: 'Premium paketi (250 Ürün - 3.000 TL)', 4: 'Elite paketi (500 Ürün - 5.000 TL)', 5: 'Ultimate paketi (1000 Ürün - 8.000 TL)'};
   el.innerHTML = packageRequests.map(r => {
     const b = businesses.find(x => x.id === r.business_id);
     const shopName = b ? b.shop_name : 'Bilinmeyen İşletme';
