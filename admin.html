@@ -682,15 +682,7 @@ body.modal-open{
       <div class="header">
         <div>
           <h2>Argo İçerikli Yorum Onayları</h2>
-          <div class="muted">Argo / sakıncalı kelime tespit edilen ürün ve işletme yorumları doğrudan yayınlanmaz; buradan onaylayabilir, bekletebilir veya reddedebilirsiniz.</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="reviewModerationStatusFilter" onchange="renderAdminReviewModeration()" style="width:auto;min-width:170px;margin:0">
-            <option value="all">Tüm Durumlar</option>
-            <option value="pending">Onay Bekleyenler</option>
-            <option value="approved">Onaylananlar (Yayında)</option>
-            <option value="rejected">Reddedilenler</option>
-          </select>
+          <div class="muted">Argo / sakıncalı kelime tespit edilen ürün ve işletme yorumları doğrudan yayınlanmaz; buradan onaylayıp yayınlayabilir veya reddederek silebilirsiniz.</div>
         </div>
       </div>
       <div id="reviewModerationAdminList" class="product-question-admin-list">
@@ -1909,108 +1901,44 @@ async function loadAdminReviewModeration(){
   const list=document.getElementById("reviewModerationAdminList");
   try{
     const marker=`__review_mod__:${currentBusinessId}`;
-    const [modRes, bizRevRes, prodRevRes] = await Promise.all([
-      supabaseClient
-        .from("business_passwords")
-        .select("id,email,password,created_at,updated_at")
-        .eq("email",marker)
-        .order("created_at",{ascending:false}),
-      supabaseClient
-        .from("reviews")
-        .select("id,name,rating,comment,created_at,business_id")
-        .eq("business_id",currentBusinessId)
-        .order("created_at",{ascending:false}),
-      supabaseClient
-        .from("product_reviews")
-        .select("id,business_id,product_id,rating,comment,created_at")
-        .eq("business_id",currentBusinessId)
-        .order("created_at",{ascending:false})
-    ]);
+    const {data, error} = await supabaseClient
+      .from("business_passwords")
+      .select("id,email,password,created_at,updated_at")
+      .eq("email",marker)
+      .order("created_at",{ascending:false});
 
-    if(modRes.error)throw modRes.error;
+    if(error)throw error;
 
-    const rows = Array.isArray(modRes.data) ? modRes.data : [];
+    const rows = Array.isArray(data) ? data : [];
     const parsedItems = [];
-    const trackedPublishedIds = new Set();
+    const staleCompletedRowIds = [];
 
     rows.forEach(row=>{
       try{
         const p=JSON.parse(row.password||"{}");
         if(p && typeof p==="object"){
-          if(p.published_id!=null) trackedPublishedIds.add(String(p.published_id));
+          const st = p.status || "pending";
+          if(st === "approved" || st === "rejected"){
+            staleCompletedRowIds.push(row.id);
+            return;
+          }
           parsedItems.push({
             ...p,
             _row_id: row.id,
-            status: p.status || "pending",
+            status: "pending",
             created_at: p.created_at || row.created_at
           });
         }
       }catch(e){}
     });
 
-    // Eğer tabloda önceden eklenmiş ve argo içeren ama henüz onay kuyruğunda olmayan yorum varsa onları da otomatik kuyruğa al
-    const untrackedToSync = [];
-    (bizRevRes.data || []).forEach(r=>{
-      if(trackedPublishedIds.has(String(r.id))) return;
-      const matched = detectAdminArgoWordsInReview(r.name, r.comment);
-      if(matched.length > 0){
-        untrackedToSync.push({
-          id: "rmod_existing_biz_" + r.id,
-          type: "business",
-          business_id: currentBusinessId,
-          product_id: null,
-          product_name: null,
-          name: r.name || "Müşteri",
-          rating: Number(r.rating || 0),
-          comment: r.comment || "",
-          matched_words: matched,
-          status: "pending",
-          published_id: r.id,
-          created_at: r.created_at || new Date().toISOString()
-        });
-      }
-    });
-
-    (prodRevRes.data || []).forEach(r=>{
-      if(trackedPublishedIds.has(String(r.id))) return;
-      const matched = detectAdminArgoWordsInReview(r.comment);
-      if(matched.length > 0){
-        untrackedToSync.push({
-          id: "rmod_existing_prod_" + r.id,
-          type: "product",
-          business_id: currentBusinessId,
-          product_id: r.product_id,
-          product_name: adminQuestionProductName(r.product_id),
-          name: "Müşteri",
-          rating: Number(r.rating || 0),
-          comment: r.comment || "",
-          matched_words: matched,
-          status: "pending",
-          published_id: r.id,
-          created_at: r.created_at || new Date().toISOString()
-        });
-      }
-    });
-
-    for(const item of untrackedToSync){
-      try{
-        const {data:insRow, error:insErr} = await supabaseClient
-          .from("business_passwords")
-          .insert({
-            business_id: null,
-            user_id: null,
-            email: marker,
-            shop_name: platformBusiness?.shop_name || null,
-            owner_name: item.type,
-            owner_phone: item.status,
-            password: JSON.stringify(item)
-          })
-          .select("id")
-          .single();
-        if(!insErr && insRow){
-          parsedItems.unshift({...item, _row_id: insRow.id});
-        }
-      }catch(e){}
+    if(staleCompletedRowIds.length){
+      supabaseClient
+        .from("business_passwords")
+        .delete()
+        .in("id", staleCompletedRowIds)
+        .then(()=>{})
+        .catch(()=>{});
     }
 
     parsedItems.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
@@ -2024,42 +1952,23 @@ async function loadAdminReviewModeration(){
   }
 }
 
-function reviewModerationStatusLabel(status){
-  if(status==="approved") return "Onaylandı · Yayında";
-  if(status==="rejected") return "Reddedildi · Yayında Değil";
-  return "Onay Bekliyor · Yayında Değil";
-}
-
-function reviewModerationStatusBadgeClass(status){
-  if(status==="approved") return "product-question-status-answered";
-  if(status==="rejected") return "badge-cancelled";
-  return "product-question-status-pending";
-}
-
 function renderAdminReviewModeration(){
   const list=document.getElementById("reviewModerationAdminList");
   if(!list)return;
 
-  const pendingCount = adminReviewModerations.filter(x => (x.status || "pending") === "pending").length;
+  const pendingCount = adminReviewModerations.length;
   const badge = document.getElementById("reviewModerationPendingCount");
   if(badge){
     badge.textContent = String(pendingCount);
     badge.classList.toggle("hidden", pendingCount === 0);
   }
 
-  const filterVal = document.getElementById("reviewModerationStatusFilter")?.value || "all";
-  const filtered = adminReviewModerations.filter(item => {
-    const st = item.status || "pending";
-    return filterVal === "all" ? true : st === filterVal;
-  });
-
-  if(!filtered.length){
-    list.innerHTML = '<div class="empty">Bu filtreye uygun argo içerikli yorum bulunmuyor.</div>';
+  if(!adminReviewModerations.length){
+    list.innerHTML = '<div class="empty">Onay bekleyen argo içerikli yorum bulunmuyor.</div>';
     return;
   }
 
-  list.innerHTML = filtered.map(item => {
-    const st = item.status || "pending";
+  list.innerHTML = adminReviewModerations.map(item => {
     const isProduct = item.type === "product";
     const targetTitle = isProduct
       ? `📦 Ürün Yorumu: ${item.product_name || adminQuestionProductName(item.product_id)}`
@@ -2076,8 +1985,8 @@ function renderAdminReviewModeration(){
           <div class="product-question-admin-product">${escapeHtml(targetTitle)}</div>
           <div class="muted">${escapeHtml(formatDateTime(item.created_at))} · <span style="color:#f5a623;font-weight:800">${stars} (${ratingNum}/5)</span></div>
         </div>
-        <span class="badge ${reviewModerationStatusBadgeClass(st)}">
-          ${escapeHtml(reviewModerationStatusLabel(st))}
+        <span class="badge product-question-status-pending">
+          Onay Bekliyor · Yayında Değil
         </span>
       </div>
 
@@ -2091,13 +2000,10 @@ function renderAdminReviewModeration(){
       </div>
 
       <div class="actions" style="justify-content:flex-end;margin-top:12px;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn ${st==="approved"?"btn-light":"btn-success"}" ${st==="approved"?"disabled":""} onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','approved')">
+        <button type="button" class="btn btn-success" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','approved')">
           ✓ Onayla ve Yayınla
         </button>
-        <button type="button" class="btn ${st==="pending"?"btn-light":"btn-warning"}" ${st==="pending"?"disabled":""} style="${st!=="pending"?"background:#f59e0b;color:#fff":""}" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','pending')">
-          ⏳ Beklet (Yayından Kaldır)
-        </button>
-        <button type="button" class="btn ${st==="rejected"?"btn-light":"btn-danger"}" ${st==="rejected"?"disabled":""} onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','rejected')">
+        <button type="button" class="btn btn-danger" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','rejected')">
           ✕ Reddet
         </button>
       </div>
@@ -2117,77 +2023,62 @@ async function setModeratedReviewStatus(rowId, newStatus){
   try{
     let publishedId = item.published_id || null;
 
-    if(newStatus === "approved" && !publishedId){
-      if(item.type === "product"){
-        const {data:insProd, error:errProd} = await supabaseClient
-          .from("product_reviews")
-          .insert({
-            business_id: currentBusinessId,
-            product_id: item.product_id,
-            rating: Number(item.rating || 5),
-            comment: String(item.comment || "").substring(0, 500)
-          })
-          .select("id")
-          .single();
-        if(errProd) throw errProd;
-        publishedId = insProd?.id || null;
-      }else{
-        const {data:insBiz, error:errBiz} = await supabaseClient
-          .from("reviews")
-          .insert({
-            business_id: currentBusinessId,
-            name: String(item.name || "Müşteri").substring(0, 50),
-            rating: Number(item.rating || 5),
-            comment: String(item.comment || "").substring(0, 500)
-          })
-          .select("id")
-          .single();
-        if(errBiz) throw errBiz;
-        publishedId = insBiz?.id || null;
+    if(newStatus === "approved"){
+      if(!publishedId){
+        if(item.type === "product"){
+          const {data:insProd, error:errProd} = await supabaseClient
+            .from("product_reviews")
+            .insert({
+              business_id: currentBusinessId,
+              product_id: item.product_id,
+              rating: Number(item.rating || 5),
+              comment: String(item.comment || "").substring(0, 500)
+            })
+            .select("id")
+            .single();
+          if(errProd) throw errProd;
+          publishedId = insProd?.id || null;
+        }else{
+          const {data:insBiz, error:errBiz} = await supabaseClient
+            .from("reviews")
+            .insert({
+              business_id: currentBusinessId,
+              name: String(item.name || "Müşteri").substring(0, 50),
+              rating: Number(item.rating || 5),
+              comment: String(item.comment || "").substring(0, 500)
+            })
+            .select("id")
+            .single();
+          if(errBiz) throw errBiz;
+          publishedId = insBiz?.id || null;
+        }
       }
-    }
-
-    const updatedPayload = {
-      ...item,
-      status: newStatus,
-      published_id: publishedId,
-      updated_at: new Date().toISOString()
-    };
-    delete updatedPayload._row_id;
-
-    if(publishedId){
+    }else if(newStatus === "rejected" && publishedId){
       const targetTable = item.type === "product" ? "product_reviews" : "reviews";
-      supabaseClient
+      await supabaseClient
         .from(targetTable)
-        .update({ status: newStatus, moderated_at: new Date().toISOString() })
+        .delete()
         .eq("id", publishedId)
-        .then(()=>{})
         .catch(()=>{});
     }
 
-    const {error:updErr} = await supabaseClient
+    const {error:delErr} = await supabaseClient
       .from("business_passwords")
-      .update({
-        owner_phone: newStatus,
-        password: JSON.stringify(updatedPayload)
-      })
+      .delete()
       .eq("id", item._row_id);
 
-    if(updErr) throw updErr;
+    if(delErr) throw delErr;
 
-    item.status = newStatus;
-    item.published_id = publishedId;
+    adminReviewModerations = adminReviewModerations.filter(x => String(x._row_id) !== String(rowId));
     renderAdminReviewModeration();
 
     if(newStatus === "approved"){
-      toast("Yorum onaylandı ve müşteri sayfasında yayına alındı.");
-    }else if(newStatus === "rejected"){
-      toast("Yorum reddedildi. Müşteri sayfasında yayınlanmayacak.");
+      toast("Yorum onaylanarak yayına alındı ve onay listesinden silindi.");
     }else{
-      toast("Yorum beklemeye alındı. Müşteri sayfasında görünmez.");
+      toast("Yorum reddedildi ve veritabanından silindi.");
     }
   }catch(err){
-    console.error("Yorum durumu güncellenemedi:", err);
+    console.error("Yorum işlemi başarısız:", err);
     toast("İşlem başarısız: " + (err?.message || String(err)));
   }finally{
     reviewModerationActionBusy = false;
