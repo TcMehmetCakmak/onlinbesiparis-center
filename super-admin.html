@@ -304,7 +304,7 @@ async function loadBusinessPasswords(){
 }
 
 function isInactiveViewsCounterRow(r){
-  return Boolean(r&&typeof r.email==='string'&&r.email.startsWith('__inactive_views__:'));
+  return Boolean(r&&typeof r.email==='string'&&(r.email.startsWith('__inactive_views__:')||r.email.startsWith('__review_mod__:')));
 }
 
 function getBusinessPasswordRow(b){

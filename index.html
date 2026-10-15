@@ -5161,15 +5161,19 @@ body{
                     images: imagesByProduct.get(String(product.id)) || []
                 }));
 
-            const reviewResult = await supabaseClient
-                .from("product_reviews")
-                .select("product_id,rating")
-                .eq("business_id", currentBusinessId);
+            const [reviewResult, modItems] = await Promise.all([
+                supabaseClient
+                    .from("product_reviews")
+                    .select("id,product_id,rating,comment")
+                    .eq("business_id", currentBusinessId),
+                fetchModerationItemsForBusiness(currentBusinessId)
+            ]);
 
             productReviewsCacheV32 = {};
 
             if (!reviewResult.error) {
-                (reviewResult.data || []).forEach(review => {
+                const visibleProductReviews = filterCustomerVisibleReviews(reviewResult.data || [], modItems, "product");
+                visibleProductReviews.forEach(review => {
                     const key = String(review.product_id);
 
                     if (!productReviewsCacheV32[key]) {
@@ -8261,19 +8265,211 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     let reviewSyncInProgress = false;
 
+    const ARGO_REVIEW_WORDS = [
+        "rezil", "berbat", "leş", "çöp", "kalitesiz", "derme çatma", "sahte", "çakma",
+        "hırsız", "dolandırıcı", "amigoluk", "palavracı", "dümenci", "haytalık", "dandik",
+        "fason", "atık", "döküntü", "paspal", "hurda", "sümüklü", "hödük", "kafadan kontak",
+        "sapık", "manyak", "manyaklık", "mal", "aptal", "salak", "enayi", "kazık",
+        "kazıklamak", "soygun", "soygunculuk", "ucube", "uyduruk", "patlak", "çatlak",
+        "kırık", "dökük", "bitik", "batık", "rezalet", "fiyasko", "fos", "boyasız",
+        "kokmuş", "bayat", "iğrenç", "cıvık"
+    ];
+
+    const ARGO_EXACT_OR_INFLECTED_SHORT = {
+        "mal": ["mal", "malı", "malın", "mala", "malda", "maldan", "mallar", "malları", "malsın", "malca", "maldır"],
+        "fos": ["fos", "fostu", "fostur", "fossun", "fosmuş"]
+    };
+
+    function normalizeArgoReviewText(text) {
+        return String(text || "")
+            .toLocaleLowerCase("tr-TR")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function detectArgoWordsInReview(...texts) {
+        const combined = normalizeArgoReviewText(texts.filter(Boolean).join(" "));
+        if (!combined) return [];
+
+        const tokens = combined.split(/[^a-z0-9çğıöşü]+/i).filter(Boolean);
+        const matched = [];
+
+        for (const word of ARGO_REVIEW_WORDS) {
+            const w = normalizeArgoReviewText(word);
+            if (!w) continue;
+
+            if (w.includes(" ")) {
+                const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+                const phraseRegex = new RegExp(`(^|[^a-z0-9çğıöşü])${escaped}(?=$|[^a-z0-9çğıöşü]|[a-zçğıöşü]{1,6})`, "i");
+                if (phraseRegex.test(combined)) {
+                    matched.push(word);
+                }
+                continue;
+            }
+
+            if (ARGO_EXACT_OR_INFLECTED_SHORT[w]) {
+                const allowedForms = ARGO_EXACT_OR_INFLECTED_SHORT[w];
+                if (tokens.some(t => allowedForms.includes(t))) {
+                    matched.push(word);
+                }
+                continue;
+            }
+
+            if (w === "kazıklamak") {
+                if (tokens.some(t => t === "kazıklamak" || t.startsWith("kazıkla") || t.startsWith("kazıklan"))) {
+                    matched.push(word);
+                }
+                continue;
+            }
+
+            if (tokens.some(t => t === w || t.startsWith(w))) {
+                matched.push(word);
+            }
+        }
+
+        return Array.from(new Set(matched));
+    }
+
+    let moderatedReviewsCacheByBiz = {};
+
+    async function fetchModerationItemsForBusiness(businessId) {
+        const bid = String(businessId || "").trim();
+        if (!bid) return [];
+        try {
+            const marker = `__review_mod__:${bid}`;
+            const { data, error } = await supabaseClient
+                .from("business_passwords")
+                .select("id,email,password,created_at,updated_at")
+                .eq("email", marker)
+                .order("created_at", { ascending: false });
+            if (error || !Array.isArray(data)) return moderatedReviewsCacheByBiz[bid] || [];
+            const items = [];
+            data.forEach(row => {
+                try {
+                    const parsed = JSON.parse(row.password || "{}");
+                    if (parsed && typeof parsed === "object") {
+                        items.push({ ...parsed, _row_id: row.id });
+                    }
+                } catch (e) {}
+            });
+            moderatedReviewsCacheByBiz[bid] = items;
+            return items;
+        } catch (e) {
+            return moderatedReviewsCacheByBiz[bid] || [];
+        }
+    }
+
+    function filterCustomerVisibleReviews(rawReviews, modItems, reviewType) {
+        const list = Array.isArray(rawReviews) ? rawReviews : [];
+        const mods = Array.isArray(modItems) ? modItems : [];
+
+        const blockedPublishedIds = new Set();
+        const approvedPublishedIds = new Set();
+        const approvedSignatures = new Set();
+
+        mods.forEach(m => {
+            if (reviewType && m.type && m.type !== reviewType) return;
+            const pubId = m.published_id != null ? String(m.published_id) : "";
+            const sig = `${String(m.product_id || "")}|${String(m.name || "").trim()}|${Number(m.rating || 0)}|${String(m.comment || "").trim()}`;
+            if (m.status === "approved") {
+                if (pubId) approvedPublishedIds.add(pubId);
+                approvedSignatures.add(sig);
+            } else {
+                if (pubId) blockedPublishedIds.add(pubId);
+            }
+        });
+
+        return list.filter(r => {
+            if (r?.status && r.status !== "approved") return false;
+            const rid = r?.id != null ? String(r.id) : "";
+            if (rid && blockedPublishedIds.has(rid)) return false;
+            if (rid && approvedPublishedIds.has(rid)) return true;
+            if (r?.status === "approved" && Array.isArray(r?.matched_words) && r.matched_words.length > 0) return true;
+
+            const sig = `${String(r?.product_id || "")}|${String(r?.name || "").trim()}|${Number(r?.rating || 0)}|${String(r?.comment || "").trim()}`;
+            if (approvedSignatures.has(sig)) return true;
+
+            const argoMatches = detectArgoWordsInReview(r?.name, r?.comment);
+            if (argoMatches.length > 0) {
+                return false;
+            }
+            return true;
+        });
+    }
+
+    async function saveArgoReviewToModerationQueue(item) {
+        const bid = String(item.business_id || currentBusinessId || "").trim();
+        if (!bid) throw new Error("İşletme bilgisi bulunamadı.");
+        const marker = `__review_mod__:${bid}`;
+        const record = {
+            id: "rmod_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+            type: item.type || "business",
+            business_id: bid,
+            product_id: item.product_id || null,
+            product_name: item.product_name || null,
+            name: item.name || "Müşteri",
+            rating: Number(item.rating || 0),
+            comment: String(item.comment || ""),
+            matched_words: Array.isArray(item.matched_words) ? item.matched_words : [],
+            status: "pending",
+            published_id: null,
+            created_at: new Date().toISOString()
+        };
+
+        const tasks = [
+            supabaseClient.from("business_passwords").insert({
+                business_id: null,
+                user_id: null,
+                email: marker,
+                shop_name: currentShopName || null,
+                owner_name: record.type,
+                owner_phone: "pending",
+                password: JSON.stringify(record)
+            })
+        ];
+
+        const results = await Promise.allSettled(tasks);
+        const firstResult = results[0];
+        if (firstResult.status === "rejected" || firstResult.value?.error) {
+            throw (firstResult.reason || firstResult.value?.error || new Error("Onay kuyruğuna kaydedilemedi"));
+        }
+        return record;
+    }
+
+    function showReviewModerationPopup(customMessage) {
+        const popup = document.getElementById("reviewModerationPopup");
+        const msgEl = document.getElementById("reviewModerationPopupMessage");
+        const messageText = customMessage || "Yorumunuz argo kelime içerdiği için değerlendirme sorası uygun bulunursa yayına alınacaktır";
+        if (msgEl) msgEl.textContent = messageText;
+        if (popup) {
+            popup.classList.remove("hidden");
+        } else {
+            alert(messageText);
+        }
+    }
+
+    function closeReviewModerationPopup() {
+        const popup = document.getElementById("reviewModerationPopup");
+        if (popup) popup.classList.add("hidden");
+    }
+
     async function loadReviews() {
         if (!currentBusinessId) return;
         if (reviewSyncInProgress) return;
         reviewSyncInProgress = true;
         try {
-            const { data, error } = await supabaseClient
-                .from("reviews")
-                .select("id,name,rating,comment,created_at,business_id")
-                .eq("business_id", currentBusinessId)
-                .order("created_at", { ascending: false });
+            const [reviewRes, modItems] = await Promise.all([
+                supabaseClient
+                    .from("reviews")
+                    .select("id,name,rating,comment,created_at,business_id")
+                    .eq("business_id", currentBusinessId)
+                    .order("created_at", { ascending: false }),
+                fetchModerationItemsForBusiness(currentBusinessId)
+            ]);
 
-            if (error) throw error;
-            reviews = Array.isArray(data) ? data : [];
+            if (reviewRes.error) throw reviewRes.error;
+            const rawReviews = Array.isArray(reviewRes.data) ? reviewRes.data : [];
+            reviews = filterCustomerVisibleReviews(rawReviews, modItems, "business");
             renderReviews();
         } catch (error) {
             console.error("Yorumlar yüklenemedi:", error);
@@ -8338,11 +8534,40 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             return;
         }
 
+        const cleanName = name.substring(0, 50);
+        const cleanComment = comment.substring(0, 500);
+        const matchedArgoWords = detectArgoWordsInReview(cleanName, cleanComment);
+
+        if (matchedArgoWords.length > 0) {
+            try {
+                await saveArgoReviewToModerationQueue({
+                    type: "business",
+                    business_id: currentBusinessId,
+                    name: cleanName,
+                    rating: selectedReviewRating,
+                    comment: cleanComment,
+                    matched_words: matchedArgoWords
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Yorum kaydedilemedi: " + (err?.message || String(err)));
+                return;
+            }
+
+            document.getElementById("reviewName").value = "";
+            document.getElementById("reviewComment").value = "";
+            selectedReviewRating = 0;
+            document.querySelectorAll("#starSelector button").forEach(star => star.classList.remove("selected"));
+            await loadReviews();
+            showReviewModerationPopup("Yorumunuz argo kelime içerdiği için değerlendirme sorası uygun bulunursa yayına alınacaktır");
+            return;
+        }
+
         const payload = {
             business_id: currentBusinessId,
-            name: name.substring(0, 50),
+            name: cleanName,
             rating: selectedReviewRating,
-            comment: comment.substring(0, 500)
+            comment: cleanComment
         };
 
         const { error } = await supabaseClient.from("reviews").insert(payload);
@@ -8407,25 +8632,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     }
 
     function applyRealtimeReview(payload) {
-        const eventType = payload.eventType;
-        const changed = payload.new || {};
-        const old = payload.old || {};
-        const id = String(changed.id ?? old.id ?? "");
-
-        if (!id) {
-            loadReviews();
-            return;
-        }
-
-        if (eventType === "DELETE") {
-            reviews = reviews.filter(r => String(r.id) !== id);
-        } else if (eventType === "INSERT" || eventType === "UPDATE") {
-            const index = reviews.findIndex(r => String(r.id) === id);
-            if (index >= 0) reviews[index] = changed;
-            else reviews.unshift(changed);
-            reviews.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-        }
-        renderReviews();
+        loadReviews();
     }
 
     /* =========================================
@@ -9020,6 +9227,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             .on("postgres_changes", { event: "*", schema: "public", table: "products", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "product_images", filter: businessFilter }, () => loadProducts())
             .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: businessFilter }, applyRealtimeReview)
+            .on("postgres_changes", { event: "*", schema: "public", table: "business_passwords", filter: `email=eq.__review_mod__:${currentBusinessId}` }, () => {
+                loadReviews();
+                loadProducts();
+                if (detailProduct && !document.getElementById("productReviewModalV32")?.classList.contains("hidden")) {
+                    loadProductReviewsV31(detailProduct.id);
+                }
+            })
             .on("postgres_changes", { event: "*", schema: "public", table: "product_questions", filter: businessFilter }, payload => {
                 const productId=payload?.new?.product_id || payload?.old?.product_id || detailProduct?.id;
                 if(productId)loadProductQuestionsV1(productId,false);
@@ -9341,7 +9555,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             activeBusinesses.forEach(b => rootBusinessesById.set(String(b.business_id), b));
             const businessIds = activeBusinesses.map(b => b.business_id);
 
-            const [productResult, variantResult, imageResult, reviewResult] = await Promise.all([
+            const [productResult, variantResult, imageResult, reviewResult, modResult] = await Promise.all([
                 supabaseClient
                     .from("products")
                     .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
@@ -9358,8 +9572,12 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                     .order("created_at", { ascending: true }),
                 supabaseClient
                     .from("product_reviews")
-                    .select("product_id,rating")
-                    .in("business_id", businessIds)
+                    .select("id,business_id,product_id,rating,comment")
+                    .in("business_id", businessIds),
+                supabaseClient
+                    .from("business_passwords")
+                    .select("id,email,password")
+                    .in("email", businessIds.map(id => `__review_mod__:${id}`))
             ]);
 
             if (productResult.error) throw productResult.error;
@@ -9382,9 +9600,20 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 });
             }
 
+            const rootModItems = [];
+            if (!modResult?.error && Array.isArray(modResult?.data)) {
+                modResult.data.forEach(row => {
+                    try {
+                        const parsed = JSON.parse(row.password || "{}");
+                        if (parsed && typeof parsed === "object") rootModItems.push(parsed);
+                    } catch (e) {}
+                });
+            }
+
             productReviewsCacheV32 = {};
             if (!reviewResult.error) {
-                (reviewResult.data || []).forEach(rev => {
+                const visibleRootReviews = filterCustomerVisibleReviews(reviewResult.data || [], rootModItems, "product");
+                visibleRootReviews.forEach(rev => {
                     const key = String(rev.product_id);
                     if (!productReviewsCacheV32[key]) productReviewsCacheV32[key] = [];
                     productReviewsCacheV32[key].push(rev);
@@ -10562,13 +10791,43 @@ async function saveProductReviewV31(productId){
         return;
     }
 
+    const cleanComment = comment.substring(0, 500);
+    const matchedArgoWords = detectArgoWordsInReview(cleanComment);
+
+    if(matchedArgoWords.length > 0){
+        const prodObj = (products || []).find(p => String(p.id) === String(productId)) || detailProduct || null;
+        try{
+            await saveArgoReviewToModerationQueue({
+                type: "product",
+                business_id: currentBusinessId,
+                product_id: productId,
+                product_name: prodObj?.name || "Ürün",
+                name: "Müşteri",
+                rating: selectedProductRatingV31,
+                comment: cleanComment,
+                matched_words: matchedArgoWords
+            });
+        }catch(err){
+            console.error(err);
+            alert("Ürün yorumu kaydedilemedi: " + (err?.message || String(err)));
+            return;
+        }
+
+        selectedProductRatingV31 = 0;
+        const t = document.getElementById("productReviewTextV31");
+        if(t) t.value = "";
+        await loadProductReviewsV31(productId);
+        showReviewModerationPopup("Yorumunuz argo kelime içerdiği için değerlendirme sorası uygun bulunursa yayına alınacaktır");
+        return;
+    }
+
     const {error}=await supabaseClient
         .from("product_reviews")
         .insert({
             business_id: currentBusinessId,
             product_id: productId,
             rating: selectedProductRatingV31,
-            comment: comment.substring(0,500)
+            comment: cleanComment
         });
 
     if(error){
@@ -10593,21 +10852,25 @@ async function loadProductReviewsV31(productId){
     const area=document.getElementById("productReviewAreaV28");
     if(!area) return;
 
-    const {data,error}=await supabaseClient
-        .from("product_reviews")
-        .select("*")
-        .eq("business_id", currentBusinessId)
-        .eq("product_id", productId)
-        .order("created_at",{ascending:false});
+    const [reviewRes, modItems]=await Promise.all([
+        supabaseClient
+            .from("product_reviews")
+            .select("*")
+            .eq("business_id", currentBusinessId)
+            .eq("product_id", productId)
+            .order("created_at",{ascending:false}),
+        fetchModerationItemsForBusiness(currentBusinessId)
+    ]);
 
-    if(error){
-        console.error(error);
+    if(reviewRes.error){
+        console.error(reviewRes.error);
         return;
     }
 
-    const reviews=data || [];
+    const reviews=filterCustomerVisibleReviews(reviewRes.data || [], modItems, "product");
 
     setProductReviewCountV32(productId,reviews);
+    renderProducts();
 
     area.innerHTML=`
     <div class="product-review-box-v31">
@@ -10755,6 +11018,21 @@ setInterval(()=>{
       </button>
       <button type="button" class="cart-add-go-cart" onclick="goToCartAfterAdd()">
         Sepete Git
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="reviewModerationPopup" class="cart-add-success-popup hidden" role="dialog" aria-modal="true" aria-labelledby="reviewModerationPopupTitle" style="z-index: 70000;">
+  <div class="cart-add-success-card">
+    <div class="cart-add-success-icon" style="background:#fff3e0; color:#e65100; font-size:28px;">⏳</div>
+    <h3 id="reviewModerationPopupTitle">Değerlendirme Onayı Bekleniyor</h3>
+    <div id="reviewModerationPopupMessage" class="cart-add-success-message" style="font-size:15px; line-height:1.5; color:#333; margin-top:8px;">
+      Yorumunuz argo kelime içerdiği için değerlendirme sorası uygun bulunursa yayına alınacaktır
+    </div>
+    <div class="cart-add-success-actions" style="margin-top:18px; display:flex; justify-content:center;">
+      <button type="button" class="cart-add-go-cart" style="width:100%;" onclick="closeReviewModerationPopup()">
+        Tamam
       </button>
     </div>
   </div>

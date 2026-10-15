@@ -650,6 +650,7 @@ body.modal-open{
     <button class="tab" onclick="showTab('subscription',this)">👑 Abonelik Paketi <span id="subscriptionUsageBadge" class="badge" style="margin-left:5px;display:none;"></span></button>
     <button class="tab" onclick="showTab('support',this)">🛠️ Talepler <span id="supportPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('productQuestions',this)">❓ Ürün Soruları <span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
+    <button class="tab" onclick="showTab('reviewsModeration',this)">💬 Yorum Onayları <span id="reviewModerationPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
   </div>
 
   <section id="productsTab">
@@ -672,6 +673,28 @@ body.modal-open{
       </div>
       <div id="productQuestionAdminList" class="product-question-admin-list">
         <div class="empty">Ürün soruları yükleniyor...</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reviewsModerationTab" class="hidden">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h2>Argo İçerikli Yorum Onayları</h2>
+          <div class="muted">Argo / sakıncalı kelime tespit edilen ürün ve işletme yorumları doğrudan yayınlanmaz; buradan onaylayabilir, bekletebilir veya reddedebilirsiniz.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="reviewModerationStatusFilter" onchange="renderAdminReviewModeration()" style="width:auto;min-width:170px;margin:0">
+            <option value="all">Tüm Durumlar</option>
+            <option value="pending">Onay Bekleyenler</option>
+            <option value="approved">Onaylananlar (Yayında)</option>
+            <option value="rejected">Reddedilenler</option>
+          </select>
+        </div>
+      </div>
+      <div id="reviewModerationAdminList" class="product-question-admin-list">
+        <div class="empty">Yorum onay listesi yükleniyor...</div>
       </div>
     </div>
   </section>
@@ -1625,7 +1648,8 @@ async function loadAll(){
       loadAdminSettings(),
       loadSubscription(),
       loadSupportTickets(),
-      loadAdminProductQuestions()
+      loadAdminProductQuestions(),
+      loadAdminReviewModeration()
     ];
     if(TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG){
       loadTasks.push(loadMedicineRequests());
@@ -1634,6 +1658,7 @@ async function loadAll(){
 
     renderProducts();
     renderAdminProductQuestions();
+    renderAdminReviewModeration();
     renderOrders();
     renderAdminNotifications();
     renderAdminAdvertisements();
@@ -1827,6 +1852,345 @@ async function saveProductQuestionAnswer(){
     productQuestionAnswerBusy=false;
     button.disabled=false;
     button.textContent="Cevabı Kaydet";
+  }
+}
+
+let adminReviewModerations = [];
+let reviewModerationActionBusy = false;
+
+const ADMIN_ARGO_REVIEW_WORDS = [
+  "rezil", "berbat", "leş", "çöp", "kalitesiz", "derme çatma", "sahte", "çakma",
+  "hırsız", "dolandırıcı", "amigoluk", "palavracı", "dümenci", "haytalık", "dandik",
+  "fason", "atık", "döküntü", "paspal", "hurda", "sümüklü", "hödük", "kafadan kontak",
+  "sapık", "manyak", "manyaklık", "mal", "aptal", "salak", "enayi", "kazık",
+  "kazıklamak", "soygun", "soygunculuk", "ucube", "uyduruk", "patlak", "çatlak",
+  "kırık", "dökük", "bitik", "batık", "rezalet", "fiyasko", "fos", "boyasız",
+  "kokmuş", "bayat", "iğrenç", "cıvık"
+];
+
+const ADMIN_ARGO_SHORT_FORMS = {
+  "mal": ["mal", "malı", "malın", "mala", "malda", "maldan", "mallar", "malları", "malsın", "malca", "maldır"],
+  "fos": ["fos", "fostu", "fostur", "fossun", "fosmuş"]
+};
+
+function normalizeAdminArgoText(text){
+  return String(text || "").toLocaleLowerCase("tr-TR").replace(/\s+/g, " ").trim();
+}
+
+function detectAdminArgoWordsInReview(...texts){
+  const combined = normalizeAdminArgoText(texts.filter(Boolean).join(" "));
+  if(!combined) return [];
+  const tokens = combined.split(/[^a-z0-9çğıöşü]+/i).filter(Boolean);
+  const matched = [];
+  for(const word of ADMIN_ARGO_REVIEW_WORDS){
+    const w = normalizeAdminArgoText(word);
+    if(!w) continue;
+    if(w.includes(" ")){
+      const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      const phraseRegex = new RegExp(`(^|[^a-z0-9çğıöşü])${escaped}(?=$|[^a-z0-9çğıöşü]|[a-zçğıöşü]{1,6})`, "i");
+      if(phraseRegex.test(combined)) matched.push(word);
+      continue;
+    }
+    if(ADMIN_ARGO_SHORT_FORMS[w]){
+      if(tokens.some(t => ADMIN_ARGO_SHORT_FORMS[w].includes(t))) matched.push(word);
+      continue;
+    }
+    if(w === "kazıklamak"){
+      if(tokens.some(t => t === "kazıklamak" || t.startsWith("kazıkla") || t.startsWith("kazıklan"))) matched.push(word);
+      continue;
+    }
+    if(tokens.some(t => t === w || t.startsWith(w))) matched.push(word);
+  }
+  return Array.from(new Set(matched));
+}
+
+async function loadAdminReviewModeration(){
+  if(!currentBusinessId)return;
+  const list=document.getElementById("reviewModerationAdminList");
+  try{
+    const marker=`__review_mod__:${currentBusinessId}`;
+    const [modRes, bizRevRes, prodRevRes] = await Promise.all([
+      supabaseClient
+        .from("business_passwords")
+        .select("id,email,password,created_at,updated_at")
+        .eq("email",marker)
+        .order("created_at",{ascending:false}),
+      supabaseClient
+        .from("reviews")
+        .select("id,name,rating,comment,created_at,business_id")
+        .eq("business_id",currentBusinessId)
+        .order("created_at",{ascending:false}),
+      supabaseClient
+        .from("product_reviews")
+        .select("id,business_id,product_id,rating,comment,created_at")
+        .eq("business_id",currentBusinessId)
+        .order("created_at",{ascending:false})
+    ]);
+
+    if(modRes.error)throw modRes.error;
+
+    const rows = Array.isArray(modRes.data) ? modRes.data : [];
+    const parsedItems = [];
+    const trackedPublishedIds = new Set();
+
+    rows.forEach(row=>{
+      try{
+        const p=JSON.parse(row.password||"{}");
+        if(p && typeof p==="object"){
+          if(p.published_id!=null) trackedPublishedIds.add(String(p.published_id));
+          parsedItems.push({
+            ...p,
+            _row_id: row.id,
+            status: p.status || "pending",
+            created_at: p.created_at || row.created_at
+          });
+        }
+      }catch(e){}
+    });
+
+    // Eğer tabloda önceden eklenmiş ve argo içeren ama henüz onay kuyruğunda olmayan yorum varsa onları da otomatik kuyruğa al
+    const untrackedToSync = [];
+    (bizRevRes.data || []).forEach(r=>{
+      if(trackedPublishedIds.has(String(r.id))) return;
+      const matched = detectAdminArgoWordsInReview(r.name, r.comment);
+      if(matched.length > 0){
+        untrackedToSync.push({
+          id: "rmod_existing_biz_" + r.id,
+          type: "business",
+          business_id: currentBusinessId,
+          product_id: null,
+          product_name: null,
+          name: r.name || "Müşteri",
+          rating: Number(r.rating || 0),
+          comment: r.comment || "",
+          matched_words: matched,
+          status: "pending",
+          published_id: r.id,
+          created_at: r.created_at || new Date().toISOString()
+        });
+      }
+    });
+
+    (prodRevRes.data || []).forEach(r=>{
+      if(trackedPublishedIds.has(String(r.id))) return;
+      const matched = detectAdminArgoWordsInReview(r.comment);
+      if(matched.length > 0){
+        untrackedToSync.push({
+          id: "rmod_existing_prod_" + r.id,
+          type: "product",
+          business_id: currentBusinessId,
+          product_id: r.product_id,
+          product_name: adminQuestionProductName(r.product_id),
+          name: "Müşteri",
+          rating: Number(r.rating || 0),
+          comment: r.comment || "",
+          matched_words: matched,
+          status: "pending",
+          published_id: r.id,
+          created_at: r.created_at || new Date().toISOString()
+        });
+      }
+    });
+
+    for(const item of untrackedToSync){
+      try{
+        const {data:insRow, error:insErr} = await supabaseClient
+          .from("business_passwords")
+          .insert({
+            business_id: null,
+            user_id: null,
+            email: marker,
+            shop_name: platformBusiness?.shop_name || null,
+            owner_name: item.type,
+            owner_phone: item.status,
+            password: JSON.stringify(item)
+          })
+          .select("id")
+          .single();
+        if(!insErr && insRow){
+          parsedItems.unshift({...item, _row_id: insRow.id});
+        }
+      }catch(e){}
+    }
+
+    parsedItems.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    adminReviewModerations = parsedItems;
+    renderAdminReviewModeration();
+  }catch(error){
+    console.error("Yorum onayları yüklenemedi:",error);
+    if(list){
+      list.innerHTML=`<div class="empty">Yorum onayları yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
+    }
+  }
+}
+
+function reviewModerationStatusLabel(status){
+  if(status==="approved") return "Onaylandı · Yayında";
+  if(status==="rejected") return "Reddedildi · Yayında Değil";
+  return "Onay Bekliyor · Yayında Değil";
+}
+
+function reviewModerationStatusBadgeClass(status){
+  if(status==="approved") return "product-question-status-answered";
+  if(status==="rejected") return "badge-cancelled";
+  return "product-question-status-pending";
+}
+
+function renderAdminReviewModeration(){
+  const list=document.getElementById("reviewModerationAdminList");
+  if(!list)return;
+
+  const pendingCount = adminReviewModerations.filter(x => (x.status || "pending") === "pending").length;
+  const badge = document.getElementById("reviewModerationPendingCount");
+  if(badge){
+    badge.textContent = String(pendingCount);
+    badge.classList.toggle("hidden", pendingCount === 0);
+  }
+
+  const filterVal = document.getElementById("reviewModerationStatusFilter")?.value || "all";
+  const filtered = adminReviewModerations.filter(item => {
+    const st = item.status || "pending";
+    return filterVal === "all" ? true : st === filterVal;
+  });
+
+  if(!filtered.length){
+    list.innerHTML = '<div class="empty">Bu filtreye uygun argo içerikli yorum bulunmuyor.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(item => {
+    const st = item.status || "pending";
+    const isProduct = item.type === "product";
+    const targetTitle = isProduct
+      ? `📦 Ürün Yorumu: ${item.product_name || adminQuestionProductName(item.product_id)}`
+      : `🏪 İşletme Yorumu · Yazan: ${item.name || "Müşteri"}`;
+    const ratingNum = Math.max(1, Math.min(5, Number(item.rating || 5)));
+    const stars = "★".repeat(ratingNum) + "☆".repeat(5 - ratingNum);
+    const matchedWords = Array.isArray(item.matched_words) && item.matched_words.length
+      ? item.matched_words
+      : detectAdminArgoWordsInReview(item.name, item.comment);
+
+    return `<div class="product-question-admin-card">
+      <div class="product-question-admin-head">
+        <div>
+          <div class="product-question-admin-product">${escapeHtml(targetTitle)}</div>
+          <div class="muted">${escapeHtml(formatDateTime(item.created_at))} · <span style="color:#f5a623;font-weight:800">${stars} (${ratingNum}/5)</span></div>
+        </div>
+        <span class="badge ${reviewModerationStatusBadgeClass(st)}">
+          ${escapeHtml(reviewModerationStatusLabel(st))}
+        </span>
+      </div>
+
+      ${matchedWords.length ? `
+      <div style="margin-top:8px;padding:8px 12px;border-radius:9px;background:#fff3e0;color:#b45309;font-size:13px;font-weight:700">
+        ⚠️ Tespit Edilen Argo Kelime${matchedWords.length>1?"ler":""}: ${matchedWords.map(w=>`<span style="display:inline-block;background:#fde68a;color:#92400e;padding:2px 8px;border-radius:6px;margin-right:4px">${escapeHtml(w)}</span>`).join("")}
+      </div>` : ""}
+
+      <div class="product-question-admin-question" style="margin-top:10px">
+        <strong>Yorum Metni:</strong><br>${escapeHtml(item.comment || "")}
+      </div>
+
+      <div class="actions" style="justify-content:flex-end;margin-top:12px;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn ${st==="approved"?"btn-light":"btn-success"}" ${st==="approved"?"disabled":""} onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','approved')">
+          ✓ Onayla ve Yayınla
+        </button>
+        <button type="button" class="btn ${st==="pending"?"btn-light":"btn-warning"}" ${st==="pending"?"disabled":""} style="${st!=="pending"?"background:#f59e0b;color:#fff":""}" onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','pending')">
+          ⏳ Beklet (Yayından Kaldır)
+        </button>
+        <button type="button" class="btn ${st==="rejected"?"btn-light":"btn-danger"}" ${st==="rejected"?"disabled":""} onclick="setModeratedReviewStatus('${escapeAttr(String(item._row_id))}','rejected')">
+          ✕ Reddet
+        </button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function setModeratedReviewStatus(rowId, newStatus){
+  if(reviewModerationActionBusy) return;
+  const item = adminReviewModerations.find(x => String(x._row_id) === String(rowId));
+  if(!item){
+    toast("Yorum kaydı bulunamadı.");
+    return;
+  }
+
+  reviewModerationActionBusy = true;
+  try{
+    let publishedId = item.published_id || null;
+
+    if(newStatus === "approved" && !publishedId){
+      if(item.type === "product"){
+        const {data:insProd, error:errProd} = await supabaseClient
+          .from("product_reviews")
+          .insert({
+            business_id: currentBusinessId,
+            product_id: item.product_id,
+            rating: Number(item.rating || 5),
+            comment: String(item.comment || "").substring(0, 500)
+          })
+          .select("id")
+          .single();
+        if(errProd) throw errProd;
+        publishedId = insProd?.id || null;
+      }else{
+        const {data:insBiz, error:errBiz} = await supabaseClient
+          .from("reviews")
+          .insert({
+            business_id: currentBusinessId,
+            name: String(item.name || "Müşteri").substring(0, 50),
+            rating: Number(item.rating || 5),
+            comment: String(item.comment || "").substring(0, 500)
+          })
+          .select("id")
+          .single();
+        if(errBiz) throw errBiz;
+        publishedId = insBiz?.id || null;
+      }
+    }
+
+    const updatedPayload = {
+      ...item,
+      status: newStatus,
+      published_id: publishedId,
+      updated_at: new Date().toISOString()
+    };
+    delete updatedPayload._row_id;
+
+    if(publishedId){
+      const targetTable = item.type === "product" ? "product_reviews" : "reviews";
+      supabaseClient
+        .from(targetTable)
+        .update({ status: newStatus, moderated_at: new Date().toISOString() })
+        .eq("id", publishedId)
+        .then(()=>{})
+        .catch(()=>{});
+    }
+
+    const {error:updErr} = await supabaseClient
+      .from("business_passwords")
+      .update({
+        owner_phone: newStatus,
+        password: JSON.stringify(updatedPayload)
+      })
+      .eq("id", item._row_id);
+
+    if(updErr) throw updErr;
+
+    item.status = newStatus;
+    item.published_id = publishedId;
+    renderAdminReviewModeration();
+
+    if(newStatus === "approved"){
+      toast("Yorum onaylandı ve müşteri sayfasında yayına alındı.");
+    }else if(newStatus === "rejected"){
+      toast("Yorum reddedildi. Müşteri sayfasında yayınlanmayacak.");
+    }else{
+      toast("Yorum beklemeye alındı. Müşteri sayfasında görünmez.");
+    }
+  }catch(err){
+    console.error("Yorum durumu güncellenemedi:", err);
+    toast("İşlem başarısız: " + (err?.message || String(err)));
+  }finally{
+    reviewModerationActionBusy = false;
   }
 }
 
@@ -2385,6 +2749,7 @@ function loadDashboard(){
 function showTab(name,button){
   document.getElementById("productsTab").classList.toggle("hidden",name!=="products");
   document.getElementById("productQuestionsTab")?.classList.toggle("hidden",name!=="productQuestions");
+  document.getElementById("reviewsModerationTab")?.classList.toggle("hidden",name!=="reviewsModeration");
   document.getElementById("ordersTab").classList.toggle("hidden",name!=="orders");
   document.getElementById("medicineRequestsTab")?.classList.toggle("hidden",name!=="medicineRequests");
   document.getElementById("notificationsTab").classList.toggle("hidden",name!=="notifications");
@@ -2395,6 +2760,7 @@ function showTab(name,button){
   if(name==="support")loadSupportTickets();
   if(name==="subscription")loadSubscription();
   if(name==="productQuestions")loadAdminProductQuestions();
+  if(name==="reviewsModeration")loadAdminReviewModeration();
   if(name==="advertisements")loadAdminAdvertisements();
   if(name==="medicineRequests")loadMedicineRequests();
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));button.classList.add("active");
@@ -4701,6 +5067,9 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"products",filter:businessFilter},async()=>{await loadAdminProducts();loadDashboard();})
     .on("postgres_changes",{event:"*",schema:"public",table:"product_images",filter:businessFilter},async()=>{await loadAdminProducts();})
     .on("postgres_changes",{event:"*",schema:"public",table:"product_questions",filter:businessFilter},async()=>{await loadAdminProductQuestions();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"business_passwords",filter:`email=eq.__review_mod__:${currentBusinessId}`},async()=>{await loadAdminReviewModeration();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"reviews",filter:businessFilter},async()=>{await loadAdminReviewModeration();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"product_reviews",filter:businessFilter},async()=>{await loadAdminReviewModeration();})
     .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},async()=>{await loadAdminOrders();loadDashboard();})
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
@@ -4761,6 +5130,7 @@ async function refreshAdminLiveData(force=false){
       loadSubscription(),
       loadSupportTickets(),
       loadAdminProductQuestions(),
+      loadAdminReviewModeration(),
       loadPlatformBusiness(),
       TENANT_SLUG===PHARMACY_FEATURE_TENANT_SLUG ? loadMedicineRequests() : Promise.resolve()
     ]);
