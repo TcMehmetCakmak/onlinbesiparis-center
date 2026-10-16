@@ -3753,14 +3753,26 @@ body{
                 Ödeme Şekli
             </h2>
 
-            <label id="paymentCashOption" class="payment-option">
+            <label id="paymentTransferOption" class="payment-option hidden">
+
+                <input
+                    id="paymentTransferInput"
+                    type="radio"
+                    name="payment"
+                    value="Eft ve Havale"
+                >
+
+                🏦 Eft ve Havale
+
+            </label>
+
+            <label id="paymentCashOption" class="payment-option hidden">
 
                 <input
                     id="paymentCashInput"
                     type="radio"
                     name="payment"
                     value="Kapıda nakit"
-                    checked
                 >
 
                 💵 Kapıda nakit
@@ -3779,6 +3791,10 @@ body{
                 💳 Kapıda kredi kartı
 
             </label>
+
+            <div id="paymentEmptyNotice" class="small hidden" style="color:#777;margin-bottom:15px;">
+                Aktif ödeme yöntemi bulunmuyor.
+            </div>
 
             <!-- NOT -->
 
@@ -4642,8 +4658,9 @@ body{
         phone: "",
         instagram_url: "",
         instagram_label: "",
-        payment_cash_enabled: true,
-        payment_card_enabled: false
+        payment_cash_enabled: false,
+        payment_card_enabled: false,
+        payment_transfer_enabled: false
     };
 
     let platformBusiness = null;
@@ -4861,25 +4878,50 @@ body{
     }
 
     function renderPaymentMethods() {
+        const transferOption = document.getElementById("paymentTransferOption");
         const cashOption = document.getElementById("paymentCashOption");
         const cardOption = document.getElementById("paymentCardOption");
+        const transferInput = document.getElementById("paymentTransferInput");
         const cashInput = document.getElementById("paymentCashInput");
         const cardInput = document.getElementById("paymentCardInput");
+        const emptyNotice = document.getElementById("paymentEmptyNotice");
 
-        // Kapıda nakit daima aktiftir ve müşteri ekranında mutlaka görünür.
-        if (cashOption) cashOption.classList.remove("hidden");
-
+        const isFood = platformBusiness?.business_type === "food";
+        const transferEnabled = !isFood && appSettings.payment_transfer_enabled === true;
+        const cashEnabled = appSettings.payment_cash_enabled === true;
         const cardEnabled = appSettings.payment_card_enabled === true;
+
+        if (transferOption) transferOption.classList.toggle("hidden", !transferEnabled);
+        if (cashOption) cashOption.classList.toggle("hidden", !cashEnabled);
         if (cardOption) cardOption.classList.toggle("hidden", !cardEnabled);
 
-        if (cardInput && !cardEnabled) {
-            cardInput.checked = false;
+        if (transferInput && !transferEnabled) transferInput.checked = false;
+        if (cashInput && !cashEnabled) cashInput.checked = false;
+        if (cardInput && !cardEnabled) cardInput.checked = false;
+
+        const anyEnabled = transferEnabled || cashEnabled || cardEnabled;
+        if (emptyNotice) emptyNotice.classList.toggle("hidden", anyEnabled);
+
+        const selected = document.querySelector('input[name="payment"]:checked');
+        const isSelectedValid = selected && (
+            (selected.value === "Eft ve Havale" && transferEnabled) ||
+            (selected.value === "Kapıda nakit" && cashEnabled) ||
+            (selected.value === "Kapıda kredi kartı" && cardEnabled)
+        );
+
+        if (!isSelectedValid) {
+            if (transferInput && transferEnabled) {
+                transferInput.checked = true;
+            } else if (cashInput && cashEnabled) {
+                cashInput.checked = true;
+            } else if (cardInput && cardEnabled) {
+                cardInput.checked = true;
+            }
         }
 
-        // Seçili bir geçerli yöntem yoksa varsayılan her zaman Kapıda Nakit.
-        const selected = document.querySelector('input[name="payment"]:checked');
-        if (!selected || (selected.value === "Kapıda kredi kartı" && !cardEnabled)) {
-            if (cashInput) cashInput.checked = true;
+        const activeSelected = document.querySelector('input[name="payment"]:checked');
+        if (typeof order === "object" && order) {
+            order.payment = activeSelected ? activeSelected.value : "";
         }
     }
 
@@ -4932,7 +4974,7 @@ body{
         try {
             const { data, error } = await supabaseClient
                 .from("app_settings")
-                .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,business_id")
+                .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,payment_transfer_enabled,business_id")
                 .eq("business_id", currentBusinessId)
                 .maybeSingle();
             if (error) throw error;
@@ -5080,10 +5122,10 @@ body{
             });
 
             // Kaydedilmiş ödeme yöntemi artık işletme tarafından kapatılmışsa
-            // varsayılan Kapıda Nakit'e geri dön.
+            // aktif olan ilk ödeme yöntemini seç.
             renderPaymentMethods();
             const selectedPayment = document.querySelector('input[name="payment"]:checked');
-            order.payment = selectedPayment?.value || "Kapıda nakit";
+            order.payment = selectedPayment?.value || "";
 
             calculateTotal();
 
@@ -7750,7 +7792,7 @@ body{
         const preview=document.getElementById("addressPreview"); if(preview) preview.textContent="Adres seçiminiz burada görünecek.";
         document.getElementById("orderNote").value = "";
         document.querySelectorAll('input[name="payment"]').forEach(input => {
-            input.checked = input.value === "Kapıda nakit";
+            input.checked = false;
         });
         renderPaymentMethods();
         document.getElementById("locationStatus").textContent = "";

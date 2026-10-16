@@ -341,24 +341,28 @@ function getBusinessPackageName(b){
   return PACKAGE_NAMES[tier]||('Tier '+tier);
 }
 function calculateBusinessEarnings(b){
-  const totalActiveMonths=Math.max(0,Number(b?.active_months||0));
-  if(totalActiveMonths<=0)return 0;
-  const bid=String(b?.id||'').trim();
+  if(!b)return 0;
+  const bid=String(b.id||'').trim();
   const sub=packageSubscriptions.find(x=>String(x?.business_id||'').trim()===bid);
   const currentTier=Number(sub?.package_tier)||1;
   const currentPrice=PACKAGE_PRICES[currentTier]||1000;
 
-  const startMs=b?.license_start_date
-    ? new Date(b.license_start_date+'T00:00:00').getTime()
-    : (b?.created_at?new Date(b.created_at).getTime():Date.now());
-  const licenseEndMs=b?.license_end_date
-    ? new Date(b.license_end_date+'T23:59:59').getTime()
-    : Date.now();
-  const endMs=Math.min(Date.now(),licenseEndMs);
+  const activeMonthsVal=Math.max(0,Number(b.active_months||0));
+  const totalLicensedMonths=Math.max(1,Number(b.total_license_months||1));
 
-  if(!Number.isFinite(startMs)||!Number.isFinite(endMs)||endMs<=startMs){
-    return Math.round(totalActiveMonths*currentPrice);
+  // İşletme ilk açıldığı anda 1. ay başlamış sayılır (1000 TL).
+  // Aktif olduğu sürece başlayan her yeni ay için (Math.floor(activeMonthsVal) + 1) ilgili ayın paket ücreti eklenir.
+  // Kapalı/deaktif olduğunda yeni ay eklenmez; tekrar aktif edildiğinde kaldığı yerden devam eder.
+  let startedMonths=1;
+  if(b.is_active){
+    startedMonths=Math.min(totalLicensedMonths,Math.floor(activeMonthsVal)+1);
+  }else{
+    startedMonths=Math.min(totalLicensedMonths,Math.max(1,Math.ceil(activeMonthsVal)));
   }
+
+  const startMs=b.license_start_date
+    ? new Date(b.license_start_date+'T00:00:00').getTime()
+    : (b.created_at?new Date(b.created_at).getTime():Date.now());
 
   const approvedReqs=(allPackageRequests||[])
     .filter(r=>String(r?.business_id||'').trim()===bid&&r?.status==='approved')
@@ -376,13 +380,12 @@ function calculateBusinessEarnings(b){
   if(approvedReqs.length>0){
     initialTier=approvedReqs[0].fromTier||1;
     approvedReqs.forEach(r=>{
-      const clampedTime=Math.max(startMs,Math.min(endMs,r.time));
-      transitions.push({time:clampedTime,tier:r.toTier});
+      transitions.push({time:r.time,tier:r.toTier});
     });
   }else if(sub&&currentTier!==1&&(sub.updated_at||sub.created_at)){
     const subTime=new Date(sub.updated_at||sub.created_at).getTime();
-    if(Number.isFinite(subTime)&&subTime>startMs){
-      transitions.push({time:Math.min(endMs,subTime),tier:currentTier});
+    if(Number.isFinite(subTime)&&Number.isFinite(startMs)&&subTime>startMs){
+      transitions.push({time:subTime,tier:currentTier});
     }else{
       initialTier=currentTier;
     }
@@ -390,46 +393,25 @@ function calculateBusinessEarnings(b){
     initialTier=currentTier;
   }
 
-  if(transitions.length>0&&transitions[transitions.length-1].tier!==currentTier){
-    const subTime=sub&&(sub.updated_at||sub.created_at)
-      ? Math.max(transitions[transitions.length-1].time,Math.min(endMs,new Date(sub.updated_at||sub.created_at).getTime()))
-      : endMs;
-    transitions.push({time:subTime,tier:currentTier});
-  }
-
   if(transitions.length===0){
-    return Math.round(totalActiveMonths*(PACKAGE_PRICES[initialTier]||1000));
+    return startedMonths*(PACKAGE_PRICES[initialTier]||1000);
   }
 
-  const points=[{time:startMs,tier:initialTier},...transitions];
   const MS_PER_MONTH=86400000*30.44;
-  const subSegments=[];
-  let subsequentMonthsSum=0;
-
-  for(let i=1;i<points.length;i++){
-    const segStart=points[i].time;
-    const segEnd=(i+1<points.length)?points[i+1].time:endMs;
-    const rawMonths=Math.max(0,(segEnd-segStart)/MS_PER_MONTH);
-    const roundedMonths=Math.round(rawMonths*10)/10;
-    subSegments.push({tier:points[i].tier,months:roundedMonths});
-    subsequentMonthsSum+=roundedMonths;
-  }
-
   let totalEarnings=0;
-  if(subsequentMonthsSum<=totalActiveMonths){
-    const firstMonths=Math.max(0,Number((totalActiveMonths-subsequentMonthsSum).toFixed(1)));
-    totalEarnings+=firstMonths*(PACKAGE_PRICES[initialTier]||1000);
-    subSegments.forEach(seg=>{
-      totalEarnings+=seg.months*(PACKAGE_PRICES[seg.tier]||1000);
-    });
-  }else{
-    const totalDuration=Math.max(1,endMs-startMs);
-    for(let i=0;i<points.length;i++){
-      const segStart=points[i].time;
-      const segEnd=(i+1<points.length)?points[i+1].time:endMs;
-      const frac=Math.max(0,segEnd-segStart)/totalDuration;
-      const segMonths=totalActiveMonths*frac;
-      totalEarnings+=segMonths*(PACKAGE_PRICES[points[i].tier]||1000);
+
+  for(let m=0;m<startedMonths;m++){
+    if(m===startedMonths-1){
+      totalEarnings+=(PACKAGE_PRICES[currentTier]||1000);
+    }else{
+      const monthEndMs=startMs+(m+1)*MS_PER_MONTH;
+      let tierForMonth=initialTier;
+      for(let i=0;i<transitions.length;i++){
+        if(transitions[i].time<=monthEndMs){
+          tierForMonth=transitions[i].tier;
+        }
+      }
+      totalEarnings+=(PACKAGE_PRICES[tierForMonth]||1000);
     }
   }
 

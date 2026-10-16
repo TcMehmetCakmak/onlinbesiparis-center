@@ -801,16 +801,14 @@ body.modal-open{
           Burada seçili olan ödeme yöntemleri müşteri ekranında gösterilir.
         </div>
 
-        <label class="payment-method-admin-option payment-method-admin-required" id="settingPaymentTransferWrap" style="display:none;">
+        <label class="payment-method-admin-option" id="settingPaymentTransferWrap" style="display:none;">
           <input
             id="settingPaymentTransfer"
             type="checkbox"
-            checked
-            disabled
           >
           <span>
             <strong>🏦 Eft ve Havale</strong>
-            <small>Varsayılan ve zorunlu ödeme yöntemi</small>
+            <small>Seçildiğinde müşteri ekranında gösterilir</small>
           </span>
         </label>
 
@@ -2261,8 +2259,11 @@ async function loadAdminSettings(){
     if(paymentCard){
       paymentCard.checked=appSettings.payment_card_enabled===true;
     }
+    if(paymentTransfer){
+      paymentTransfer.checked=appSettings.payment_transfer_enabled===true;
+    }
     
-    if(paymentTransferWrap && platformBusiness?.business_type === 'ecommerce'){
+    if(paymentTransferWrap && platformBusiness?.business_type !== 'food'){
       paymentTransferWrap.style.display = 'flex';
     } else if (paymentTransferWrap) {
       paymentTransferWrap.style.display = 'none';
@@ -2373,7 +2374,7 @@ async function saveAppSettings(){
   const background_color=document.getElementById("settingBackgroundColorText").value.trim();
   const payment_cash_enabled=document.getElementById("settingPaymentCash")?.checked===true;
   const payment_card_enabled=document.getElementById("settingPaymentCard")?.checked===true;
-  const payment_transfer_enabled=platformBusiness?.business_type === 'ecommerce' ? true : false;
+  const payment_transfer_enabled=(platformBusiness?.business_type !== 'food') && (document.getElementById("settingPaymentTransfer")?.checked===true);
 
   if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
