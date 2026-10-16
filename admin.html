@@ -63,9 +63,10 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .header-actions{display:flex;gap:8px;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px;align-items:stretch}
 .card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 5px 20px #0000000d}
-.stat-label{color:#777;font-size:13px}.stat-value{font-size:28px;font-weight:bold;margin-top:8px}
-.stat-desc{font-size:11.5px;line-height:1.4;margin-top:8px;color:#7c2d12;opacity:.9}
-.grid>.card{position:relative;overflow:hidden;padding:18px 18px 16px;transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;justify-content:space-between}
+.stat-label{color:#777;font-size:14px;line-height:1.35;text-align:center;width:100%}
+.stat-value{font-size:clamp(24px,2.2vw,32px);font-weight:800;margin-top:0;line-height:1.15;text-align:center}
+.stat-desc{font-size:11.5px;line-height:1.38;margin-top:2px;color:#7c2d12;opacity:.92;text-align:center;max-width:240px}
+.grid>.card{position:relative;overflow:hidden;padding:20px 16px;transition:transform .18s ease,box-shadow .18s ease;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:10px;min-height:148px}
 .grid>.card:hover{transform:translateY(-3px)}
 .stat-card-completed{background:linear-gradient(145deg,#ffffff 0%,#ecfdf5 55%,#d1fae5 100%);border:1px solid #a7f3d0;border-top:4px solid #10b981;box-shadow:0 10px 24px -6px rgba(16,185,129,.24),0 4px 10px -3px rgba(16,185,129,.12)}
 .stat-card-completed .stat-label{color:#065f46;font-weight:700}
@@ -82,13 +83,21 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .stat-card-revenue{background:linear-gradient(145deg,#ffffff 0%,#f5f3ff 55%,#ede9fe 100%);border:1px solid #ddd6fe;border-top:4px solid #7c3aed;box-shadow:0 10px 24px -6px rgba(124,58,237,.25),0 4px 10px -3px rgba(124,58,237,.13)}
 .stat-card-revenue .stat-label{color:#5b21b6;font-weight:700}
 .stat-card-revenue .stat-value{color:#6d28d9}
-.stat-card-inactive-views{background:linear-gradient(145deg,#ffffff 0%,#fff7ed 55%,#ffedd5 100%);border:1px solid #fed7aa;border-top:4px solid #ea580c;box-shadow:0 10px 24px -6px rgba(234,88,12,.24),0 4px 10px -3px rgba(234,88,12,.12)}
-.stat-card-inactive-views .stat-label{color:#9a3412;font-weight:700}
-.stat-card-inactive-views .stat-value{color:#c2410c;font-size:24px}
-.stat-card-inactive-views.has-views{background:linear-gradient(145deg,#ffffff 0%,#fef2f2 50%,#fee2e2 100%);border:1px solid #fca5a5;border-top:4px solid #dc2626;box-shadow:0 12px 26px -6px rgba(220,38,38,.26),0 4px 10px -3px rgba(220,38,38,.14)}
-.stat-card-inactive-views.has-views .stat-label{color:#991b1b}
-.stat-card-inactive-views.has-views .stat-value{color:#dc2626}
-.stat-card-inactive-views.has-views .stat-desc{color:#7f1d1d}
+.stat-card-inactive-views{background:linear-gradient(145deg,#f0fdf4 0%,#dcfce7 55%,#bbf7d0 100%);border:1px solid #86efac;border-top:4px solid #16a34a;box-shadow:0 10px 24px -6px rgba(22,163,74,.24),0 4px 10px -3px rgba(22,163,74,.12);gap:6px;padding-top:34px}
+.stat-card-inactive-views .stat-label{color:#166534;font-weight:700}
+.stat-card-inactive-views .stat-value{color:#15803d;font-size:clamp(21px,1.9vw,26px)}
+.stat-card-inactive-views .stat-desc{color:#14532d}
+.stat-card-inactive-views.status-active{background:linear-gradient(145deg,#f0fdf4 0%,#dcfce7 55%,#bbf7d0 100%);border:1px solid #86efac;border-top:4px solid #16a34a;box-shadow:0 10px 24px -6px rgba(22,163,74,.24),0 4px 10px -3px rgba(22,163,74,.12)}
+.stat-card-inactive-views.status-active .stat-label{color:#166534}
+.stat-card-inactive-views.status-active .stat-value{color:#15803d}
+.stat-card-inactive-views.status-active .stat-desc{color:#14532d}
+.stat-card-inactive-views.status-inactive{background:linear-gradient(145deg,#fef2f2 0%,#fee2e2 55%,#fecaca 100%);border:1px solid #fca5a5;border-top:4px solid #dc2626;box-shadow:0 12px 26px -6px rgba(220,38,38,.26),0 4px 10px -3px rgba(220,38,38,.14)}
+.stat-card-inactive-views.status-inactive .stat-label{color:#991b1b}
+.stat-card-inactive-views.status-inactive .stat-value{color:#dc2626}
+.stat-card-inactive-views.status-inactive .stat-desc{color:#7f1d1d}
+.inactive-views-status-badge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.inactive-views-status-badge.active{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.inactive-views-status-badge.inactive{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .tab{padding:10px 14px;border:0;border-radius:10px;background:#e9eaec;cursor:pointer}.tab.active{background:#222;color:#fff}
 .products{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -665,15 +674,14 @@ body.modal-open{
     <div class="card stat-card-pending"><div class="stat-label">Onay Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
     <div class="card stat-card-cancelled"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card stat-card-revenue" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
-    <div id="statInactiveViewsCard" class="card stat-card-inactive-views">
-      <div>
-        <div class="stat-label" style="display:flex;justify-content:space-between;align-items:center;gap:6px">
-          <span>Deaktif Sürede Görüntüleme</span>
-          <button id="btnResetInactiveViews" type="button" class="btn btn-light hidden" style="padding:2px 7px;font-size:11px;border-radius:6px" onclick="resetAdminInactiveViews()">Sıfırla</button>
-        </div>
-        <div id="statInactiveViews" class="stat-value">👁️ 0 kişi</div>
-        <div id="statInactiveViewsLast" class="muted hidden" style="font-size:11px;margin-top:3px;color:#991b1b"></div>
+    <div id="statInactiveViewsCard" class="card stat-card-inactive-views status-active">
+      <span id="statInactiveViewsStatusBadge" class="inactive-views-status-badge active">🟢 Aktif</span>
+      <div class="stat-label" style="display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap">
+        <span>Deaktif Sürede Görüntüleme</span>
+        <button id="btnResetInactiveViews" type="button" class="btn btn-light hidden" style="padding:2px 7px;font-size:11px;border-radius:6px" onclick="resetAdminInactiveViews()">Sıfırla</button>
       </div>
+      <div id="statInactiveViews" class="stat-value">👁️ 0 kişi</div>
+      <div id="statInactiveViewsLast" class="muted hidden" style="font-size:11px;text-align:center"></div>
       <div class="stat-desc">İşletmeniz kapalı olduğu süre boyunca sayfanızı ziyaret eden müşteri sayısını göstermektedir.</div>
     </div>
   </div>
@@ -2353,6 +2361,7 @@ function renderPlatformBusiness(){
 
     const active=tenantLicenseIsActive(platformBusiness);
     applyAdminBusinessTypeUi();
+    updateInactiveViewsStatusUi();
     if(box){
       box.innerHTML=`<strong>${active?"🟢 Aktif":"🔴 Deaktif"}</strong> · İşletme tipi: <strong>${escapeHtml(businessTypeAdminLabel())}</strong> · Lisans sonu: ${escapeHtml(platformBusiness.license_end_date||"-")}`;
       box.style.background=active?"#e8f5e9":"#ffebee";
@@ -2718,7 +2727,27 @@ function loadDashboard(){
   );
 }
 
+function updateInactiveViewsStatusUi(){
+  const active=tenantLicenseIsActive(platformBusiness);
+  const cardEl=document.getElementById("statInactiveViewsCard");
+  const badgeEl=document.getElementById("statInactiveViewsStatusBadge");
+  const lastEl=document.getElementById("statInactiveViewsLast");
+  if(cardEl){
+    cardEl.classList.toggle("status-active",active);
+    cardEl.classList.toggle("status-inactive",!active);
+  }
+  if(badgeEl){
+    badgeEl.textContent=active?"🟢 Aktif":"🔴 Deaktif";
+    badgeEl.classList.toggle("active",active);
+    badgeEl.classList.toggle("inactive",!active);
+  }
+  if(lastEl){
+    lastEl.style.color=active?"#166534":"#991b1b";
+  }
+}
+
 async function loadAdminInactiveViews(){
+  updateInactiveViewsStatusUi();
   if(!currentBusinessId)return;
   const bid=String(currentBusinessId).trim();
   const marker=`__inactive_views__:${bid}`;
@@ -2746,14 +2775,10 @@ async function loadAdminInactiveViews(){
 
   const valEl=document.getElementById("statInactiveViews");
   const lastEl=document.getElementById("statInactiveViewsLast");
-  const cardEl=document.getElementById("statInactiveViewsCard");
   const resetBtn=document.getElementById("btnResetInactiveViews");
 
   if(valEl){
     valEl.textContent=`👁️ ${maxCount.toLocaleString("tr-TR")} kişi`;
-  }
-  if(cardEl){
-    cardEl.classList.toggle("has-views",maxCount>0);
   }
   if(resetBtn){
     resetBtn.classList.toggle("hidden",!(maxCount>0));
