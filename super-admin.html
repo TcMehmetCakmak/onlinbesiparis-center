@@ -68,6 +68,16 @@
 .modal-persistent-x:active{transform:translate(4px,-4px) scale(.94)}
 .btn-whatsapp{background:#25d366;color:#fff}
 .btn-whatsapp:hover{background:#1ebe5b}
+.business.business-active{
+  background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);
+  border:1.5px solid #86efac;
+  box-shadow:0 6px 20px rgba(22,163,74,.10);
+}
+.business.business-inactive{
+  background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);
+  border:1.5px solid #fca5a5;
+  box-shadow:0 6px 20px rgba(220,38,38,.10);
+}
 .business-extra-panel{
   display:grid;
   grid-template-columns:1fr auto auto;
@@ -75,8 +85,8 @@
   align-items:stretch;
   margin-top:14px;
   padding:14px;
-  background:#f8fafc;
-  border:1px solid #e2e8f0;
+  background:rgba(255,255,255,.82);
+  border:1px solid rgba(203,213,225,.85);
   border-radius:12px;
 }
 .business-access-col{
@@ -859,7 +869,7 @@ function renderBusinesses(){
     const pkgMatch=currentPackageName.match(/^([^(]+?)(?:\s*\((.+)\))?$/);
     const pkgTitle=pkgMatch?pkgMatch[1].trim():currentPackageName;
     const pkgDetail=pkgMatch&&pkgMatch[2]?pkgMatch[2].trim():'';
-    return `<div class="business card">
+    return `<div class="business card ${b.is_active?'business-active':'business-inactive'}">
       <div class="business-head">
         <div>
           <h3 style="margin:0">${esc(b.shop_name)}</h3>
