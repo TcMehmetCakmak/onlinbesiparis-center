@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Platform Süper Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
 </style>
 <style>
 .login-password-wrap{position:relative}
@@ -70,9 +70,9 @@
 .btn-whatsapp:hover{background:#1ebe5b}
 .business-extra-panel{
   display:grid;
-  grid-template-columns:1fr auto;
+  grid-template-columns:1fr auto auto;
   gap:16px;
-  align-items:center;
+  align-items:stretch;
   margin-top:14px;
   padding:14px;
   background:#f8fafc;
@@ -82,6 +82,7 @@
 .business-access-col{
   display:flex;
   flex-direction:column;
+  justify-content:center;
   gap:10px;
   min-width:0;
 }
@@ -113,6 +114,57 @@
   color:#111827;
   letter-spacing:.3px;
 }
+.business-package-box{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+  min-width:225px;
+  background:linear-gradient(135deg,#eef2ff 0%,#f5f3ff 52%,#fdf2f8 100%);
+  border:1.5px solid #a5b4fc;
+  border-radius:12px;
+  padding:12px 16px;
+  box-shadow:0 8px 20px rgba(79,70,229,.16), 0 2px 6px rgba(79,70,229,.08);
+  position:relative;
+  overflow:hidden;
+}
+.business-package-box::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  bottom:0;
+  width:5px;
+  background:linear-gradient(180deg,#4f46e5,#9333ea,#ec4899);
+}
+.business-package-label{
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.6px;
+  color:#4338ca;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.business-package-title{
+  font-size:16px;
+  font-weight:800;
+  color:#1e1b4b;
+  line-height:1.25;
+}
+.business-package-meta{
+  display:inline-flex;
+  align-items:center;
+  align-self:flex-start;
+  padding:4px 10px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#4f46e5,#7c3aed);
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  box-shadow:0 3px 10px rgba(79,70,229,.25);
+}
 .business-qr-box{
   display:flex;
   align-items:center;
@@ -121,6 +173,7 @@
   border:1px solid #e2e8f0;
   border-radius:12px;
   padding:10px 12px;
+  box-shadow:0 4px 12px rgba(15,23,42,.05);
 }
 .business-qr-img-wrap{
   position:relative;
@@ -163,7 +216,7 @@
   padding:8px 11px;
   white-space:nowrap;
 }
-@media(max-width:760px){
+@media(max-width:960px){
   .business-extra-panel{grid-template-columns:1fr}
   .business-qr-box{justify-content:space-between}
   .business-password-input{max-width:100%}
@@ -209,7 +262,7 @@
   <section id="supportTab" class="hidden"><div class="card"><div class="header"><div><h2>Destek Talepleri</h2><div class="muted">İşletme adminlerinin açtığı hata ve geliştirme talepleri.</div></div></div><div id="supportTicketList"></div></div></section>
 </div>
 
-<div id="createModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCreateBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div><div class="header"><h2>Yeni İşletme</h2></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Ahmet Çaçure"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Dürümcü"></div><div><label>Slug</label><input id="newSlug" placeholder="durumcu"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div><div><label>İşletme tipi</label><select id="newBusinessType" required><option value="ecommerce" selected>E-ticaret</option><option value="food">Yemek</option></select></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
+<div id="createModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCreateBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div><div class="header"><h2>Yeni İşletme</h2></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Mehmet Çakmak"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Çakmak Center"></div><div><label>Slug</label><input id="newSlug" placeholder="cakmak-center"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div><div><label>İşletme tipi</label><select id="newBusinessType" required><option value="ecommerce" selected>E-ticaret</option><option value="food">Yemek</option></select></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
 
 
 <div id="editBusinessModal" class="modal hidden">
@@ -712,6 +765,9 @@ function renderBusinesses(){
     const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
     const inactiveViews=getBusinessInactiveViewStats(b);
     const currentPackageName=getBusinessPackageName(b);
+    const pkgMatch=currentPackageName.match(/^([^(]+?)(?:\s*\((.+)\))?$/);
+    const pkgTitle=pkgMatch?pkgMatch[1].trim():currentPackageName;
+    const pkgDetail=pkgMatch&&pkgMatch[2]?pkgMatch[2].trim():'';
     return `<div class="business card">
       <div class="business-head">
         <div>
@@ -725,7 +781,6 @@ function renderBusinesses(){
         <div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div>
         <div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div>
         <div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div>
-        <div><div class="muted">Abonelik paketi</div><strong>${esc(currentPackageName)}</strong></div>
         <div style="${inactiveViews.count>0?'background:#fff5f5;border:1px solid #fecaca':''}">
           <div class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:6px">
             <span>Deaktif Sürede Görüntüleme</span>
@@ -735,7 +790,7 @@ function renderBusinesses(){
           ${inactiveViews.lastViewedAt&&inactiveViews.count>0?`<div class="muted" style="font-size:11px;margin-top:2px">Son: ${dateTimeTR(inactiveViews.lastViewedAt)}</div>`:''}
         </div>
       </div>
-      <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong> · Mevcut Paket: <strong>${esc(currentPackageName)}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
+      <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
 
       <div class="business-extra-panel">
         <div class="business-access-col">
@@ -751,6 +806,11 @@ function renderBusinesses(){
               <button type="button" class="btn btn-light" onclick="copyBusinessPassword('${b.id}')">📋 Kopyala</button>
             </div>
           </div>
+        </div>
+        <div class="business-package-box">
+          <div class="business-package-label">💎 Mevcut Abonelik Paketi</div>
+          <div class="business-package-title">${esc(pkgTitle)}</div>
+          ${pkgDetail?`<div class="business-package-meta">${esc(pkgDetail)}</div>`:''}
         </div>
         <div class="business-qr-box">
           <div class="business-qr-img-wrap">
