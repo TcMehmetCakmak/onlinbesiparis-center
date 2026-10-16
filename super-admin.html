@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Platform Süper Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
 </style>
 <style>
 .login-password-wrap{position:relative}
@@ -266,7 +266,14 @@ const db=window.supabase.createClient(window.CENTRAL_SUPABASE_CONFIG.url,window.
 const tenantDb=(window.SUPABASE_CONFIG&&window.SUPABASE_CONFIG.url&&window.SUPABASE_CONFIG.key)
   ? window.supabase.createClient(window.SUPABASE_CONFIG.url,window.SUPABASE_CONFIG.key)
   : null;
-let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[];
+let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[],packageRequests=[],packageSubscriptions=[];
+const PACKAGE_NAMES={1:'Başlangıç paketi (20 Ürün - 1.000 TL)',2:'Pro paketi (100 Ürün - 2.000 TL)',3:'Premium paketi (250 Ürün - 3.000 TL)',4:'Elite paketi (500 Ürün - 5.000 TL)',5:'Ultimate paketi (1000 Ürün - 8.000 TL)'};
+function getBusinessPackageName(b){
+  const bid=String(b?.id||'').trim();
+  const sub=packageSubscriptions.find(x=>String(x?.business_id||'').trim()===bid);
+  const tier=Number(sub?.package_tier)||1;
+  return PACKAGE_NAMES[tier]||('Tier '+tier);
+}
 const qrDataUrlCache=new Map();
 
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
@@ -704,6 +711,7 @@ function renderBusinesses(){
     const currentPassword=pwdRow?.password||'';
     const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
     const inactiveViews=getBusinessInactiveViewStats(b);
+    const currentPackageName=getBusinessPackageName(b);
     return `<div class="business card">
       <div class="business-head">
         <div>
@@ -717,6 +725,7 @@ function renderBusinesses(){
         <div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div>
         <div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div>
         <div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div>
+        <div><div class="muted">Abonelik paketi</div><strong>${esc(currentPackageName)}</strong></div>
         <div style="${inactiveViews.count>0?'background:#fff5f5;border:1px solid #fecaca':''}">
           <div class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:6px">
             <span>Deaktif Sürede Görüntüleme</span>
@@ -726,7 +735,7 @@ function renderBusinesses(){
           ${inactiveViews.lastViewedAt&&inactiveViews.count>0?`<div class="muted" style="font-size:11px;margin-top:2px">Son: ${dateTimeTR(inactiveViews.lastViewedAt)}</div>`:''}
         </div>
       </div>
-      <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
+      <div class="muted">İşletme tipi: <strong>${b.business_type==='food'?'Yemek':'E-ticaret'}</strong> · Mevcut Paket: <strong>${esc(currentPackageName)}</strong><br>Project Ref: ${esc(b.tenant_project_ref||'-')}<br>Public Key: ${esc(b.public_key)}</div>
 
       <div class="business-extra-panel">
         <div class="business-access-col">
@@ -750,7 +759,6 @@ function renderBusinesses(){
           </div>
           <div class="business-qr-actions">
             <button type="button" class="btn btn-dark" onclick="printBusinessQrPdf('${b.id}')">🖨️ QR PDF Yazdır</button>
-            <button type="button" class="btn btn-whatsapp" onclick="sendBusinessQrWhatsapp('${b.id}')">💬 WhatsApp'tan Gönder</button>
           </div>
         </div>
       </div>
@@ -959,7 +967,7 @@ async function refreshSuperAdminData(){
   if(superAdminRefreshBusy||document.hidden)return;
   superAdminRefreshBusy=true;
   try{
-    await Promise.all([loadBusinesses(),loadBusinessPasswords(),loadRequests(),loadSupportTickets()]);
+    await Promise.all([loadBusinesses(),loadBusinessPasswords(),loadRequests(),loadSupportTickets(),loadPackageRequests()]);
   }finally{
     superAdminRefreshBusy=false;
   }
@@ -974,6 +982,7 @@ const ch=db.channel('super-admin-live')
   .on('postgres_changes',{event:'*',schema:'public',table:'support_ticket_status_public'},()=>refreshSuperAdminData())
   .on('postgres_changes',{event:'*',schema:'public',table:'franchise_requests'},()=>loadFranchiseRequests())
   .on('postgres_changes',{event:'*',schema:'public',table:'package_requests'},()=>loadPackageRequests())
+  .on('postgres_changes',{event:'*',schema:'public',table:'package_subscriptions'},()=>loadPackageRequests())
   .subscribe();
 
 if(tenantDb){
@@ -993,8 +1002,6 @@ setInterval(()=>refreshSuperAdminData(),3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSuperAdminData()});
 window.addEventListener('focus',()=>refreshSuperAdminData());
 checkSession();
-let packageRequests = [];
-let packageSubscriptions = [];
 async function loadPackageRequests() {
   const {data: reqs, error: err1} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
   if(err1){ toast(err1.message); return; }
@@ -1010,13 +1017,13 @@ async function loadPackageRequests() {
   const {data: subs, error: err2} = await db.from('package_subscriptions').select('*');
   if(!err2) packageSubscriptions = subs || [];
   renderPackageRequests();
+  renderBusinesses();
   renderStats();
 }
 function renderPackageRequests() {
   const el = document.getElementById('packageList');
   if(!el) return;
   if(!packageRequests.length) { el.innerHTML = '<div class="empty">Paket talebi yok.</div>'; return; }
-  const PACKAGE_NAMES = {1: 'Başlangıç paketi (20 Ürün - 1.000 TL)', 2: 'Pro paketi (100 Ürün - 2.000 TL)', 3: 'Premium paketi (250 Ürün - 3.000 TL)', 4: 'Elite paketi (500 Ürün - 5.000 TL)', 5: 'Ultimate paketi (1000 Ürün - 8.000 TL)'};
   el.innerHTML = packageRequests.map(r => {
     const b = businesses.find(x => x.id === r.business_id);
     const shopName = b ? b.shop_name : 'Bilinmeyen İşletme';

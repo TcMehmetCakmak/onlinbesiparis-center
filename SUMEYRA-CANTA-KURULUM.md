@@ -320,6 +320,6 @@ Diğer dükkanlardaki (`orgu-sepeti/index.html` veya `ceyiz-sandigi/index.html`)
    - **Müşteri Sipariş Sayfası:** `https://shopping.abcsepeti.com/sumeyra-canta/`
    - **Admin Yönetim Paneli:** `https://shopping.abcsepeti.com/sumeyra-canta/admin.html`
 3. **Admin Paneli İlk Giriş & Genel Ayarlar:**
-   - 3. adımda oluşturduğunuz e-posta ve şifre ile `https://shopping.abcsepeti.com/sumeyra-canta/admin.html` adresinden giriş yapın *(ilk giriş yaptığınızda şifre Süper Admin panelindeki şifre kutusuna otomatik kaydedilir)*.
+   - 3. adımda oluşturduğunuz e-posta ve şifre ile `https://shopping.abcsepeti.com/sumeyra-canta/admin.html` adresinden giriş yapın.
    - **Genel Ayarlar** sekmesine giderek **WhatsApp / Telefon Numarası**, **Instagram Adresi** ve **Ödeme Yöntemlerini (Nakit / Kart / Havale-EFT)** seçip **Kaydet** butonuna basın.
 
