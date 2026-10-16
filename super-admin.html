@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Platform Süper Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}.meta>div{background:#f8f9fb;border-radius:9px;padding:9px}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f6f8;color:#1f2937}.hidden{display:none!important}.container{max-width:1250px;margin:auto;padding:22px}.login{max-width:430px;margin:8vh auto;background:#fff;padding:28px;border-radius:18px;box-shadow:0 8px 30px #0001}.header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.header-actions,.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.card{background:#fff;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000c}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.stat{background:#fff;border-radius:14px;padding:17px;box-shadow:0 3px 14px #0000000b}.stat-label{font-size:13px;color:#6b7280}.stat-value{font-size:27px;font-weight:800;margin-top:6px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.tab{background:#e8ebef}.tab.active{background:#111827;color:#fff}.btn-primary{background:#2563eb;color:#fff}.btn-success{background:#16803a;color:#fff}.btn-danger{background:#c62828;color:#fff}.btn-light{background:#edf0f4;color:#1f2937}.btn-dark{background:#111827;color:#fff}input,select,textarea{width:100%;padding:11px;border:1px solid #d8dde5;border-radius:9px;font-size:14px}label{font-weight:700;font-size:13px;display:block;margin:10px 0 6px}.filters,.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.business{border:1px solid #e6e9ee;border-radius:14px;padding:15px;margin:12px 0}.business-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.active{background:#dcfce7;color:#166534}.inactive{background:#fee2e2;color:#991b1b}.pending{background:#fff3cd;color:#7a5900}.review{background:#e8e4ff;color:#4c3494}.done{background:#dcfce7;color:#166534}.muted{color:#6b7280;font-size:13px}.meta{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}.meta>div{background:linear-gradient(135deg,#ffffff 0%,#f0f7ff 100%);border:1px solid #cfe2ff;border-top:3px solid #60a5fa;border-radius:11px;padding:11px 12px;box-shadow:0 4px 12px rgba(30,64,175,.07),0 1px 3px rgba(15,23,42,.04)}.meta>div.meta-earnings{background:linear-gradient(135deg,#ffffff 0%,#ecfdf5 100%);border-color:#a7f3d0;border-top-color:#10b981;box-shadow:0 4px 12px rgba(5,150,105,.09),0 1px 3px rgba(15,23,42,.04)}.meta>div.meta-inactive-alert{background:linear-gradient(135deg,#ffffff 0%,#fff5f5 100%);border-color:#fecaca;border-top-color:#ef4444;box-shadow:0 4px 12px rgba(220,38,38,.08),0 1px 3px rgba(15,23,42,.04)}.request{border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:10px 0}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none;z-index:20}.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:15}.modal-card{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:16px;padding:20px}.token-box{word-break:break-all;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;font-family:monospace}.empty{text-align:center;padding:24px;color:#6b7280}@media(max-width:850px){.grid,.meta{grid-template-columns:1fr 1fr}.filters,.form-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid,.meta{grid-template-columns:1fr}.container{padding:12px}}
 </style>
 <style>
 .login-password-wrap{position:relative}
@@ -169,11 +169,22 @@
   display:flex;
   align-items:center;
   gap:12px;
-  background:#fff;
-  border:1px solid #e2e8f0;
+  background:linear-gradient(135deg,#eef2ff 0%,#f5f3ff 52%,#fdf2f8 100%);
+  border:1.5px solid #a5b4fc;
   border-radius:12px;
-  padding:10px 12px;
-  box-shadow:0 4px 12px rgba(15,23,42,.05);
+  padding:12px 16px;
+  box-shadow:0 8px 20px rgba(79,70,229,.16), 0 2px 6px rgba(79,70,229,.08);
+  position:relative;
+  overflow:hidden;
+}
+.business-qr-box::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  bottom:0;
+  width:5px;
+  background:linear-gradient(180deg,#4f46e5,#9333ea,#ec4899);
 }
 .business-qr-img-wrap{
   position:relative;
@@ -185,10 +196,11 @@
   width:100%;
   height:100%;
   border-radius:8px;
-  border:1px solid #edf0f4;
+  border:1px solid #c7d2fe;
   background:#fff;
   object-fit:contain;
   display:block;
+  box-shadow:0 2px 8px rgba(79,70,229,.12);
 }
 .business-qr-center-logo{
   position:absolute;
@@ -319,13 +331,109 @@ const db=window.supabase.createClient(window.CENTRAL_SUPABASE_CONFIG.url,window.
 const tenantDb=(window.SUPABASE_CONFIG&&window.SUPABASE_CONFIG.url&&window.SUPABASE_CONFIG.key)
   ? window.supabase.createClient(window.SUPABASE_CONFIG.url,window.SUPABASE_CONFIG.key)
   : null;
-let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[],packageRequests=[],packageSubscriptions=[];
+let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[],packageRequests=[],allPackageRequests=[],packageSubscriptions=[];
 const PACKAGE_NAMES={1:'Başlangıç paketi (20 Ürün - 1.000 TL)',2:'Pro paketi (100 Ürün - 2.000 TL)',3:'Premium paketi (250 Ürün - 3.000 TL)',4:'Elite paketi (500 Ürün - 5.000 TL)',5:'Ultimate paketi (1000 Ürün - 8.000 TL)'};
+const PACKAGE_PRICES={1:1000,2:2000,3:3000,4:5000,5:8000};
 function getBusinessPackageName(b){
   const bid=String(b?.id||'').trim();
   const sub=packageSubscriptions.find(x=>String(x?.business_id||'').trim()===bid);
   const tier=Number(sub?.package_tier)||1;
   return PACKAGE_NAMES[tier]||('Tier '+tier);
+}
+function calculateBusinessEarnings(b){
+  const totalActiveMonths=Math.max(0,Number(b?.active_months||0));
+  if(totalActiveMonths<=0)return 0;
+  const bid=String(b?.id||'').trim();
+  const sub=packageSubscriptions.find(x=>String(x?.business_id||'').trim()===bid);
+  const currentTier=Number(sub?.package_tier)||1;
+  const currentPrice=PACKAGE_PRICES[currentTier]||1000;
+
+  const startMs=b?.license_start_date
+    ? new Date(b.license_start_date+'T00:00:00').getTime()
+    : (b?.created_at?new Date(b.created_at).getTime():Date.now());
+  const licenseEndMs=b?.license_end_date
+    ? new Date(b.license_end_date+'T23:59:59').getTime()
+    : Date.now();
+  const endMs=Math.min(Date.now(),licenseEndMs);
+
+  if(!Number.isFinite(startMs)||!Number.isFinite(endMs)||endMs<=startMs){
+    return Math.round(totalActiveMonths*currentPrice);
+  }
+
+  const approvedReqs=(allPackageRequests||[])
+    .filter(r=>String(r?.business_id||'').trim()===bid&&r?.status==='approved')
+    .map(r=>({
+      time:new Date(r.updated_at||r.created_at||0).getTime(),
+      fromTier:Number(r.current_tier)||1,
+      toTier:Number(r.requested_tier)||1
+    }))
+    .filter(r=>Number.isFinite(r.time)&&r.time>0)
+    .sort((a,b)=>a.time-b.time);
+
+  const transitions=[];
+  let initialTier=1;
+
+  if(approvedReqs.length>0){
+    initialTier=approvedReqs[0].fromTier||1;
+    approvedReqs.forEach(r=>{
+      const clampedTime=Math.max(startMs,Math.min(endMs,r.time));
+      transitions.push({time:clampedTime,tier:r.toTier});
+    });
+  }else if(sub&&currentTier!==1&&(sub.updated_at||sub.created_at)){
+    const subTime=new Date(sub.updated_at||sub.created_at).getTime();
+    if(Number.isFinite(subTime)&&subTime>startMs){
+      transitions.push({time:Math.min(endMs,subTime),tier:currentTier});
+    }else{
+      initialTier=currentTier;
+    }
+  }else{
+    initialTier=currentTier;
+  }
+
+  if(transitions.length>0&&transitions[transitions.length-1].tier!==currentTier){
+    const subTime=sub&&(sub.updated_at||sub.created_at)
+      ? Math.max(transitions[transitions.length-1].time,Math.min(endMs,new Date(sub.updated_at||sub.created_at).getTime()))
+      : endMs;
+    transitions.push({time:subTime,tier:currentTier});
+  }
+
+  if(transitions.length===0){
+    return Math.round(totalActiveMonths*(PACKAGE_PRICES[initialTier]||1000));
+  }
+
+  const points=[{time:startMs,tier:initialTier},...transitions];
+  const MS_PER_MONTH=86400000*30.44;
+  const subSegments=[];
+  let subsequentMonthsSum=0;
+
+  for(let i=1;i<points.length;i++){
+    const segStart=points[i].time;
+    const segEnd=(i+1<points.length)?points[i+1].time:endMs;
+    const rawMonths=Math.max(0,(segEnd-segStart)/MS_PER_MONTH);
+    const roundedMonths=Math.round(rawMonths*10)/10;
+    subSegments.push({tier:points[i].tier,months:roundedMonths});
+    subsequentMonthsSum+=roundedMonths;
+  }
+
+  let totalEarnings=0;
+  if(subsequentMonthsSum<=totalActiveMonths){
+    const firstMonths=Math.max(0,Number((totalActiveMonths-subsequentMonthsSum).toFixed(1)));
+    totalEarnings+=firstMonths*(PACKAGE_PRICES[initialTier]||1000);
+    subSegments.forEach(seg=>{
+      totalEarnings+=seg.months*(PACKAGE_PRICES[seg.tier]||1000);
+    });
+  }else{
+    const totalDuration=Math.max(1,endMs-startMs);
+    for(let i=0;i<points.length;i++){
+      const segStart=points[i].time;
+      const segEnd=(i+1<points.length)?points[i+1].time:endMs;
+      const frac=Math.max(0,segEnd-segStart)/totalDuration;
+      const segMonths=totalActiveMonths*frac;
+      totalEarnings+=segMonths*(PACKAGE_PRICES[points[i].tier]||1000);
+    }
+  }
+
+  return Math.round(totalEarnings);
 }
 const qrDataUrlCache=new Map();
 
@@ -765,6 +873,7 @@ function renderBusinesses(){
     const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
     const inactiveViews=getBusinessInactiveViewStats(b);
     const currentPackageName=getBusinessPackageName(b);
+    const totalEarnings=calculateBusinessEarnings(b);
     const pkgMatch=currentPackageName.match(/^([^(]+?)(?:\s*\((.+)\))?$/);
     const pkgTitle=pkgMatch?pkgMatch[1].trim():currentPackageName;
     const pkgDetail=pkgMatch&&pkgMatch[2]?pkgMatch[2].trim():'';
@@ -781,7 +890,8 @@ function renderBusinesses(){
         <div><div class="muted">Lisans sonu</div><strong>${dateTR(b.license_end_date)}</strong></div>
         <div><div class="muted">Toplam lisans</div><strong>${Number(b.total_license_months||0)} ay</strong></div>
         <div><div class="muted">Geçen lisans süresi</div><strong>${Number(b.active_months||0).toLocaleString('tr-TR')} ay</strong></div>
-        <div style="${inactiveViews.count>0?'background:#fff5f5;border:1px solid #fecaca':''}">
+        <div class="meta-earnings"><div class="muted">Kazancım</div><strong style="color:#047857">${totalEarnings.toLocaleString('tr-TR')} TL</strong></div>
+        <div class="${inactiveViews.count>0?'meta-inactive-alert':''}">
           <div class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:6px">
             <span>Deaktif Sürede Görüntüleme</span>
             ${inactiveViews.count>0?`<button type="button" class="btn btn-light" style="padding:2px 6px;font-size:11px;border-radius:6px" onclick="resetBusinessInactiveViews('${b.id}')">Sıfırla</button>`:''}
@@ -1066,13 +1176,8 @@ async function loadPackageRequests() {
   const {data: reqs, error: err1} = await db.from('package_requests').select('*').order('created_at', {ascending: false});
   if(err1){ toast(err1.message); return; }
   
-  if (reqs && reqs.length > 5) {
-    const toDelete = reqs.slice(5).map(r => r.id);
-    await db.from('package_requests').delete().in('id', toDelete);
-    packageRequests = reqs.slice(0, 5);
-  } else {
-    packageRequests = reqs || [];
-  }
+  allPackageRequests = reqs || [];
+  packageRequests = allPackageRequests.slice(0, 5);
   
   const {data: subs, error: err2} = await db.from('package_subscriptions').select('*');
   if(!err2) packageSubscriptions = subs || [];
