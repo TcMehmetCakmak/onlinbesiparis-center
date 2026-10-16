@@ -3340,7 +3340,7 @@ body{
                         aria-expanded="false"
                         title="Ürünleri sırala"
                     >
-                        ↕️ <span class="filter-label">En Yüksek Puanlılar</span>
+                        ↕️ <span class="filter-label">Puan: En yüksekten düşüğe</span>
                     </button>
 
                     <div id="rootProductFilterMenu" class="product-filter-menu hidden">
@@ -3584,7 +3584,7 @@ body{
                             aria-expanded="false"
                             title="Ürünleri sırala"
                         >
-                            ↕️ <span class="filter-label">Önerilen Sıralama</span>
+                            ↕️ <span class="filter-label">Varsayılan</span>
                         </button>
 
                         <div id="productFilterMenu" class="product-filter-menu hidden">
@@ -5274,16 +5274,27 @@ body{
 
     function setProductSort(mode){
         productSortMode = String(mode || "default");
+        let selectedLabel = "";
 
-        document.querySelectorAll(".product-filter-option").forEach(option => {
-            option.classList.toggle(
-                "selected",
-                option.dataset.sort === productSortMode
-            );
+        document.querySelectorAll("#productFilterMenu .product-filter-option").forEach(option => {
+            const isSelected = option.dataset.sort === productSortMode;
+            option.classList.toggle("selected", isSelected);
+            if (isSelected) {
+                selectedLabel = option.textContent.trim();
+            }
         });
 
         const button = document.getElementById("productFilterButton");
-        button?.classList.toggle("active", productSortMode !== "default");
+        if (button) {
+            button.classList.toggle("active", productSortMode !== "default");
+            const labelEl = button.querySelector(".filter-label");
+            if (labelEl && selectedLabel) {
+                labelEl.textContent = selectedLabel;
+            }
+            if (selectedLabel) {
+                button.title = selectedLabel;
+            }
+        }
 
         closeProductFilterMenu();
         renderProducts();
@@ -9246,11 +9257,25 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     function setRootProductSort(mode) {
         rootProductSortMode = String(mode || "rating_desc");
-        document.querySelectorAll(".root-filter-option").forEach(option => {
-            option.classList.toggle("selected", option.dataset.sort === rootProductSortMode);
+        let selectedLabel = "";
+        document.querySelectorAll("#rootProductFilterMenu .root-filter-option").forEach(option => {
+            const isSelected = option.dataset.sort === rootProductSortMode;
+            option.classList.toggle("selected", isSelected);
+            if (isSelected) {
+                selectedLabel = option.textContent.trim();
+            }
         });
         const button = document.getElementById("rootProductFilterButton");
-        button?.classList.toggle("active", rootProductSortMode !== "rating_desc");
+        if (button) {
+            button.classList.toggle("active", rootProductSortMode !== "rating_desc");
+            const labelEl = button.querySelector(".filter-label");
+            if (labelEl && selectedLabel) {
+                labelEl.textContent = selectedLabel;
+            }
+            if (selectedLabel) {
+                button.title = selectedLabel;
+            }
+        }
         closeRootProductFilterMenu();
         renderRootLandingProducts();
     }
