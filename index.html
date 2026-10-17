@@ -4981,6 +4981,17 @@ body{
         const productTitle = variantObj?.variant_name
             ? `${product.name} (${variantObj.variant_name})`
             : String(product.name || "ilan").trim();
+        const bid = String(product.business_id || currentBusinessId || platformBusiness?.business_id || "").trim();
+        const priceVal = Number(variantObj?.price ?? product.price ?? 0) || 0;
+        if (bid) {
+            supabaseClient.rpc("create_listing_application_order", {
+                p_business_id: bid,
+                p_product_id: String(product.id || ""),
+                p_product_name: String(product.name || "İlan"),
+                p_variant_name: variantObj?.variant_name || null,
+                p_price: priceVal
+            }).catch(err => console.warn("Başvuru kaydı oluşturulamadı:", err));
+        }
         const message = `Merhaba, "${productTitle}" ürünü ile ilgileniyorum. Detayları konuşabilir miyiz?`;
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, "_blank", "noopener,noreferrer");

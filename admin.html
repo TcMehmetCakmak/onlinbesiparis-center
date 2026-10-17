@@ -634,7 +634,7 @@ body.modal-open{
   <div class="header">
     <div>
       <h1 id="tenantAdminTitle">İşletme Yönetim Paneli</h1>
-      <div class="muted">Müşteri sayfasında görüntülenen ürünler ve siparişler yönetim paneli üzerinden yönetilir.</div>
+      <div id="tenantAdminSubtitle" class="muted">Müşteri sayfasında görüntülenen ürünler ve siparişler yönetim paneli üzerinden yönetilir.</div>
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" onclick="openPromoVideoModal()">🎬 Tanıtım Videosu</button>
@@ -644,10 +644,10 @@ body.modal-open{
   </div>
 
   <div class="grid">
-    <div class="card stat-card-completed"><div class="stat-label">Tamamlanan Sipariş</div><div id="statCompleted" class="stat-value">0</div></div>
-    <div class="card stat-card-preparing"><div class="stat-label">Hazırlanmaya Başlanan Sipariş</div><div id="statPreparing" class="stat-value">0</div></div>
-    <div class="card stat-card-pending"><div class="stat-label">Onay Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
-    <div class="card stat-card-cancelled"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
+    <div id="statCompletedCard" class="card stat-card-completed"><div id="statCompletedLabel" class="stat-label">Tamamlanan Sipariş</div><div id="statCompleted" class="stat-value">0</div></div>
+    <div id="statPreparingCard" class="card stat-card-preparing"><div id="statPreparingLabel" class="stat-label">Hazırlanmaya Başlanan Sipariş</div><div id="statPreparing" class="stat-value">0</div></div>
+    <div id="statPendingCard" class="card stat-card-pending"><div id="statPendingLabel" class="stat-label">Onay Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
+    <div id="statCancelledCard" class="card stat-card-cancelled"><div id="statCancelledLabel" class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card stat-card-revenue" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
     <div id="statActiveViewsCard" class="card stat-card-active-views">
       <div class="stat-label">Sayfa Görüntülenme Sayısı</div>
@@ -666,14 +666,14 @@ body.modal-open{
 
   <div class="tabs">
     <button id="productsTabButton" class="tab active" onclick="showTab('products',this)">📦 Ürünler <span id="productTotalCount" class="badge badge-active hidden" style="margin-left:5px">0</span></button>
-    <button class="tab" onclick="showTab('orders',this)">🧾 Siparişler <span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
+    <button id="ordersTabButton" class="tab" onclick="showTab('orders',this)">🧾 Siparişler <span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span></button>
     <button id="medicineRequestsTabButton" class="tab hidden" onclick="showTab('medicineRequests',this)">💊 İlaç Talepleri <span id="medicineRequestPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('notifications',this)">🔔 Bildirimler</button>
     <button class="tab" onclick="showTab('advertisements',this)">📣 Reklamlar</button>
     <button class="tab" onclick="showTab('settings',this)">⚙️ Genel Ayarlar</button>
     <button class="tab" onclick="showTab('subscription',this)">👑 Abonelik Paketi <span id="subscriptionUsageBadge" class="badge" style="margin-left:5px;display:none;"></span></button>
     <button class="tab" onclick="showTab('support',this)">🛠️ Talepler <span id="supportPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
-    <button class="tab" onclick="showTab('productQuestions',this)">❓ Ürün Soruları <span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
+    <button id="productQuestionsTabButton" class="tab" onclick="showTab('productQuestions',this)">❓ Ürün Soruları <span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
     <button class="tab" onclick="showTab('reviewsModeration',this)">💬 Yorum Onayları <span id="reviewModerationPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span></button>
   </div>
 
@@ -691,8 +691,8 @@ body.modal-open{
     <div class="card">
       <div class="header">
         <div>
-          <h2>Ürün Soruları</h2>
-          <div class="muted">Müşterilerin ürün modalından sorduğu soruları buradan cevaplayabilirsiniz.</div>
+          <h2 id="productQuestionsTitle">Ürün Soruları</h2>
+          <div id="productQuestionsHelp" class="muted">Müşterilerin ürün modalından sorduğu soruları buradan cevaplayabilirsiniz.</div>
         </div>
       </div>
       <div id="productQuestionAdminList" class="product-question-admin-list">
@@ -717,12 +717,12 @@ body.modal-open{
 
   <section id="ordersTab" class="hidden">
     <div class="card">
-      <div class="header"><div><h2>Siparişler</h2><div class="muted">Duruma göre filtreleyebilir ve sıralayabilirsiniz.</div></div></div>
+      <div class="header"><div><h2 id="ordersManagementTitle">Siparişler</h2><div id="ordersManagementHelp" class="muted">Duruma göre filtreleyebilir ve sıralayabilirsiniz.</div></div></div>
       <div class="filters">
         <select id="statusFilter" onchange="renderOrders()">
           <option value="all">Tüm durumlar</option>
           <option value="onay-bekliyor">Onay bekleyenler</option>
-          <option value="devam-ediyor">Devam edenler</option>
+          <option id="statusFilterPreparingOption" value="devam-ediyor">Devam edenler</option>
           <option value="tamamlandi">Tamamlananlar</option>
           <option value="iptal-edildi">İptal edilenler</option>
         </select>
@@ -1389,6 +1389,13 @@ function applyAdminBusinessTypeUi(){
   const help=document.getElementById("productManagementHelp");
   const add=document.getElementById("newProductButton");
   const galleryHelp=document.querySelector(".product-gallery-help");
+  const subtitleEl=document.getElementById("tenantAdminSubtitle");
+
+  if(subtitleEl){
+    subtitleEl.textContent=listing
+      ? "Müşteri sayfasında görüntülenen ilanlar ve başvurular yönetim paneli üzerinden yönetilir."
+      : "Müşteri sayfasında görüntülenen ürünler ve siparişler yönetim paneli üzerinden yönetilir.";
+  }
 
   if(tab){
     const badgeHtml = tab.querySelector('#productTotalCount')?.outerHTML || '<span id="productTotalCount" class="badge badge-active hidden" style="margin-left:5px">0</span>';
@@ -1408,9 +1415,59 @@ function applyAdminBusinessTypeUi(){
     galleryHelp.textContent=`En fazla ${maxImages} fotoğraf. Yüklemeden önce fotoğraflar tarayıcıda maksimum 1600 px'e küçültülür ve WebP formatına dönüştürülür. Ana fotoğraf müşteri ${listing ? "ilan" : "ürün"} listesinde gösterilir.`;
   }
 
+  // Stat kutuları: Gayrimenkul / Galeri için Tamamlanan İlanlar, Onay Bekleyen İlanlar, İptal Edilen İlanlar; Hazırlanmaya Başlanan Sipariş gizli
+  const statCompletedLabel=document.getElementById("statCompletedLabel");
+  const statPreparingCard=document.getElementById("statPreparingCard");
+  const statPendingLabel=document.getElementById("statPendingLabel");
+  const statCancelledLabel=document.getElementById("statCancelledLabel");
+  if(statCompletedLabel)statCompletedLabel.textContent=listing ? "Tamamlanan İlanlar" : "Tamamlanan Sipariş";
+  if(statPreparingCard)statPreparingCard.classList.toggle("hidden",listing);
+  if(statPendingLabel)statPendingLabel.textContent=listing ? "Onay Bekleyen İlanlar" : "Onay Bekleyen Siparişler";
+  if(statCancelledLabel)statCancelledLabel.textContent=listing ? "İptal Edilen İlanlar" : "İptal Edilen Sipariş";
+
+  // Siparişler / Başvurular sekmesi ve alanı
+  const ordersTabBtn=document.getElementById("ordersTabButton");
+  if(ordersTabBtn){
+    const orderBadgeHtml=ordersTabBtn.querySelector("#orderTotalCount")?.outerHTML || '<span id="orderTotalCount" class="badge badge-active" style="margin-left:5px">0</span>';
+    ordersTabBtn.innerHTML=(listing ? "📩 Başvurular" : "🧾 Siparişler") + " " + orderBadgeHtml;
+  }
+  const ordersTitle=document.getElementById("ordersManagementTitle");
+  if(ordersTitle)ordersTitle.textContent=listing ? "Başvurular" : "Siparişler";
+  const preparingOpt=document.getElementById("statusFilterPreparingOption");
+  if(preparingOpt){
+    preparingOpt.hidden=listing;
+    preparingOpt.disabled=listing;
+    const statusSelect=document.getElementById("statusFilter");
+    if(listing && statusSelect && statusSelect.value==="devam-ediyor"){
+      statusSelect.value="all";
+    }
+  }
+  const orderSearchEl=document.getElementById("orderSearch");
+  if(orderSearchEl){
+    orderSearchEl.placeholder=listing
+      ? "İlan / başvuru no / müşteri / telefon ara"
+      : "Müşteri / sipariş no / telefon / adres ara";
+  }
+
+  // Ürün Soruları / İlan Soruları sekmesi ve alanı
+  const pqTabBtn=document.getElementById("productQuestionsTabButton");
+  if(pqTabBtn){
+    const pqBadgeHtml=pqTabBtn.querySelector("#productQuestionPendingCount")?.outerHTML || '<span id="productQuestionPendingCount" class="badge badge-pending hidden" style="margin-left:5px">0</span>';
+    pqTabBtn.innerHTML=(listing ? "❓ İlan Soruları" : "❓ Ürün Soruları") + " " + pqBadgeHtml;
+  }
+  const pqTitle=document.getElementById("productQuestionsTitle");
+  if(pqTitle)pqTitle.textContent=listing ? "İlan Soruları" : "Ürün Soruları";
+  const pqHelp=document.getElementById("productQuestionsHelp");
+  if(pqHelp){
+    pqHelp.textContent=listing
+      ? "Müşterilerin ilan modalından sorduğu soruları buradan cevaplayabilirsiniz."
+      : "Müşterilerin ürün modalından sorduğu soruları buradan cevaplayabilirsiniz.";
+  }
+
   const foodArea=document.getElementById("foodProductOptionsArea");
   foodArea?.classList.toggle("hidden",!food);
   renderSubscriptionCard();
+  loadDashboard();
 }
 function toast(message) {
   const el=document.getElementById("toast");
@@ -1792,13 +1849,13 @@ async function loadAdminProductQuestions(){
   }catch(error){
     console.error("Ürün soruları yüklenemedi:",error);
     if(list){
-      list.innerHTML=`<div class="empty">Ürün soruları yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
+      list.innerHTML=`<div class="empty">${isListingBusiness() ? "İlan" : "Ürün"} soruları yüklenemedi: ${escapeHtml(error?.message||String(error))}</div>`;
     }
   }
 }
 
 function adminQuestionProductName(productId){
-  return products.find(p=>String(p.id)===String(productId))?.name || "Ürün";
+  return products.find(p=>String(p.id)===String(productId))?.name || (isListingBusiness() ? "İlan" : "Ürün");
 }
 
 function renderAdminProductQuestions(){
@@ -1813,7 +1870,7 @@ function renderAdminProductQuestions(){
   }
 
   if(!productQuestions.length){
-    list.innerHTML='<div class="empty">Henüz ürün sorusu yok.</div>';
+    list.innerHTML=`<div class="empty">Henüz ${isListingBusiness() ? "ilan" : "ürün"} sorusu yok.</div>`;
     return;
   }
 
@@ -2722,6 +2779,7 @@ async function completeSupportTicket(id){
 }
 
 function loadDashboard(){
+  const listing=isListingBusiness();
   const completedCount=orders.filter(o=>o.status==="tamamlandi").length;
   const preparingCount=orders.filter(o=>o.status==="devam-ediyor").length;
   const pendingCount=orders.filter(o=>o.status==="onay-bekliyor").length;
@@ -2732,11 +2790,12 @@ function loadDashboard(){
   document.getElementById("statPreparing").textContent=preparingCount;
   document.getElementById("statPendingOrders").textContent=pendingCount;
   document.getElementById("statCancelled").textContent=cancelledCount;
+  document.getElementById("statPreparingCard")?.classList.toggle("hidden",listing);
 
   const orderTotalCount=document.getElementById("orderTotalCount");
   if(orderTotalCount){
     orderTotalCount.textContent=String(totalCount);
-    orderTotalCount.title=`Toplam ${totalCount} sipariş`;
+    orderTotalCount.title=`Toplam ${totalCount} ${listing ? "başvuru" : "sipariş"}`;
   }
 
   document.getElementById("statRevenue").textContent=money(
@@ -4212,6 +4271,7 @@ function renderOrders(){
     const id=input.id.replace("wa-code-","");
     if(input.value) whatsappCodeDrafts.set(String(id), input.value);
   });
+  const listing=isListingBusiness();
   const status=document.getElementById("statusFilter").value;
   const sort=document.getElementById("sortFilter").value;
   const q=document.getElementById("orderSearch").value.toLowerCase().trim();
@@ -4227,7 +4287,9 @@ function renderOrders(){
 
       if(hideCustomerInfo)return false;
 
-      return (o.name||"").toLowerCase().includes(q) ||
+      const itemMatch = Array.isArray(o.items) && o.items.some(i => String(i?.name||"").toLowerCase().includes(q));
+      return itemMatch ||
+             (o.name||"").toLowerCase().includes(q) ||
              (o.address||"").toLowerCase().includes(q) ||
              (o.phone_number||"").toLowerCase().includes(q);
     });
@@ -4238,19 +4300,27 @@ function renderOrders(){
     return new Date(b.created_at)-new Date(a.created_at);
   });
   const el=document.getElementById("ordersList");
-  if(!list.length){el.innerHTML='<div class="empty">Filtreye uyan sipariş yok.</div>';return;}
+  if(!list.length){el.innerHTML=`<div class="empty">Filtreye uyan ${listing ? "başvuru" : "sipariş"} yok.</div>`;return;}
   el.innerHTML=list.map(order=>{
     const isWhatsapp=order.verification_method==="whatsapp-business";
     const whatsappVerified=!!order.verified_at;
     const hideCustomerInfo=isWhatsapp&&!whatsappVerified;
     const needsWhatsappVerification=hideCustomerInfo&&order.status!=="iptal-edildi";
-    const statusBadge=needsWhatsappVerification?'<span class="badge badge-pending">Doğrulama Bekleniyor</span>':order.status==="tamamlandi"?'<span class="badge badge-done">Tamamlandı</span>':order.status==="iptal-edildi"?'<span class="badge badge-cancel">İptal edildi</span>':'<span class="badge badge-active">Devam ediyor</span>';
+    const statusBadge=needsWhatsappVerification
+      ? '<span class="badge badge-pending">Doğrulama Bekleniyor</span>'
+      : order.status==="tamamlandi"
+        ? '<span class="badge badge-done">Tamamlandı</span>'
+        : order.status==="iptal-edildi"
+          ? '<span class="badge badge-cancel">İptal edildi</span>'
+          : (listing && order.status==="onay-bekliyor")
+            ? '<span class="badge badge-pending">Onay Bekliyor</span>'
+            : '<span class="badge badge-active">Devam ediyor</span>';
     const badge=statusBadge;
     const items=(order.items||[]).map((i,itemIndex)=>{
       const itemProductId = i.productId ?? i.product_id ?? "";
       const imageUrl=getProductMainImageUrl(itemProductId);
       const visual=imageUrl
-        ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||"Ürün")}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
+        ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||(listing?"İlan":"Ürün"))}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
       const variantText = i.variantName || i.variant_name || i.size || i.beden || i.variant || "";
       const foodParts=getAdminFoodParts(i);
@@ -4263,11 +4333,11 @@ function renderOrders(){
         data-item-index="${itemIndex}"
         role="button"
         tabindex="0"
-        title="Ürün detaylarını aç"
+        title="${listing ? "İlan" : "Ürün"} detaylarını aç"
       >
         ${visual}
         <div>
-          <div><strong>${escapeHtml(i.name || "Ürün")}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong> × ${i.quantity}</div>
+          <div><strong>${escapeHtml(i.name || (listing ? "İlan" : "Ürün"))}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong>${listing ? "" : ` × ${i.quantity}`}</div>
           ${foodText?`<div class="muted" style="margin-top:3px">${escapeHtml(foodText)}</div>`:""}
           <div class="muted">${money(itemPrice)} · Detay için tıkla</div>
         </div>
@@ -4288,7 +4358,7 @@ function renderOrders(){
 
     return `<div class="order"><div class="order-head"><div><strong>#${order.id}</strong> · ${customerTitle}<div class="muted">${date}</div></div>${badge}</div>
       <div class="order-items">${items}</div>
-      <div><strong>Toplam: ${money(order.total)}</strong>${Number(order.discount_amount||0)>0?`<div class="muted">Ara toplam: ${money(order.subtotal||Number(order.total)+Number(order.discount_amount||0))} · İndirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` · Kodlar: ${escapeHtml(order.coupon_codes.join(", "))}`:(order.coupon_code?` · Kod: ${escapeHtml(order.coupon_code)}`:"")}</div>`:""}</div>
+      <div><strong>${listing ? "İlan Fiyatı" : "Toplam"}: ${money(order.total)}</strong>${Number(order.discount_amount||0)>0?`<div class="muted">Ara toplam: ${money(order.subtotal||Number(order.total)+Number(order.discount_amount||0))} · İndirim: -${money(order.discount_amount)}${(Array.isArray(order.coupon_codes)&&order.coupon_codes.length)?` · Kodlar: ${escapeHtml(order.coupon_codes.join(", "))}`:(order.coupon_code?` · Kod: ${escapeHtml(order.coupon_code)}`:"")}</div>`:""}</div>
       ${customerDetail}
       <div class="actions" style="margin-top:12px">
         ${needsWhatsappVerification?`<input id="wa-code-${order.id}" maxlength="6" inputmode="numeric" placeholder="Güvenlik kodu" value="${escapeAttr(whatsappCodeDrafts.get(String(order.id))||"")}" oninput="whatsappCodeDrafts.set('${order.id}', this.value.replace(/\D/g,'').slice(0,6)); this.value=whatsappCodeDrafts.get('${order.id}')" style="max-width:150px;padding:9px;border:1px solid #ddd;border-radius:9px"><button class="btn btn-success" onclick="verifyWhatsappOrder(${order.id})">✓ Kodu Doğrula</button><button class="btn btn-danger" onclick="openRejectOrderModal(${order.id})">✕ Reddet</button>`:""}
@@ -4296,13 +4366,18 @@ function renderOrders(){
         ${!needsWhatsappVerification&&order.status!=="tamamlandi"&&order.status!=="iptal-edildi"&&!(isWhatsapp&&!whatsappVerified)?`<button class="btn btn-success" onclick="completeOrder(${order.id})">✓ Tamamlandı</button>`:""}
         ${!needsWhatsappVerification&&order.status!=="iptal-edildi"&&order.status!=="tamamlandi"?`<button class="btn btn-danger" onclick="openRejectOrderModal(${order.id})">✕ Reddet</button>`:""}
         ${order.status==="iptal-edildi"
-          ? `<button class="btn btn-light" onclick="openReprepareOrderModal(${order.id})">↻ Tekrar Hazırla</button>`
-          : (!needsWhatsappVerification
+          ? (listing
+              ? `<button class="btn btn-light" onclick="setStatus(${order.id},'onay-bekliyor')">↻ Tekrar Onaya Al</button>`
+              : `<button class="btn btn-light" onclick="openReprepareOrderModal(${order.id})">↻ Tekrar Hazırla</button>`)
+          : (!listing
+              && !needsWhatsappVerification
               && order.status!=="devam-ediyor"
               && order.status!=="tamamlandi"
               && !(isWhatsapp&&!whatsappVerified)
               ? `<button class="btn btn-light" onclick="setStatus(${order.id},'devam-ediyor')">↻ Devam ediyor</button>`
-              : "")}
+              : (listing && order.status==="tamamlandi"
+                  ? `<button class="btn btn-light" onclick="setStatus(${order.id},'onay-bekliyor')">↻ Onay Bekleyene Al</button>`
+                  : ""))}
       </div></div>`;
   }).join("");
 }
@@ -4411,16 +4486,17 @@ async function resumeWhatsappVerification(id){
 async function completeOrder(id){
   const order=orders.find(o=>String(o.id)===String(id));
   if(!order)return;
+  const listing=isListingBusiness();
 
   if(order.verification_method==="whatsapp-business"&&!order.verified_at){
     toast("Sipariş tamamlanmadan önce güvenlik kodu doğrulanmalıdır.");
     return;
   }
 
-  if(!confirm(`#${id} nolu sipariş tamamlandı olarak işaretlensin mi?`))return;
+  if(!confirm(`#${id} nolu ${listing ? "başvuru" : "sipariş"} tamamlandı olarak işaretlensin mi?`))return;
 
-  const deliveryCode=generateDeliveryCode();
-  const waWindow=order.phone_number?reserveWhatsAppWindow():null;
+  const deliveryCode=listing ? null : generateDeliveryCode();
+  const waWindow=(!listing && order.phone_number)?reserveWhatsAppWindow():null;
 
   try{
     const {data,error}=await supabaseClient
@@ -4441,13 +4517,17 @@ async function completeOrder(id){
     renderOrders();
     loadDashboard();
 
-    const message=
-      `#${id} nolu siparişiniz tamamlandı. `+
-      `Kurye ile en kısa sürede teslim edilecektir. `+
-      `${deliveryCode} güvenlik kodu ile teslim alabilirsiniz. Teşekkürler.`;
+    if(listing){
+      toast("Başvuru tamamlandı.");
+    }else{
+      const message=
+        `#${id} nolu siparişiniz tamamlandı. `+
+        `Kurye ile en kısa sürede teslim edilecektir. `+
+        `${deliveryCode} güvenlik kodu ile teslim alabilirsiniz. Teşekkürler.`;
 
-    openCustomerWhatsApp(data,message,waWindow);
-    toast(`Sipariş tamamlandı. Teslimat kodu: ${deliveryCode}`);
+      openCustomerWhatsApp(data,message,waWindow);
+      toast(`Sipariş tamamlandı. Teslimat kodu: ${deliveryCode}`);
+    }
   }catch(e){
     try{waWindow?.close();}catch{}
     toast(e.message);
@@ -4459,11 +4539,14 @@ let rejectOrderId=null;
 function openRejectOrderModal(id){
   const order=orders.find(o=>String(o.id)===String(id));
   if(!order)return;
+  const listing=isListingBusiness();
 
   rejectOrderId=id;
   document.getElementById("rejectOrderReason").value="";
+  const modalH2=document.querySelector("#rejectOrderModal h2");
+  if(modalH2)modalH2.textContent=listing ? "Başvuruyu Reddet" : "Siparişi Reddet";
   document.getElementById("rejectOrderModalInfo").textContent=
-    `#${id} nolu sipariş için red nedenini yazın.`;
+    `#${id} nolu ${listing ? "başvuru" : "sipariş"} için red nedenini yazın.`;
   document.getElementById("rejectOrderModal").classList.remove("hidden");
 
   setTimeout(()=>{
@@ -4479,6 +4562,7 @@ function closeRejectOrderModal(){
 async function confirmRejectOrder(){
   const id=rejectOrderId;
   const reason=document.getElementById("rejectOrderReason").value.trim();
+  const listing=isListingBusiness();
 
   if(!id)return;
   if(!reason){
@@ -4489,7 +4573,7 @@ async function confirmRejectOrder(){
   const order=orders.find(o=>String(o.id)===String(id));
   if(!order)return;
 
-  const waWindow=order.phone_number?reserveWhatsAppWindow():null;
+  const waWindow=(!listing && order.phone_number)?reserveWhatsAppWindow():null;
 
   try{
     const {data,error}=await supabaseClient
@@ -4512,12 +4596,16 @@ async function confirmRejectOrder(){
     renderOrders();
     loadDashboard();
 
-    const message=
-      `#${id} nolu siparişiniz ${reason} nedeninden dolayı reddedilmiştir. `+
-      `Tekrar sipariş vermeyi deneyebilirsiniz.`;
+    if(listing){
+      toast("Başvuru reddedildi.");
+    }else{
+      const message=
+        `#${id} nolu siparişiniz ${reason} nedeninden dolayı reddedilmiştir. `+
+        `Tekrar sipariş vermeyi deneyebilirsiniz.`;
 
-    openCustomerWhatsApp(data,message,waWindow);
-    toast("Sipariş reddedildi.");
+      openCustomerWhatsApp(data,message,waWindow);
+      toast("Sipariş reddedildi.");
+    }
   }catch(e){
     try{waWindow?.close();}catch{}
     toast(e.message);
