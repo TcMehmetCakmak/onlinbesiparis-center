@@ -368,6 +368,35 @@
   </div>
 </div>
 
+<div id="deleteOrResetBusinessModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeDeleteOrResetBusinessModal()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+    <div class="header">
+      <h2 id="deleteOrResetModalTitle">⚠️ İşletmeyi Sil / Sıfırla</h2>
+    </div>
+    <input id="deleteOrResetBusinessId" type="hidden">
+    <div id="deleteOrResetBusinessNameBox" style="padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:12px;font-size:14px"></div>
+    <p style="margin:0 0 10px;line-height:1.5;color:#374151;font-size:14px">
+      İşletmeyi <strong>silmek</strong> için <strong>sil</strong>, <strong>sıfırlamak</strong> için <strong>sıfırla</strong> yazın:
+    </p>
+    <input
+      id="deleteOrResetConfirmInput"
+      type="text"
+      autocomplete="off"
+      placeholder="sil veya sıfırla yazın..."
+      oninput="handleDeleteOrResetInputChange()"
+    >
+    <div id="deleteOrResetValidationMsg" class="hidden" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;font-size:13px;font-weight:700">
+      Geçersiz bir giriş yaptınız. Lütfen yalnızca "sil" veya "sıfırla" yazın.
+    </div>
+    <div id="deleteOrResetStatusMsg" class="hidden" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:13px;font-weight:600"></div>
+    <div class="actions" style="justify-content:flex-end;margin-top:16px">
+      <button id="confirmDeleteBusinessBtn" type="button" class="btn btn-danger hidden" onclick="executeDeleteOrResetBusiness('delete')">🗑️ Sil</button>
+      <button id="confirmResetBusinessBtn" type="button" class="btn btn-warning hidden" onclick="executeDeleteOrResetBusiness('reset')">🔄 Sıfırla</button>
+    </div>
+  </div>
+</div>
+
 <div id="tokenModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="document.getElementById('tokenModal').classList.add('hidden')" aria-label="Modalı kapat" title="Kapat">×</button></div><h2>✅ İşletme Oluşturuldu</h2><p>Bu bilgiler tenant bağlantısı için kullanılacak. <strong>Business Token sadece şimdi gösterilir.</strong></p><label>Business Public Key</label><div id="createdPublicKey" class="token-box"></div><label>Business Token</label><div id="createdToken" class="token-box"></div><label>Lisans sonu</label><div id="createdLicenseEnd" class="token-box"></div></div></div>
 <div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -996,6 +1025,7 @@ function renderBusinesses(){
         <button class="btn btn-warning" onclick="extendLicense('${b.id}',-6)">-6 Ay</button>
         <button class="btn ${b.manual_enabled?'btn-danger':'btn-primary'}" onclick="setEnabled('${b.id}',${!b.manual_enabled})">${b.manual_enabled?'Manuel Deaktif Et':'Aktif Et'}</button>
         <button class="btn btn-light" onclick="rotateToken('${b.id}')">Token Yenile</button>
+        <button class="btn btn-danger" onclick="openDeleteOrResetBusinessModal('${b.id}')">🗑️ İşletmeyi Sil / Sıfırla</button>
       </div>
     </div>`;
   }).join('');
@@ -1158,6 +1188,350 @@ async function saveBusinessEdit(){
   if(enabled)await resetBusinessInactiveViews(id,true);
   toast('İşletme güncellendi.');
   await refreshSuperAdminData();
+}
+
+let deleteOrResetBusy=false;
+
+function openDeleteOrResetBusinessModal(id){
+  const b=businesses.find(x=>String(x.id)===String(id));
+  if(!b){toast('İşletme bulunamadı.');return}
+  document.getElementById('deleteOrResetBusinessId').value=b.id;
+  const nameBox=document.getElementById('deleteOrResetBusinessNameBox');
+  if(nameBox){
+    nameBox.innerHTML=`<strong>🏪 ${esc(b.shop_name)}</strong> <span class="muted">(${esc(b.owner_name)} · ${esc(b.slug)})</span>`;
+  }
+  const input=document.getElementById('deleteOrResetConfirmInput');
+  if(input){
+    input.value='';
+    input.disabled=false;
+  }
+  document.getElementById('deleteOrResetValidationMsg')?.classList.add('hidden');
+  const statusEl=document.getElementById('deleteOrResetStatusMsg');
+  if(statusEl){
+    statusEl.textContent='';
+    statusEl.classList.add('hidden');
+  }
+  const delBtn=document.getElementById('confirmDeleteBusinessBtn');
+  const rstBtn=document.getElementById('confirmResetBusinessBtn');
+  if(delBtn){delBtn.classList.add('hidden');delBtn.disabled=false;delBtn.textContent='🗑️ Sil';}
+  if(rstBtn){rstBtn.classList.add('hidden');rstBtn.disabled=false;rstBtn.textContent='🔄 Sıfırla';}
+  document.getElementById('deleteOrResetBusinessModal').classList.remove('hidden');
+  setTimeout(()=>input?.focus(),50);
+}
+
+function closeDeleteOrResetBusinessModal(force=false){
+  if(deleteOrResetBusy&&!force)return;
+  document.getElementById('deleteOrResetBusinessModal').classList.add('hidden');
+}
+
+function handleDeleteOrResetInputChange(){
+  const input=document.getElementById('deleteOrResetConfirmInput');
+  const validMsg=document.getElementById('deleteOrResetValidationMsg');
+  const delBtn=document.getElementById('confirmDeleteBusinessBtn');
+  const rstBtn=document.getElementById('confirmResetBusinessBtn');
+  if(!input||!validMsg||!delBtn||!rstBtn)return;
+
+  const raw=input.value.trim();
+  const normalized=raw.toLocaleLowerCase('tr-TR');
+
+  if(!raw){
+    validMsg.classList.add('hidden');
+    delBtn.classList.add('hidden');
+    rstBtn.classList.add('hidden');
+    return;
+  }
+
+  if(normalized==='sil'){
+    validMsg.classList.add('hidden');
+    delBtn.classList.remove('hidden');
+    rstBtn.classList.add('hidden');
+    return;
+  }
+
+  if(normalized==='sıfırla'||normalized==='sifirla'){
+    validMsg.classList.add('hidden');
+    delBtn.classList.add('hidden');
+    rstBtn.classList.remove('hidden');
+    return;
+  }
+
+  validMsg.classList.remove('hidden');
+  delBtn.classList.add('hidden');
+  rstBtn.classList.add('hidden');
+}
+
+async function deleteFromCloudflareR2Url(storagePath){
+  if(!storagePath||typeof storagePath!=='string')return;
+  const trimmed=storagePath.trim();
+  if(!trimmed)return;
+  try{
+    if(trimmed.startsWith('http')){
+      const urlObj=new URL(trimmed);
+      if(urlObj.hostname.includes('r2.dev')||urlObj.hostname.includes('workers.dev')){
+        const objectPath=urlObj.pathname.replace(/^\/+/,'');
+        if(objectPath){
+          await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`,{method:'DELETE'});
+        }
+      }
+    }else if(trimmed.includes('/')){
+      await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(trimmed.replace(/^\/+/,''))}`,{method:'DELETE'});
+    }
+  }catch(e){
+    console.warn('Cloudflare R2 dosya silme uyarısı:',e);
+  }
+}
+
+async function createScopedTenantClientForBusiness(b){
+  if(!window.SUPABASE_CONFIG?.url||!window.SUPABASE_CONFIG?.key)return null;
+  const scoped=window.supabase.createClient(window.SUPABASE_CONFIG.url,window.SUPABASE_CONFIG.key,{
+    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+  });
+  const pwdRow=getBusinessPasswordRow(b);
+  if(pwdRow?.email&&pwdRow?.password){
+    try{
+      await scoped.auth.signInWithPassword({
+        email:String(pwdRow.email).trim(),
+        password:String(pwdRow.password)
+      });
+    }catch(e){
+      console.warn('İşletme admin oturumu açılamadı, anonim/RPC ile devam ediliyor:',e);
+    }
+  }
+  return scoped;
+}
+
+async function purgeBusinessMediaAndOperationalData(b,setStatus){
+  const bid=String(b.id||'').trim();
+  if(!bid)return;
+
+  const scopedTenant=await createScopedTenantClientForBusiness(b);
+  const clients=[scopedTenant,tenantDb].filter(Boolean);
+  const primaryTenant=scopedTenant||tenantDb;
+
+  const r2Urls=new Set();
+  const productStoragePaths=new Set();
+  const adStoragePaths=new Set();
+  const medStoragePaths=new Set();
+  const productIds=new Set();
+
+  const addPathToCollections=(rawPath,bucketSet)=>{
+    const sp=String(rawPath||'').trim();
+    if(!sp)return;
+    if(sp.startsWith('http'))r2Urls.add(sp);
+    else{
+      bucketSet.add(sp);
+      if(sp.startsWith(bid+'/'))r2Urls.add(`https://image-uploader.tc-mehmetcakmak.workers.dev/${sp}`);
+    }
+  };
+
+  if(primaryTenant){
+    setStatus('İşletmeye ait fotoğraflar ve ürünler taranıyor...');
+    const [rpcMediaRes,prodRes,prodImgRes,adImgRes,medRes]=await Promise.allSettled([
+      primaryTenant.rpc('tenant_collect_business_media_urls',{p_business_id:bid}),
+      primaryTenant.from('products').select('id').eq('business_id',bid),
+      primaryTenant.from('product_images').select('id,storage_path').eq('business_id',bid),
+      primaryTenant.from('advertisement_images').select('id,storage_path').eq('business_id',bid),
+      primaryTenant.from('medicine_requests').select('id,storage_path').eq('business_id',bid)
+    ]);
+
+    if(rpcMediaRes.status==='fulfilled'&&rpcMediaRes.value?.data){
+      const md=rpcMediaRes.value.data;
+      (Array.isArray(md.product_paths)?md.product_paths:[]).forEach(p=>addPathToCollections(p,productStoragePaths));
+      (Array.isArray(md.ad_paths)?md.ad_paths:[]).forEach(p=>addPathToCollections(p,adStoragePaths));
+      (Array.isArray(md.medicine_paths)?md.medicine_paths:[]).forEach(p=>addPathToCollections(p,medStoragePaths));
+    }
+    if(prodRes.status==='fulfilled'&&Array.isArray(prodRes.value?.data)){
+      prodRes.value.data.forEach(p=>{if(p?.id)productIds.add(p.id)});
+    }
+    if(prodImgRes.status==='fulfilled'&&Array.isArray(prodImgRes.value?.data)){
+      prodImgRes.value.data.forEach(row=>addPathToCollections(row?.storage_path,productStoragePaths));
+    }
+    if(adImgRes.status==='fulfilled'&&Array.isArray(adImgRes.value?.data)){
+      adImgRes.value.data.forEach(row=>addPathToCollections(row?.storage_path,adStoragePaths));
+    }
+    if(medRes.status==='fulfilled'&&Array.isArray(medRes.value?.data)){
+      medRes.value.data.forEach(row=>addPathToCollections(row?.storage_path,medStoragePaths));
+    }
+  }
+
+  const r2List=Array.from(r2Urls);
+  if(r2List.length){
+    setStatus(`Cloudflare R2 üzerindeki ${r2List.length} fotoğraf siliniyor...`);
+    await Promise.allSettled(r2List.map(u=>deleteFromCloudflareR2Url(u)));
+  }
+  try{
+    await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?prefix=${encodeURIComponent(bid+'/')}`,{method:'DELETE'}).catch(()=>{});
+  }catch{}
+
+  if(primaryTenant){
+    if(productStoragePaths.size){
+      await primaryTenant.storage.from('product-images').remove(Array.from(productStoragePaths)).catch(()=>{});
+    }
+    if(adStoragePaths.size){
+      await primaryTenant.storage.from('advertisement-images').remove(Array.from(adStoragePaths)).catch(()=>{});
+    }
+    if(medStoragePaths.size){
+      await primaryTenant.storage.from('medicine-prescriptions').remove(Array.from(medStoragePaths)).catch(()=>{});
+    }
+  }
+
+  setStatus('Ürünler, siparişler, reklamlar, bildirimler ve yorumlar temizleniyor...');
+  for(const c of clients){
+    try{
+      await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:false}).catch(()=>{});
+    }catch{}
+    if(productIds.size){
+      await c.from('product_variants').delete().in('product_id',Array.from(productIds));
+    }
+    await Promise.allSettled([
+      c.from('product_images').delete().eq('business_id',bid),
+      c.from('product_questions').delete().eq('business_id',bid),
+      c.from('product_reviews').delete().eq('business_id',bid),
+      c.from('advertisement_images').delete().eq('business_id',bid),
+      c.from('notifications').delete().eq('business_id',bid),
+      c.from('orders').delete().eq('business_id',bid),
+      c.from('reviews').delete().eq('business_id',bid),
+      c.from('medicine_requests').delete().eq('business_id',bid)
+    ]);
+    await Promise.allSettled([
+      c.from('products').delete().eq('business_id',bid),
+      c.from('advertisements').delete().eq('business_id',bid)
+    ]);
+  }
+
+  const markers=[
+    `__review_mod__:${bid}`,
+    `__inactive_views__:${bid}`,
+    `__active_views__:${bid}`
+  ];
+  await Promise.allSettled([
+    db.from('business_passwords').delete().in('email',markers),
+    ...(clients.map(c=>c.from('business_passwords').delete().in('email',markers)))
+  ]);
+
+  return {clients,primaryTenant};
+}
+
+async function executeDeleteOrResetBusiness(mode){
+  if(deleteOrResetBusy)return;
+  const id=document.getElementById('deleteOrResetBusinessId').value;
+  const b=businesses.find(x=>String(x.id)===String(id));
+  if(!b){toast('İşletme bulunamadı.');return}
+
+  const input=document.getElementById('deleteOrResetConfirmInput');
+  const val=(input?.value||'').trim().toLocaleLowerCase('tr-TR');
+  if(mode==='delete'&&val!=='sil'){
+    toast('Silmek için kutuya "sil" yazmalısınız.');
+    return;
+  }
+  if(mode==='reset'&&val!=='sıfırla'&&val!=='sifirla'){
+    toast('Sıfırlamak için kutuya "sıfırla" yazmalısınız.');
+    return;
+  }
+
+  const statusEl=document.getElementById('deleteOrResetStatusMsg');
+  const delBtn=document.getElementById('confirmDeleteBusinessBtn');
+  const rstBtn=document.getElementById('confirmResetBusinessBtn');
+  const setStatus=msg=>{
+    if(statusEl){
+      statusEl.textContent=msg;
+      statusEl.classList.remove('hidden');
+    }
+  };
+
+  deleteOrResetBusy=true;
+  if(input)input.disabled=true;
+  if(delBtn)delBtn.disabled=true;
+  if(rstBtn)rstBtn.disabled=true;
+
+  const bid=String(b.id).trim();
+
+  try{
+    const {clients}=await purgeBusinessMediaAndOperationalData(b,setStatus);
+
+    if(mode==='reset'){
+      setStatus('İşletme ayarları ilk kurulum haline getiriliyor...');
+      const defaultIcon=b.business_type==='food'?'🍽️':'🛍️';
+      for(const c of clients){
+        await c.from('app_settings').upsert({
+          business_id:bid,
+          shop_name:b.shop_name,
+          shop_icon:defaultIcon,
+          background_color:'#f5f5f5',
+          phone:null,
+          instagram_url:null,
+          instagram_label:null,
+          branches:[],
+          payment_cash_enabled:true,
+          payment_card_enabled:true,
+          payment_transfer_enabled:false,
+          updated_at:new Date().toISOString()
+        },{onConflict:'business_id'});
+      }
+
+      await Promise.allSettled([
+        db.rpc('reset_inactive_business_views',{p_business_id:bid}),
+        db.rpc('super_admin_reset_business',{p_business_id:bid}),
+        db.from('support_ticket_status_public').delete().eq('business_id',bid),
+        db.from('support_tickets').delete().eq('business_id',bid),
+        db.from('name_change_requests').delete().eq('business_id',bid)
+      ]);
+
+      deleteOrResetBusy=false;
+      closeDeleteOrResetBusinessModal(true);
+      toast(`"${b.shop_name}" işletmesi sıfırlandı (ürünsüz ve resimsiz ilk açılış haline getirildi).`);
+      await refreshSuperAdminData();
+      return;
+    }
+
+    if(mode==='delete'){
+      setStatus('İşletmenin tüm Supabase kayıtları siliniyor...');
+      for(const c of clients){
+        try{
+          await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:true}).catch(()=>{});
+        }catch{}
+        await Promise.allSettled([
+          c.from('app_settings').delete().eq('business_id',bid),
+          c.from('profiles').delete().eq('business_id',bid),
+          c.from('business_passwords').delete().eq('business_id',bid),
+          c.from('business_passwords').delete().eq('shop_name',b.shop_name)
+        ]);
+      }
+
+      await Promise.allSettled([
+        db.from('package_requests').delete().eq('business_id',bid),
+        db.from('package_subscriptions').delete().eq('business_id',bid),
+        db.from('support_ticket_status_public').delete().eq('business_id',bid),
+        db.from('support_tickets').delete().eq('business_id',bid),
+        db.from('name_change_requests').delete().eq('business_id',bid),
+        db.from('business_license_history').delete().eq('business_id',bid),
+        db.from('business_passwords').delete().eq('business_id',bid),
+        db.from('business_passwords').delete().eq('shop_name',b.shop_name),
+        b.slug?db.from('franchise_requests').delete().eq('business_slug',b.slug):Promise.resolve()
+      ]);
+
+      const {error:rpcDelErr}=await db.rpc('super_admin_delete_business',{p_business_id:bid});
+      if(rpcDelErr){
+        await db.from('business_public').delete().eq('business_id',bid);
+        const {error:directDelErr}=await db.from('businesses').delete().eq('id',bid);
+        if(directDelErr)throw new Error(rpcDelErr.message||directDelErr.message);
+      }
+
+      deleteOrResetBusy=false;
+      closeDeleteOrResetBusinessModal(true);
+      toast(`"${b.shop_name}" işletmesi ve tüm verileri silindi. Klasörü (${b.slug}) manuel silebilirsiniz.`);
+      await refreshSuperAdminData();
+    }
+  }catch(e){
+    console.error('İşletme silme/sıfırlama hatası:',e);
+    setStatus('Hata: '+(e?.message||String(e)));
+    toast(e?.message||'İşlem sırasında bir hata oluştu.');
+  }finally{
+    deleteOrResetBusy=false;
+    if(input)input.disabled=false;
+    if(delBtn)delBtn.disabled=false;
+    if(rstBtn)rstBtn.disabled=false;
+  }
 }
 
 async function extendLicense(id,m){

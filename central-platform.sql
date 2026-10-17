@@ -404,3 +404,65 @@ $$;
 grant execute on function public.record_inactive_business_view(uuid) to anon, authenticated;
 grant execute on function public.reset_inactive_business_views(uuid) to anon, authenticated;
 
+-- İşletmeyi sıfırlama (Sıfırla butonu): işletme ve abonelik paketini korur, geçici talep ve sayaçları sıfırlar
+create or replace function public.super_admin_reset_business(p_business_id uuid)
+returns void
+language plpgsql security definer set search_path=public
+as $$
+begin
+  if not public.is_super_admin() then raise exception 'Yetkisiz işlem.'; end if;
+
+  update public.businesses
+     set inactive_view_count = 0,
+         last_inactive_view_at = null,
+         updated_at = now()
+   where id = p_business_id;
+
+  delete from public.support_ticket_status_public where business_id = p_business_id;
+  delete from public.support_tickets where business_id = p_business_id;
+  delete from public.name_change_requests where business_id = p_business_id;
+  delete from public.package_requests where business_id = p_business_id;
+  delete from public.business_passwords
+   where email in (
+     '__review_mod__:' || p_business_id::text,
+     '__inactive_views__:' || p_business_id::text,
+     '__active_views__:' || p_business_id::text
+   );
+end;
+$$;
+
+-- İşletmeyi tamamen silme (Sil butonu): işletmeye ait tüm merkez veritabanı kayıtlarını temizler
+create or replace function public.super_admin_delete_business(p_business_id uuid)
+returns void
+language plpgsql security definer set search_path=public
+as $$
+declare
+  v_shop_name text;
+begin
+  if not public.is_super_admin() then raise exception 'Yetkisiz işlem.'; end if;
+
+  select shop_name into v_shop_name from public.businesses where id = p_business_id;
+
+  delete from public.support_ticket_status_public where business_id = p_business_id;
+  delete from public.support_tickets where business_id = p_business_id;
+  delete from public.package_requests where business_id = p_business_id;
+  delete from public.package_subscriptions where business_id = p_business_id;
+  delete from public.name_change_requests where business_id = p_business_id;
+  delete from public.business_license_history where business_id = p_business_id;
+  delete from public.business_passwords
+   where business_id = p_business_id
+      or (v_shop_name is not null and shop_name = v_shop_name)
+      or email in (
+        '__review_mod__:' || p_business_id::text,
+        '__inactive_views__:' || p_business_id::text,
+        '__active_views__:' || p_business_id::text
+      );
+  delete from public.business_public where business_id = p_business_id;
+  delete from public.businesses where id = p_business_id;
+end;
+$$;
+
+revoke all on function public.super_admin_reset_business(uuid) from public;
+revoke all on function public.super_admin_delete_business(uuid) from public;
+grant execute on function public.super_admin_reset_business(uuid) to authenticated;
+grant execute on function public.super_admin_delete_business(uuid) to authenticated;
