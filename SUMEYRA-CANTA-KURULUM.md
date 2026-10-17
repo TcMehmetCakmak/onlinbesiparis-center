@@ -31,12 +31,21 @@ Bu rehber, **Sümeyra Çanta** işletmesini sıfırdan açmak için gereken tüm
    - **Business Token** *(Sadece bu ekranda bir kez gösterilir)*
    - **Lisans sonu**
 
-   Business Public Key
-  6e8133c4-e519-4047-8392-93973849bb7d
-  Business Token
-  7c42330b434d7a4e76924a7fee134f4dd73e46a6e66b6aa3c250e6ef326297c7
-  Lisans sonu
-  2026-11-16
+  Sümeyra Çanta
+    Business Public Key
+    6e8133c4-e519-4047-8392-93973849bb7d
+    Business Token
+    7c42330b434d7a4e76924a7fee134f4dd73e46a6e66b6aa3c250e6ef326297c7
+    Lisans sonu
+    2026-11-16
+
+  Çakmak Dürüm
+    Business Public Key
+    5d013a5b-6539-4e7d-9c1e-81cde1e3f2e5
+    Business Token
+    8bf818f8d72a642bd317a087c3c89990a3ac3a606b1cf2370efb11b49e1fb9f8
+    Lisans sonu
+    2026-11-17
 
 ---
 
@@ -57,7 +66,11 @@ select
 from public.businesses
 where slug = 'sumeyra-canta';
 
+Sümeyra Çanta
 business_id: 67ec0a96-6062-4648-b39c-90731839a545
+
+Çakmak Dürüm
+business_id: b5cfea6b-8795-4ed0-b22f-945cea258e8a
 ```
 
 3. Sorgu sonucunda dönen **`business_id`** (UUID) değerini kopyalayın (4. adımda kullanacağız).
@@ -75,6 +88,7 @@ business_id: 67ec0a96-6062-4648-b39c-90731839a545
 4. **Create user** butonuna basın.
 5. Kullanıcı listesinde oluşan yeni kullanıcının **`User UID`** (UUID) değerini kopyalayın.
 fd95cdad-9dc1-4733-ac53-cc1302de2afc
+cakmak dürüm: 784468dc-587b-489f-a537-30c0b420ee73
 
 ---
 
