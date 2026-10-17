@@ -137,6 +137,10 @@
   box-shadow:0 8px 20px rgba(79,70,229,.16), 0 2px 6px rgba(79,70,229,.08);
   position:relative;
   overflow:hidden;
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.business-package-box:hover{
+  transform:translateY(-2px);
 }
 .business-package-box::before{
   content:"";
@@ -175,6 +179,56 @@
   font-weight:700;
   box-shadow:0 3px 10px rgba(79,70,229,.25);
 }
+/* Tier 1: Başlangıç Paketi (Turkuaz / Camgöbeği) */
+.business-package-box.pkg-tier-1{
+  background:linear-gradient(135deg,#ecfeff 0%,#cffafe 52%,#e0f2fe 100%);
+  border-color:#67e8f9;
+  box-shadow:0 10px 24px -4px rgba(8,145,178,.24), 0 4px 10px -2px rgba(8,145,178,.14);
+}
+.business-package-box.pkg-tier-1::before{background:linear-gradient(180deg,#0891b2,#0284c7,#0ea5e9)}
+.business-package-box.pkg-tier-1 .business-package-label{color:#0e7490}
+.business-package-box.pkg-tier-1 .business-package-title{color:#164e63}
+.business-package-box.pkg-tier-1 .business-package-meta{background:linear-gradient(90deg,#0891b2,#0284c7);box-shadow:0 3px 10px rgba(8,145,178,.28)}
+/* Tier 2: Pro Paketi (Kraliyet Mavisi / İndigo) */
+.business-package-box.pkg-tier-2{
+  background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 52%,#e0e7ff 100%);
+  border-color:#93c5fd;
+  box-shadow:0 10px 24px -4px rgba(37,99,235,.25), 0 4px 10px -2px rgba(37,99,235,.14);
+}
+.business-package-box.pkg-tier-2::before{background:linear-gradient(180deg,#2563eb,#4f46e5,#3b82f6)}
+.business-package-box.pkg-tier-2 .business-package-label{color:#1d4ed8}
+.business-package-box.pkg-tier-2 .business-package-title{color:#1e3a8a}
+.business-package-box.pkg-tier-2 .business-package-meta{background:linear-gradient(90deg,#2563eb,#4f46e5);box-shadow:0 3px 10px rgba(37,99,235,.28)}
+/* Tier 3: Premium Paketi (Ametist Moru / Fuşya) */
+.business-package-box.pkg-tier-3{
+  background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 52%,#fae8ff 100%);
+  border-color:#c4b5fd;
+  box-shadow:0 10px 24px -4px rgba(124,58,237,.26), 0 4px 10px -2px rgba(124,58,237,.15);
+}
+.business-package-box.pkg-tier-3::before{background:linear-gradient(180deg,#7c3aed,#9333ea,#c026d3)}
+.business-package-box.pkg-tier-3 .business-package-label{color:#6d28d9}
+.business-package-box.pkg-tier-3 .business-package-title{color:#3b0764}
+.business-package-box.pkg-tier-3 .business-package-meta{background:linear-gradient(90deg,#7c3aed,#9333ea);box-shadow:0 3px 10px rgba(124,58,237,.30)}
+/* Tier 4: Elite Paketi (Altın / Kehribar) */
+.business-package-box.pkg-tier-4{
+  background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 52%,#ffedd5 100%);
+  border-color:#fcd34d;
+  box-shadow:0 10px 24px -4px rgba(217,119,6,.28), 0 4px 10px -2px rgba(217,119,6,.16);
+}
+.business-package-box.pkg-tier-4::before{background:linear-gradient(180deg,#d97706,#ea580c,#f59e0b)}
+.business-package-box.pkg-tier-4 .business-package-label{color:#b45309}
+.business-package-box.pkg-tier-4 .business-package-title{color:#78350f}
+.business-package-box.pkg-tier-4 .business-package-meta{background:linear-gradient(90deg,#d97706,#ea580c);box-shadow:0 3px 10px rgba(217,119,6,.30)}
+/* Tier 5: Ultimate Paketi (Yakut Kırmızısı / Gül Altın) */
+.business-package-box.pkg-tier-5{
+  background:linear-gradient(135deg,#fff1f2 0%,#ffe4e6 50%,#fce7f3 100%);
+  border-color:#fda4af;
+  box-shadow:0 12px 26px -4px rgba(225,29,72,.28), 0 4px 12px -2px rgba(225,29,72,.16);
+}
+.business-package-box.pkg-tier-5::before{background:linear-gradient(180deg,#e11d48,#db2777,#9333ea)}
+.business-package-box.pkg-tier-5 .business-package-label{color:#be123c}
+.business-package-box.pkg-tier-5 .business-package-title{color:#881337}
+.business-package-box.pkg-tier-5 .business-package-meta{background:linear-gradient(90deg,#e11d48,#db2777);box-shadow:0 3px 10px rgba(225,29,72,.32)}
 .business-qr-box{
   display:flex;
   align-items:center;
@@ -344,10 +398,14 @@ const tenantDb=(window.SUPABASE_CONFIG&&window.SUPABASE_CONFIG.url&&window.SUPAB
 let businesses=[],requests=[],supportTickets=[],franchiseRequests=[],businessPasswords=[],packageRequests=[],allPackageRequests=[],packageSubscriptions=[];
 const PACKAGE_NAMES={1:'Başlangıç paketi (20 Ürün - 1.000 TL)',2:'Pro paketi (100 Ürün - 2.000 TL)',3:'Premium paketi (250 Ürün - 3.000 TL)',4:'Elite paketi (500 Ürün - 5.000 TL)',5:'Ultimate paketi (1000 Ürün - 8.000 TL)'};
 const PACKAGE_PRICES={1:1000,2:2000,3:3000,4:5000,5:8000};
-function getBusinessPackageName(b){
+const PACKAGE_ICONS={1:'🌱',2:'🚀',3:'💎',4:'👑',5:'🔥'};
+function getBusinessPackageTier(b){
   const bid=String(b?.id||'').trim();
   const sub=packageSubscriptions.find(x=>String(x?.business_id||'').trim()===bid);
-  const tier=Number(sub?.package_tier)||1;
+  return Math.min(5,Math.max(1,Number(sub?.package_tier)||1));
+}
+function getBusinessPackageName(b){
+  const tier=getBusinessPackageTier(b);
   return PACKAGE_NAMES[tier]||('Tier '+tier);
 }
 function calculateBusinessEarnings(b){
@@ -864,6 +922,8 @@ function renderBusinesses(){
     const currentPassword=pwdRow?.password||'';
     const pwdMeta=[pwdRow?.email,pwdRow?.owner_phone].filter(Boolean).join(' · ');
     const inactiveViews=getBusinessInactiveViewStats(b);
+    const pkgTier=getBusinessPackageTier(b);
+    const pkgIcon=PACKAGE_ICONS[pkgTier]||'💎';
     const currentPackageName=getBusinessPackageName(b);
     const totalEarnings=calculateBusinessEarnings(b);
     const pkgMatch=currentPackageName.match(/^([^(]+?)(?:\s*\((.+)\))?$/);
@@ -909,8 +969,8 @@ function renderBusinesses(){
             </div>
           </div>
         </div>
-        <div class="business-package-box">
-          <div class="business-package-label">💎 Mevcut Abonelik Paketi</div>
+        <div class="business-package-box pkg-tier-${pkgTier}">
+          <div class="business-package-label">${pkgIcon} Mevcut Abonelik Paketi</div>
           <div class="business-package-title">${esc(pkgTitle)}</div>
           ${pkgDetail?`<div class="business-package-meta">${esc(pkgDetail)}</div>`:''}
         </div>
