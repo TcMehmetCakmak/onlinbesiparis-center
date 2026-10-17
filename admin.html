@@ -67,21 +67,13 @@ label{display:block;margin:12px 0 6px;font-weight:bold}
 .stat-value{font-size:22px;font-weight:800;margin-top:0;line-height:1.15;text-align:center;color:#111}
 .stat-desc{font-size:10.5px;line-height:1.28;margin-top:2px;color:#555;text-align:center}
 .grid>.card{position:relative;overflow:hidden;padding:12px 10px;border:1px solid #e5e7eb;box-shadow:none;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:5px;min-height:0}
-.stat-card-inactive-views{background:#f0fdf4;border:1px solid #86efac;padding-top:24px;gap:3px}
-.stat-card-inactive-views .stat-label{color:#166534;font-weight:700}
-.stat-card-inactive-views .stat-value{color:#15803d;font-size:19px}
-.stat-card-inactive-views .stat-desc{color:#14532d}
-.stat-card-inactive-views.status-active{background:#f0fdf4;border:1px solid #86efac}
-.stat-card-inactive-views.status-active .stat-label{color:#166534}
-.stat-card-inactive-views.status-active .stat-value{color:#15803d}
-.stat-card-inactive-views.status-active .stat-desc{color:#14532d}
-.stat-card-inactive-views.status-inactive{background:#fef2f2;border:1px solid #fca5a5}
-.stat-card-inactive-views.status-inactive .stat-label{color:#991b1b}
-.stat-card-inactive-views.status-inactive .stat-value{color:#dc2626}
-.stat-card-inactive-views.status-inactive .stat-desc{color:#7f1d1d}
-.inactive-views-status-badge{position:absolute;top:5px;right:6px;padding:2px 6px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.15}
-.inactive-views-status-badge.active{background:#dcfce7;color:#166534;border:1px solid #86efac}
-.inactive-views-status-badge.inactive{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.stat-card-active-views{background:#f0fdf4;border:1px solid #86efac}
+.stat-card-active-views .stat-label{color:#166534;font-weight:700}
+.stat-card-active-views .stat-value{color:#15803d;font-size:20px}
+.stat-card-inactive-views{background:#fef2f2;border:1px solid #fca5a5;gap:3px}
+.stat-card-inactive-views .stat-label{color:#991b1b;font-weight:700}
+.stat-card-inactive-views .stat-value{color:#dc2626;font-size:19px}
+.stat-card-inactive-views .stat-desc{color:#7f1d1d}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .tab{padding:10px 14px;border:0;border-radius:10px;background:#e9eaec;cursor:pointer}.tab.active{background:#222;color:#fff}
 .products{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -161,7 +153,7 @@ body.modal-open{
 .discount-admin-fields{margin-top:12px;padding:14px;background:#fff7e6;border:1px solid #ffd58a;border-radius:12px}
 .pdf-btn{background:#455a64;color:#fff}
 @media(max-width:1200px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:800px){.grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.grid>.card{padding:8px 8px;border-radius:12px;gap:3px}.stat-card-inactive-views{padding-top:20px}.stat-label{font-size:11px}.stat-value{font-size:17px}.stat-card-inactive-views .stat-value{font-size:15px}.stat-desc{font-size:9.5px;line-height:1.2}.inactive-views-status-badge{top:3px;right:4px;padding:1px 5px;font-size:9px}.products{grid-template-columns:1fr}.form-grid,.filters{grid-template-columns:1fr}.container{padding:14px}.header{align-items:flex-start;flex-direction:column}}
+@media(max-width:800px){.grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.grid>.card{padding:8px 8px;border-radius:12px;gap:3px}.stat-label{font-size:11px}.stat-value{font-size:17px}.stat-card-active-views .stat-value,.stat-card-inactive-views .stat-value{font-size:15px}.stat-desc{font-size:9.5px;line-height:1.2}.products{grid-template-columns:1fr}.form-grid,.filters{grid-template-columns:1fr}.container{padding:14px}.header{align-items:flex-start;flex-direction:column}}
 @media(max-width:600px){.revenue-grid{grid-template-columns:1fr}}
 
 /* =========================================
@@ -657,14 +649,17 @@ body.modal-open{
     <div class="card stat-card-pending"><div class="stat-label">Onay Bekleyen Siparişler</div><div id="statPendingOrders" class="stat-value">0</div></div>
     <div class="card stat-card-cancelled"><div class="stat-label">İptal Edilen Sipariş</div><div id="statCancelled" class="stat-value">0</div></div>
     <div class="card revenue-card stat-card-revenue" onclick="openRevenueModal()" title="Dönemsel ciroyu göster"><div class="stat-label">Tamamlanan Ciro · Detay için tıkla</div><div id="statRevenue" class="stat-value">0 TL</div></div>
-    <div id="statInactiveViewsCard" class="card stat-card-inactive-views status-active">
-      <span id="statInactiveViewsStatusBadge" class="inactive-views-status-badge active">🟢 Aktif</span>
+    <div id="statActiveViewsCard" class="card stat-card-active-views">
+      <div class="stat-label">Sayfa Görüntülenme Sayısı</div>
+      <div id="statActiveViews" class="stat-value">👁️ 0 kişi</div>
+    </div>
+    <div id="statInactiveViewsCard" class="card stat-card-inactive-views hidden">
       <div class="stat-label" style="display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap">
         <span>Deaktif Sürede Görüntüleme</span>
         <button id="btnResetInactiveViews" type="button" class="btn btn-light hidden" style="padding:2px 7px;font-size:11px;border-radius:6px" onclick="resetAdminInactiveViews()">Sıfırla</button>
       </div>
       <div id="statInactiveViews" class="stat-value">👁️ 0 kişi</div>
-      <div id="statInactiveViewsLast" class="muted hidden" style="font-size:11px;text-align:center"></div>
+      <div id="statInactiveViewsLast" class="muted hidden" style="font-size:11px;color:#991b1b;text-align:center"></div>
       <div class="stat-desc">İşletmeniz kapalı olduğu süre boyunca sayfanızı ziyaret eden müşteri sayısını göstermektedir.</div>
     </div>
   </div>
@@ -2712,20 +2707,13 @@ function loadDashboard(){
 
 function updateInactiveViewsStatusUi(){
   const active=tenantLicenseIsActive(platformBusiness);
-  const cardEl=document.getElementById("statInactiveViewsCard");
-  const badgeEl=document.getElementById("statInactiveViewsStatusBadge");
-  const lastEl=document.getElementById("statInactiveViewsLast");
-  if(cardEl){
-    cardEl.classList.toggle("status-active",active);
-    cardEl.classList.toggle("status-inactive",!active);
+  const activeCardEl=document.getElementById("statActiveViewsCard");
+  const inactiveCardEl=document.getElementById("statInactiveViewsCard");
+  if(activeCardEl){
+    activeCardEl.classList.toggle("hidden",!active);
   }
-  if(badgeEl){
-    badgeEl.textContent=active?"🟢 Aktif":"🔴 Deaktif";
-    badgeEl.classList.toggle("active",active);
-    badgeEl.classList.toggle("inactive",!active);
-  }
-  if(lastEl){
-    lastEl.style.color=active?"#166534":"#991b1b";
+  if(inactiveCardEl){
+    inactiveCardEl.classList.toggle("hidden",active);
   }
 }
 
@@ -2733,43 +2721,55 @@ async function loadAdminInactiveViews(){
   updateInactiveViewsStatusUi();
   if(!currentBusinessId)return;
   const bid=String(currentBusinessId).trim();
-  const marker=`__inactive_views__:${bid}`;
-  let maxCount=Math.max(0,parseInt(platformBusiness?.inactive_view_count,10)||0);
-  let lastViewedAt=platformBusiness?.last_inactive_view_at||null;
+  const inactiveMarker=`__inactive_views__:${bid}`;
+  const activeMarker=`__active_views__:${bid}`;
+  let maxInactiveCount=Math.max(0,parseInt(platformBusiness?.inactive_view_count,10)||0);
+  let lastInactiveViewedAt=platformBusiness?.last_inactive_view_at||null;
+  let maxActiveCount=0;
 
   const queries=[
-    supabaseClient.from("business_passwords").select("password,owner_phone,updated_at").eq("email",marker).order("updated_at",{ascending:false}).limit(5)
+    supabaseClient.from("business_passwords").select("email,password,owner_phone,updated_at").in("email",[inactiveMarker,activeMarker]).order("updated_at",{ascending:false}).limit(10)
   ];
   if(platformClient){
-    queries.push(platformClient.from("business_passwords").select("password,owner_phone,updated_at").eq("email",marker).order("updated_at",{ascending:false}).limit(5));
+    queries.push(platformClient.from("business_passwords").select("email,password,owner_phone,updated_at").in("email",[inactiveMarker,activeMarker]).order("updated_at",{ascending:false}).limit(10));
   }
   const results=await Promise.allSettled(queries);
   results.forEach(res=>{
     if(res.status==="fulfilled" && Array.isArray(res.value?.data)){
       res.value.data.forEach(r=>{
         const c=Math.max(0,parseInt(r?.password,10)||0);
-        if(c>=maxCount){
-          maxCount=c;
-          if(r?.owner_phone)lastViewedAt=r.owner_phone;
+        if(r?.email===inactiveMarker){
+          if(c>=maxInactiveCount){
+            maxInactiveCount=c;
+            if(r?.owner_phone)lastInactiveViewedAt=r.owner_phone;
+          }
+        }else if(r?.email===activeMarker){
+          if(c>=maxActiveCount){
+            maxActiveCount=c;
+          }
         }
       });
     }
   });
 
+  const activeValEl=document.getElementById("statActiveViews");
   const valEl=document.getElementById("statInactiveViews");
   const lastEl=document.getElementById("statInactiveViewsLast");
   const resetBtn=document.getElementById("btnResetInactiveViews");
 
+  if(activeValEl){
+    activeValEl.textContent=`👁️ ${maxActiveCount.toLocaleString("tr-TR")} kişi`;
+  }
   if(valEl){
-    valEl.textContent=`👁️ ${maxCount.toLocaleString("tr-TR")} kişi`;
+    valEl.textContent=`👁️ ${maxInactiveCount.toLocaleString("tr-TR")} kişi`;
   }
   if(resetBtn){
-    resetBtn.classList.toggle("hidden",!(maxCount>0));
+    resetBtn.classList.toggle("hidden",!(maxInactiveCount>0));
   }
   if(lastEl){
-    if(maxCount>0 && lastViewedAt){
-      const d=new Date(lastViewedAt);
-      const formatted=Number.isNaN(d.getTime())?String(lastViewedAt):d.toLocaleString("tr-TR");
+    if(maxInactiveCount>0 && lastInactiveViewedAt){
+      const d=new Date(lastInactiveViewedAt);
+      const formatted=Number.isNaN(d.getTime())?String(lastInactiveViewedAt):d.toLocaleString("tr-TR");
       lastEl.textContent=`Son ziyaret: ${formatted}`;
       lastEl.classList.remove("hidden");
     }else{
@@ -5147,6 +5147,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"product_questions",filter:businessFilter},async()=>{await loadAdminProductQuestions();})
     .on("postgres_changes",{event:"*",schema:"public",table:"business_passwords",filter:`email=eq.__review_mod__:${currentBusinessId}`},async()=>{await loadAdminReviewModeration();})
     .on("postgres_changes",{event:"*",schema:"public",table:"business_passwords",filter:`email=eq.__inactive_views__:${currentBusinessId}`},async()=>{await loadAdminInactiveViews();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"business_passwords",filter:`email=eq.__active_views__:${currentBusinessId}`},async()=>{await loadAdminInactiveViews();})
     .on("postgres_changes",{event:"*",schema:"public",table:"reviews",filter:businessFilter},async()=>{await loadAdminReviewModeration();})
     .on("postgres_changes",{event:"*",schema:"public",table:"product_reviews",filter:businessFilter},async()=>{await loadAdminReviewModeration();})
     .on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:businessFilter},async()=>{await loadAdminOrders();loadDashboard();})

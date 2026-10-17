@@ -4684,10 +4684,11 @@ body{
 
     let inactiveViewTrackedForBusinessId = null;
     let inactiveViewResetCheckedForBusinessId = null;
+    let activeViewTrackedForBusinessId = null;
 
-    async function syncInactiveCounterOnClient(client, businessId, mode = "increment") {
+    async function syncInactiveCounterOnClient(client, businessId, mode = "increment", prefix = "__inactive_views__") {
         if (!client || !businessId) return;
-        const markerEmail = `__inactive_views__:${String(businessId).trim()}`;
+        const markerEmail = `${prefix}:${String(businessId).trim()}`;
         const nowIso = new Date().toISOString();
         try {
             const { data: rows, error: selErr } = await client
@@ -4726,7 +4727,7 @@ body{
                     });
             }
         } catch (err) {
-            console.warn("Deaktif görüntüleme sayacı güncellenemedi:", err);
+            console.warn("Görüntüleme sayacı güncellenemedi:", err);
         }
     }
 
@@ -4743,8 +4744,19 @@ body{
         } catch {}
 
         await Promise.allSettled([
-            syncInactiveCounterOnClient(platformClient, bid, "increment"),
-            syncInactiveCounterOnClient(supabaseClient, bid, "increment")
+            syncInactiveCounterOnClient(platformClient, bid, "increment", "__inactive_views__"),
+            syncInactiveCounterOnClient(supabaseClient, bid, "increment", "__inactive_views__")
+        ]);
+    }
+
+    async function trackActiveBusinessPageView(businessId) {
+        const bid = String(businessId || "").trim();
+        if (!bid || activeViewTrackedForBusinessId === bid) return;
+        activeViewTrackedForBusinessId = bid;
+
+        await Promise.allSettled([
+            syncInactiveCounterOnClient(platformClient, bid, "increment", "__active_views__"),
+            syncInactiveCounterOnClient(supabaseClient, bid, "increment", "__active_views__")
         ]);
     }
 
@@ -4761,8 +4773,8 @@ body{
         } catch {}
 
         await Promise.allSettled([
-            syncInactiveCounterOnClient(platformClient, bid, "reset"),
-            syncInactiveCounterOnClient(supabaseClient, bid, "reset")
+            syncInactiveCounterOnClient(platformClient, bid, "reset", "__inactive_views__"),
+            syncInactiveCounterOnClient(supabaseClient, bid, "reset", "__inactive_views__")
         ]);
     }
 
@@ -4828,6 +4840,7 @@ body{
             banner.textContent = "";
             if (platformBusiness.business_id) {
                 resetInactiveBusinessPageViewIfActive(platformBusiness.business_id);
+                trackActiveBusinessPageView(platformBusiness.business_id);
             }
         }
     }
