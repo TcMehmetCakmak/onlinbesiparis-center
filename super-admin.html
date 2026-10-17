@@ -338,7 +338,7 @@
   <section id="supportTab" class="hidden"><div class="card"><div class="header"><div><h2>Destek Talepleri</h2><div class="muted">İşletme adminlerinin açtığı hata ve geliştirme talepleri.</div></div></div><div id="supportTicketList"></div></div></section>
 </div>
 
-<div id="createModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCreateBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div><div class="header"><h2>Yeni İşletme</h2></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Mehmet Çakmak"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Çakmak Center"></div><div><label>Slug</label><input id="newSlug" placeholder="cakmak-center"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div><div><label>İşletme tipi</label><select id="newBusinessType" required><option value="ecommerce" selected>E-ticaret</option><option value="food">Yemek</option></select></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
+<div id="createModal" class="modal hidden"><div class="modal-card"><div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeCreateBusiness()" aria-label="Modalı kapat" title="Kapat">×</button></div><div class="header"><h2>Yeni İşletme</h2></div><div class="form-grid"><div><label>İşletme sahibi</label><input id="newOwner" placeholder="Mehmet Çakmak"></div><div><label>Dükkan adı</label><input id="newShop" placeholder="Çakmak Center"></div><div><label>Slug</label><input id="newSlug" placeholder="cakmak-center"></div><div><label>İlk lisans (ay)</label><input id="newMonths" type="number" min="1" value="1"></div><div><label>Tenant Project Ref</label><input id="newProjectRef" placeholder="opsiyonel"></div><div><label>İşletme tipi</label><select id="newBusinessType" required><option value="ecommerce" selected>E-ticaret</option><option value="food">Yemek</option></select></div><div style="grid-column:1 / -1"><label>Abonelik paketi</label><select id="newPackageTier" required><option value="1" selected>🌱 Başlangıç paketi (20 Ürün - 1.000 TL)</option><option value="2">🚀 Pro paketi (100 Ürün - 2.000 TL)</option><option value="3">💎 Premium paketi (250 Ürün - 3.000 TL)</option><option value="4">👑 Elite paketi (500 Ürün - 5.000 TL)</option><option value="5">🔥 Ultimate paketi (1000 Ürün - 8.000 TL)</option></select></div></div><div class="actions" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="createBusiness()">İşletmeyi Oluştur</button></div></div></div>
 
 
 <div id="editBusinessModal" class="modal hidden">
@@ -359,6 +359,16 @@
         <select id="editEnabled">
           <option value="true">Aktif</option>
           <option value="false">Deaktif</option>
+        </select>
+      </div>
+      <div style="grid-column:1 / -1">
+        <label>Abonelik paketi</label>
+        <select id="editPackageTier">
+          <option value="1">🌱 Başlangıç paketi (20 Ürün - 1.000 TL)</option>
+          <option value="2">🚀 Pro paketi (100 Ürün - 2.000 TL)</option>
+          <option value="3">💎 Premium paketi (250 Ürün - 3.000 TL)</option>
+          <option value="4">👑 Elite paketi (500 Ürün - 5.000 TL)</option>
+          <option value="5">🔥 Ultimate paketi (1000 Ürün - 8.000 TL)</option>
         </select>
       </div>
     </div>
@@ -479,13 +489,6 @@ function calculateBusinessEarnings(b){
     approvedReqs.forEach(r=>{
       transitions.push({time:r.time,tier:r.toTier});
     });
-  }else if(sub&&currentTier!==1&&(sub.updated_at||sub.created_at)){
-    const subTime=new Date(sub.updated_at||sub.created_at).getTime();
-    if(Number.isFinite(subTime)&&Number.isFinite(startMs)&&subTime>startMs){
-      transitions.push({time:subTime,tier:currentTier});
-    }else{
-      initialTier=currentTier;
-    }
   }else{
     initialTier=currentTier;
   }
@@ -1049,11 +1052,21 @@ function franchiseClass(s){return s==='pending'?'pending':s==='contacted'?'revie
 function renderFranchiseRequests(){
   const el=document.getElementById('franchiseList'); if(!el)return;
   if(!franchiseRequests.length){el.innerHTML='<div class="empty">Bayilik talebi yok.</div>';return}
-  el.innerHTML=franchiseRequests.map(r=>`<div class="request">
+  el.innerHTML=franchiseRequests.map(r=>{
+    const tier=Math.min(5,Math.max(1,Number(r.package_tier)||1));
+    const pkgIcon=PACKAGE_ICONS[tier]||'📦';
+    const pkgLabel=r.package_name||PACKAGE_NAMES[tier]||('Tier '+tier);
+    return `<div class="request">
     <div class="business-head"><div><strong>${esc(r.customer_name)}</strong><div class="muted">${dateTimeTR(r.created_at)} · ${esc(r.business_name||r.business_slug||'Genel')}</div></div><span class="badge ${franchiseClass(r.status)}">${franchiseLabel(r.status)}</span></div>
-    <div style="margin-top:10px;line-height:1.7"><div><strong>Telefon:</strong> <a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></div>${r.email?`<div><strong>E-posta:</strong> ${esc(r.email)}</div>`:''}${r.note?`<div><strong>Not:</strong> ${esc(r.note)}</div>`:''}</div>
+    <div style="margin-top:10px;line-height:1.7">
+      <div><strong>Telefon:</strong> <a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></div>
+      ${r.email?`<div><strong>E-posta:</strong> ${esc(r.email)}</div>`:''}
+      <div style="margin:6px 0"><div class="business-package-box pkg-tier-${tier}" style="margin:0"><span class="pkg-icon">${pkgIcon}</span><span><strong>Seçilen Paket:</strong> ${esc(pkgLabel)}</span></div></div>
+      ${r.note?`<div><strong>Not:</strong> ${esc(r.note)}</div>`:''}
+    </div>
     <div class="actions" style="margin-top:12px">${r.status==='pending'?`<button class="btn btn-primary" onclick="setFranchiseStatus(${r.id},'contacted')">İletişime Geçildi</button>`:''}${r.status!=='completed'?`<button class="btn btn-success" onclick="setFranchiseStatus(${r.id},'completed')">Tamamlandı</button>`:''}${r.status!=='rejected'&&r.status!=='completed'?`<button class="btn btn-danger" onclick="setFranchiseStatus(${r.id},'rejected')">Reddet</button>`:''}</div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
 }
 async function setFranchiseStatus(id,status){
   const {error}=await db.rpc('super_admin_set_franchise_status',{p_id:id,p_status:status});
@@ -1146,9 +1159,56 @@ async function editSupportResolutionNote(id){
 }
 
 function showTab(n,b){document.getElementById('businessesTab').classList.toggle('hidden',n!=='businesses');document.getElementById('requestsTab').classList.toggle('hidden',n!=='requests');document.getElementById('supportTab').classList.toggle('hidden',n!=='support');document.getElementById('franchiseTab').classList.toggle('hidden',n!=='franchise');document.getElementById('packagesTab').classList.toggle('hidden',n!=='packages');if(n==='support')loadSupportTickets();if(n==='franchise')loadFranchiseRequests();if(n==='packages')loadPackageRequests();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active')}
-function openCreateBusiness(){document.getElementById('createModal').classList.remove('hidden')}
+function openCreateBusiness(){
+  const pkgEl=document.getElementById('newPackageTier');
+  if(pkgEl)pkgEl.value='1';
+  document.getElementById('createModal').classList.remove('hidden');
+}
 function closeCreateBusiness(){document.getElementById('createModal').classList.add('hidden')}
-async function createBusiness(){const owner=document.getElementById('newOwner').value.trim(),shop=document.getElementById('newShop').value.trim(),slug=document.getElementById('newSlug').value.trim(),months=Number(document.getElementById('newMonths').value),ref=document.getElementById('newProjectRef').value.trim(),businessType=document.getElementById('newBusinessType').value;if(!businessType){toast('İşletme tipi seçimi zorunludur.');return}const {data,error}=await db.rpc('super_admin_create_business',{p_owner_name:owner,p_shop_name:shop,p_slug:slug,p_initial_months:months,p_tenant_project_ref:ref||null,p_business_type:businessType});if(error){toast(error.message);return}closeCreateBusiness();document.getElementById('createdPublicKey').textContent=data.public_key;document.getElementById('createdToken').textContent=data.business_token;document.getElementById('createdLicenseEnd').textContent=data.license_end_date;document.getElementById('tokenModal').classList.remove('hidden');await loadAll()}
+async function createBusiness(){
+  const owner=document.getElementById('newOwner').value.trim(),
+        shop=document.getElementById('newShop').value.trim(),
+        slug=document.getElementById('newSlug').value.trim(),
+        months=Number(document.getElementById('newMonths').value),
+        ref=document.getElementById('newProjectRef').value.trim(),
+        businessType=document.getElementById('newBusinessType').value,
+        packageTier=Math.min(5,Math.max(1,Number(document.getElementById('newPackageTier')?.value)||1));
+  if(!businessType){toast('İşletme tipi seçimi zorunludur.');return}
+  let {data,error}=await db.rpc('super_admin_create_business',{
+    p_owner_name:owner,
+    p_shop_name:shop,
+    p_slug:slug,
+    p_initial_months:months,
+    p_tenant_project_ref:ref||null,
+    p_business_type:businessType,
+    p_package_tier:packageTier
+  });
+  if(error){
+    const fallback=await db.rpc('super_admin_create_business',{
+      p_owner_name:owner,
+      p_shop_name:shop,
+      p_slug:slug,
+      p_initial_months:months,
+      p_tenant_project_ref:ref||null,
+      p_business_type:businessType
+    });
+    if(fallback.error){toast(fallback.error.message||error.message);return}
+    data=fallback.data;
+  }
+  if(data?.business_id){
+    await db.from('package_subscriptions').upsert({
+      business_id:data.business_id,
+      package_tier:packageTier,
+      updated_at:new Date().toISOString()
+    },{onConflict:'business_id'}).catch(()=>{});
+  }
+  closeCreateBusiness();
+  document.getElementById('createdPublicKey').textContent=data.public_key;
+  document.getElementById('createdToken').textContent=data.business_token;
+  document.getElementById('createdLicenseEnd').textContent=data.license_end_date;
+  document.getElementById('tokenModal').classList.remove('hidden');
+  await loadAll();
+}
 
 function openEditBusiness(id){
   const b=businesses.find(x=>x.id===id);
@@ -1160,6 +1220,8 @@ function openEditBusiness(id){
   document.getElementById('editProjectRef').value=b.tenant_project_ref||'';
   document.getElementById('editBusinessType').value=b.business_type||'ecommerce';
   document.getElementById('editEnabled').value=String(!!b.manual_enabled);
+  const pkgEl=document.getElementById('editPackageTier');
+  if(pkgEl)pkgEl.value=String(getBusinessPackageTier(b));
   document.getElementById('editBusinessModal').classList.remove('hidden');
 }
 function closeEditBusiness(){
@@ -1173,6 +1235,7 @@ async function saveBusinessEdit(){
   const ref=document.getElementById('editProjectRef').value.trim();
   const businessType=document.getElementById('editBusinessType').value;
   const enabled=document.getElementById('editEnabled').value==='true';
+  const packageTier=Math.min(5,Math.max(1,Number(document.getElementById('editPackageTier')?.value)||1));
   if(!owner||!shop||!slug){toast('İşletme sahibi, dükkan adı ve slug zorunludur.');return}
   const {error}=await db.rpc('super_admin_update_business',{
     p_business_id:id,
@@ -1184,6 +1247,11 @@ async function saveBusinessEdit(){
     p_business_type:businessType
   });
   if(error){toast(error.message);return}
+  await db.from('package_subscriptions').upsert({
+    business_id:id,
+    package_tier:packageTier,
+    updated_at:new Date().toISOString()
+  },{onConflict:'business_id'}).catch(()=>{});
   closeEditBusiness();
   if(enabled)await resetBusinessInactiveViews(id,true);
   toast('İşletme güncellendi.');

@@ -10,6 +10,16 @@ Deno.serve(async(req)=>{
   const email=body.email?String(body.email).trim():null;
   const note=body.note?String(body.note).trim():null;
   const slug=body.business_slug?String(body.business_slug).trim().toLowerCase():null;
+  const rawTier=Number(body.package_tier)||1;
+  const package_tier=Math.min(5,Math.max(1,rawTier));
+  const defaultNames:Record<number,string>={
+   1:"Başlangıç paketi (20 Ürün - 1.000 TL)",
+   2:"Pro paketi (100 Ürün - 2.000 TL)",
+   3:"Premium paketi (250 Ürün - 3.000 TL)",
+   4:"Elite paketi (500 Ürün - 5.000 TL)",
+   5:"Ultimate paketi (1000 Ürün - 8.000 TL)"
+  };
+  const package_name=body.package_name?String(body.package_name).trim().slice(0,160):(defaultNames[package_tier]||defaultNames[1]);
   if(customer_name.length<2||customer_name.length>120)throw new Error("Geçersiz ad soyad");
   if(phone.replace(/\D/g,"").length<10||phone.length>30)throw new Error("Geçersiz telefon");
   if(email&&email.length>160)throw new Error("Geçersiz e-posta");
@@ -20,8 +30,8 @@ Deno.serve(async(req)=>{
   const cutoff=new Date(Date.now()-5*60*1000).toISOString();
   const {data:dupe}=await db.from("franchise_requests").select("id").eq("phone",phone).gte("created_at",cutoff).limit(1);
   if(dupe?.length)throw new Error("Bu telefon numarasıyla kısa süre önce bir talep gönderildi.");
-  const {error}=await db.from("franchise_requests").insert({business_id,business_slug:slug,business_name,customer_name,phone,email,note,status:"pending"});
+  const {error}=await db.from("franchise_requests").insert({business_id,business_slug:slug,business_name,customer_name,phone,email,note,package_tier,package_name,status:"pending"});
   if(error)throw error;
-  return new Response(JSON.stringify({ok:true}),{headers:{...cors,"Content-Type":"application/json"}});
+  return new Response(JSON.stringify({ok:true,package_tier,package_name}),{headers:{...cors,"Content-Type":"application/json"}});
  }catch(e){return new Response(JSON.stringify({error:e?.message||"Talep gönderilemedi"}),{status:400,headers:{...cors,"Content-Type":"application/json"}});}
 });

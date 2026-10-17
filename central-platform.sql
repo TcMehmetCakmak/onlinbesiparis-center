@@ -466,3 +466,214 @@ revoke all on function public.super_admin_reset_business(uuid) from public;
 revoke all on function public.super_admin_delete_business(uuid) from public;
 grant execute on function public.super_admin_reset_business(uuid) to authenticated;
 grant execute on function public.super_admin_delete_business(uuid) to authenticated;
+
+-- Bayilik taleplerinde seçilen abonelik paketi alanları
+alter table public.franchise_requests add column if not exists package_tier integer not null default 1;
+alter table public.franchise_requests add column if not exists package_name text;
+
+create or replace function public.submit_franchise_request(
+  p_customer_name text,
+  p_phone text,
+  p_email text default null,
+  p_note text default null,
+  p_business_slug text default null,
+  p_package_tier integer default 1,
+  p_package_name text default null
+)
+returns jsonb
+language plpgsql security definer set search_path=public
+as $$
+declare
+  v_name text := btrim(coalesce(p_customer_name, ''));
+  v_phone text := btrim(coalesce(p_phone, ''));
+  v_email text := nullif(btrim(coalesce(p_email, '')), '');
+  v_note text := nullif(btrim(coalesce(p_note, '')), '');
+  v_slug text := nullif(lower(btrim(coalesce(p_business_slug, ''))), '');
+  v_tier integer := greatest(1, least(5, coalesce(p_package_tier, 1)));
+  v_pkg_name text := nullif(btrim(coalesce(p_package_name, '')), '');
+  v_business_id uuid := null;
+  v_business_name text := null;
+begin
+  if char_length(v_name) < 2 or char_length(v_name) > 120 then
+    raise exception 'Geçersiz ad soyad';
+  end if;
+  if char_length(regexp_replace(v_phone, '\D', '', 'g')) < 10 or char_length(v_phone) > 30 then
+    raise exception 'Geçersiz telefon';
+  end if;
+  if v_email is not null and char_length(v_email) > 160 then
+    raise exception 'Geçersiz e-posta';
+  end if;
+  if v_note is not null and char_length(v_note) > 1500 then
+    raise exception 'Not çok uzun';
+  end if;
+
+  if v_pkg_name is null then
+    v_pkg_name := case v_tier
+      when 1 then 'Başlangıç paketi (20 Ürün - 1.000 TL)'
+      when 2 then 'Pro paketi (100 Ürün - 2.000 TL)'
+      when 3 then 'Premium paketi (250 Ürün - 3.000 TL)'
+      when 4 then 'Elite paketi (500 Ürün - 5.000 TL)'
+      when 5 then 'Ultimate paketi (1000 Ürün - 8.000 TL)'
+      else 'Başlangıç paketi (20 Ürün - 1.000 TL)'
+    end;
+  end if;
+
+  if v_slug is not null then
+    select id, shop_name into v_business_id, v_business_name
+      from public.businesses
+     where lower(btrim(slug)) = v_slug
+     limit 1;
+  end if;
+
+  if exists (
+    select 1 from public.franchise_requests
+     where phone = v_phone
+       and created_at >= (now() - interval '5 minutes')
+  ) then
+    raise exception 'Bu telefon numarasıyla kısa süre önce bir talep gönderildi.';
+  end if;
+
+  insert into public.franchise_requests (
+    business_id,
+    business_slug,
+    business_name,
+    customer_name,
+    phone,
+    email,
+    note,
+    package_tier,
+    package_name,
+    status
+  ) values (
+    v_business_id,
+    v_slug,
+    v_business_name,
+    v_name,
+    v_phone,
+    v_email,
+    v_note,
+    v_tier,
+    v_pkg_name,
+    'pending'
+  );
+
+  return jsonb_build_object('ok', true, 'package_tier', v_tier, 'package_name', v_pkg_name);
+end;
+$$;
+
+grant execute on function public.submit_franchise_request(text, text, text, text, text, integer, text) to anon, authenticated;
+
+-- İşletme eklerken seçilen abonelik paketini de kaydetme
+create or replace function public.super_admin_create_business(
+  p_owner_name text,
+  p_shop_name text,
+  p_slug text,
+  p_initial_months integer default 1,
+  p_tenant_project_ref text default null,
+  p_business_type text default 'ecommerce',
+  p_package_tier integer default 1
+)
+returns jsonb
+language plpgsql security definer set search_path=public,extensions
+as $$
+declare
+  v_id uuid;
+  v_public_key uuid;
+  v_token text := encode(gen_random_bytes(32), 'hex');
+  v_start date := current_date;
+  v_end date;
+  v_tier integer := greatest(1, least(5, coalesce(p_package_tier, 1)));
+begin
+  if not public.is_super_admin() then
+    raise exception 'Yetkisiz işlem.';
+  end if;
+  if btrim(coalesce(p_owner_name, '')) = '' then
+    raise exception 'İşletme sahibi gerekli.';
+  end if;
+  if btrim(coalesce(p_shop_name, '')) = '' then
+    raise exception 'Dükkan adı gerekli.';
+  end if;
+  if btrim(coalesce(p_slug, '')) = '' then
+    raise exception 'Slug gerekli.';
+  end if;
+  if coalesce(p_initial_months, 0) < 1 then
+    raise exception 'Başlangıç lisansı en az 1 ay olmalı.';
+  end if;
+  if coalesce(p_business_type, '') not in ('ecommerce', 'food') then
+    raise exception 'İşletme tipi seçimi zorunludur.';
+  end if;
+  if exists(select 1 from public.businesses where lower(btrim(shop_name)) = lower(btrim(p_shop_name))) then
+    raise exception 'Bu dükkan adı daha önce kullanılmış.';
+  end if;
+  if exists(select 1 from public.businesses where lower(btrim(slug)) = lower(btrim(p_slug))) then
+    raise exception 'Bu slug daha önce kullanılmış.';
+  end if;
+
+  v_end := (v_start + make_interval(months => p_initial_months))::date;
+
+  insert into public.businesses(
+    owner_name,
+    shop_name,
+    slug,
+    tenant_project_ref,
+    business_type,
+    license_start_date,
+    license_end_date,
+    total_license_months,
+    api_token_hash
+  )
+  values(
+    btrim(p_owner_name),
+    btrim(p_shop_name),
+    lower(btrim(p_slug)),
+    nullif(btrim(coalesce(p_tenant_project_ref, '')), ''),
+    p_business_type,
+    v_start,
+    v_end,
+    p_initial_months,
+    encode(extensions.digest(v_token, 'sha256'), 'hex')
+  )
+  returning id, public_key into v_id, v_public_key;
+
+  insert into public.business_license_history(
+    business_id,
+    months_added,
+    previous_end_date,
+    new_end_date,
+    changed_by
+  )
+  values(
+    v_id,
+    p_initial_months,
+    null,
+    v_end,
+    auth.uid()
+  );
+
+  insert into public.package_subscriptions(
+    business_id,
+    package_tier,
+    updated_at
+  )
+  values(
+    v_id,
+    v_tier,
+    now()
+  )
+  on conflict (business_id) do update
+  set package_tier = excluded.package_tier,
+      updated_at = now();
+
+  return jsonb_build_object(
+    'business_id', v_id,
+    'public_key', v_public_key,
+    'business_token', v_token,
+    'license_end_date', v_end,
+    'business_type', p_business_type,
+    'package_tier', v_tier
+  );
+end;
+$$;
+
+revoke all on function public.super_admin_create_business(text, text, text, integer, text, text, integer) from public;
+grant execute on function public.super_admin_create_business(text, text, text, integer, text, text, integer) to authenticated;

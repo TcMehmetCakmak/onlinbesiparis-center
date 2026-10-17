@@ -1604,6 +1604,102 @@
             box-shadow: 0 8px 20px #1f7a4d3d;
         }
 
+        .franchise-package-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .franchise-package-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 2px solid #e2e8f0;
+            background: #ffffff;
+            cursor: pointer;
+            text-align: left;
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+            user-select: none;
+        }
+
+        .franchise-package-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.09);
+        }
+
+        .franchise-package-card.pkg-tier-1 {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-color: #cbd5e1;
+        }
+        .franchise-package-card.pkg-tier-2 {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #93c5fd;
+        }
+        .franchise-package-card.pkg-tier-3 {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border-color: #c4b5fd;
+        }
+        .franchise-package-card.pkg-tier-4 {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-color: #fcd34d;
+        }
+        .franchise-package-card.pkg-tier-5 {
+            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+            border-color: #fda4af;
+        }
+
+        .franchise-package-card.selected {
+            border-color: #16803a !important;
+            box-shadow: 0 0 0 3px rgba(22, 128, 58, 0.18), 0 8px 20px rgba(22, 128, 58, 0.15);
+        }
+
+        .franchise-package-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            transition: background .15s ease, color .15s ease;
+        }
+
+        .franchise-package-card.selected .franchise-package-check {
+            background: #16803a;
+            color: #ffffff;
+        }
+
+        .franchise-package-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            padding-right: 26px;
+        }
+
+        .franchise-package-limit {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .franchise-package-price {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1d4ed8;
+            margin-top: 2px;
+        }
+
         body.franchise-page-open {
             overflow: hidden !important;
         }
@@ -1616,6 +1712,19 @@
 
             .franchise-form-card {
                 padding: 16px;
+            }
+
+            .franchise-package-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .franchise-package-card {
+                padding: 10px 11px;
+            }
+
+            .franchise-package-title {
+                font-size: 13.5px;
             }
 
             .franchise-actions {
@@ -3382,6 +3491,41 @@ body{
 
       <label>E-posta (opsiyonel)</label>
       <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
+
+      <label>Abonelik Paketi Seçin</label>
+      <input id="franchisePackageTier" type="hidden" value="1">
+      <div id="franchisePackageGrid" class="franchise-package-grid">
+        <div class="franchise-package-card pkg-tier-1 selected" data-tier="1" onclick="selectFranchisePackage(1)">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">🌱 Başlangıç Paketi</div>
+          <div class="franchise-package-limit">Maksimum 20 Ürün</div>
+          <div class="franchise-package-price">1.000 TL / Ay</div>
+        </div>
+        <div class="franchise-package-card pkg-tier-2" data-tier="2" onclick="selectFranchisePackage(2)">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">🚀 Pro Paketi</div>
+          <div class="franchise-package-limit">Maksimum 100 Ürün</div>
+          <div class="franchise-package-price">2.000 TL / Ay</div>
+        </div>
+        <div class="franchise-package-card pkg-tier-3" data-tier="3" onclick="selectFranchisePackage(3)">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">💎 Premium Paketi</div>
+          <div class="franchise-package-limit">Maksimum 250 Ürün</div>
+          <div class="franchise-package-price">3.000 TL / Ay</div>
+        </div>
+        <div class="franchise-package-card pkg-tier-4" data-tier="4" onclick="selectFranchisePackage(4)">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">👑 Elite Paketi</div>
+          <div class="franchise-package-limit">Maksimum 500 Ürün</div>
+          <div class="franchise-package-price">5.000 TL / Ay</div>
+        </div>
+        <div class="franchise-package-card pkg-tier-5" data-tier="5" onclick="selectFranchisePackage(5)">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">🔥 Ultimate Paketi</div>
+          <div class="franchise-package-limit">Maksimum 1000 Ürün</div>
+          <div class="franchise-package-price">8.000 TL / Ay</div>
+        </div>
+      </div>
 
       <label>Not (opsiyonel)</label>
       <textarea id="franchiseNote" maxlength="1500" placeholder="Bayilik hakkında eklemek istediğiniz bilgi"></textarea>
@@ -9726,6 +9870,24 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     let franchisePageScrollY = 0;
 
+    const FRANCHISE_PACKAGES = {
+        1: "Başlangıç paketi (20 Ürün - 1.000 TL)",
+        2: "Pro paketi (100 Ürün - 2.000 TL)",
+        3: "Premium paketi (250 Ürün - 3.000 TL)",
+        4: "Elite paketi (500 Ürün - 5.000 TL)",
+        5: "Ultimate paketi (1000 Ürün - 8.000 TL)"
+    };
+
+    function selectFranchisePackage(tier){
+        const normalizedTier = Math.min(5, Math.max(1, Number(tier) || 1));
+        const input = document.getElementById("franchisePackageTier");
+        if(input) input.value = String(normalizedTier);
+        document.querySelectorAll("#franchisePackageGrid .franchise-package-card").forEach(card => {
+            const cardTier = Number(card.getAttribute("data-tier")) || 0;
+            card.classList.toggle("selected", cardTier === normalizedTier);
+        });
+    }
+
     function openFranchisePage(){
         const existingName =
             document.getElementById("customerName")?.value?.trim() || "";
@@ -9733,6 +9895,9 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         if(existingName && !document.getElementById("franchiseName")?.value){
             document.getElementById("franchiseName").value = existingName;
         }
+
+        const currentTier = Number(document.getElementById("franchisePackageTier")?.value) || 1;
+        selectFranchisePackage(currentTier);
 
         franchisePageScrollY = window.scrollY || window.pageYOffset || 0;
 
@@ -9757,33 +9922,49 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         const phone=document.getElementById("franchisePhone").value.trim();
         const email=document.getElementById("franchiseEmail").value.trim();
         const note=document.getElementById("franchiseNote").value.trim();
+        const packageTier=Math.min(5,Math.max(1,Number(document.getElementById("franchisePackageTier")?.value)||1));
+        const packageName=FRANCHISE_PACKAGES[packageTier]||FRANCHISE_PACKAGES[1];
 
         if(name.length<2){alert("Lütfen ad soyad bilgisi girin.");return;}
         if(phone.replace(/\D/g,"").length<10){alert("Lütfen geçerli bir telefon numarası girin.");return;}
         if(!platformClient){alert("Bayilik talebi servisine ulaşılamıyor.");return;}
 
         try{
-            const {data,error}=await platformClient.functions.invoke("franchise-request",{
-                body:{
-                    business_id: platformBusiness?.business_id || null,
-                    business_slug: TENANT_SLUG || null,
-                    business_name: platformBusiness?.shop_name || appSettings?.shop_name || null,
-                    customer_name:name,
-                    phone,
-                    email:email||null,
-                    note:note||null
-                }
+            const {error:rpcError}=await platformClient.rpc("submit_franchise_request",{
+                p_customer_name:name,
+                p_phone:phone,
+                p_email:email||null,
+                p_note:note||null,
+                p_business_slug:TENANT_SLUG||null,
+                p_package_tier:packageTier,
+                p_package_name:packageName
             });
-            if(error) throw error;
+            if(rpcError){
+                const {error}=await platformClient.functions.invoke("franchise-request",{
+                    body:{
+                        business_id: platformBusiness?.business_id || null,
+                        business_slug: TENANT_SLUG || null,
+                        business_name: platformBusiness?.shop_name || appSettings?.shop_name || null,
+                        customer_name:name,
+                        phone,
+                        email:email||null,
+                        note:note||null,
+                        package_tier:packageTier,
+                        package_name:packageName
+                    }
+                });
+                if(error) throw error;
+            }
             closeFranchisePage();
             document.getElementById("franchiseName").value="";
             document.getElementById("franchisePhone").value="";
             document.getElementById("franchiseEmail").value="";
             document.getElementById("franchiseNote").value="";
+            selectFranchisePackage(1);
             alert("Bayilik talebiniz alınmıştır. Çalışma arkadaşlarımız en kısa sürede sizinle iletişime geçecektir.");
         }catch(e){
             console.error(e);
-            alert("Bayilik talebi gönderilemedi. Lütfen daha sonra tekrar deneyin.");
+            alert(e?.message||"Bayilik talebi gönderilemedi. Lütfen daha sonra tekrar deneyin.");
         }
     }
 
