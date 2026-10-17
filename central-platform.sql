@@ -563,6 +563,15 @@ $$;
 
 grant execute on function public.submit_franchise_request(text, text, text, text, text, integer, text) to anon, authenticated;
 
+-- Gayrimenkul (realestate) ve Galeri (gallery) işletme tipleri desteği
+alter table public.businesses drop constraint if exists businesses_business_type_check;
+alter table public.businesses add constraint businesses_business_type_check
+  check (business_type in ('ecommerce', 'food', 'realestate', 'gallery'));
+
+alter table public.business_public drop constraint if exists business_public_business_type_check;
+alter table public.business_public add constraint business_public_business_type_check
+  check (business_type in ('ecommerce', 'food', 'realestate', 'gallery'));
+
 -- İşletme eklerken seçilen abonelik paketini de kaydetme
 create or replace function public.super_admin_create_business(
   p_owner_name text,
@@ -599,7 +608,7 @@ begin
   if coalesce(p_initial_months, 0) < 1 then
     raise exception 'Başlangıç lisansı en az 1 ay olmalı.';
   end if;
-  if coalesce(p_business_type, '') not in ('ecommerce', 'food') then
+  if coalesce(p_business_type, '') not in ('ecommerce', 'food', 'realestate', 'gallery') then
     raise exception 'İşletme tipi seçimi zorunludur.';
   end if;
   if exists(select 1 from public.businesses where lower(btrim(shop_name)) = lower(btrim(p_shop_name))) then
@@ -675,5 +684,63 @@ begin
 end;
 $$;
 
+create or replace function public.super_admin_update_business(
+  p_business_id uuid,
+  p_owner_name text,
+  p_shop_name text,
+  p_slug text,
+  p_tenant_project_ref text,
+  p_manual_enabled boolean,
+  p_business_type text
+)
+returns jsonb
+language plpgsql security definer set search_path=public
+as $$
+declare
+  v_row public.businesses%rowtype;
+begin
+  if not public.is_super_admin() then
+    raise exception 'Yetkisiz işlem.';
+  end if;
+  if btrim(coalesce(p_owner_name, '')) = '' or btrim(coalesce(p_shop_name, '')) = '' or btrim(coalesce(p_slug, '')) = '' then
+    raise exception 'İşletme sahibi, dükkan adı ve slug zorunludur.';
+  end if;
+  if coalesce(p_business_type, '') not in ('ecommerce', 'food', 'realestate', 'gallery') then
+    raise exception 'Geçerli bir işletme tipi seçiniz.';
+  end if;
+  if exists(select 1 from public.businesses where id <> p_business_id and lower(btrim(shop_name)) = lower(btrim(p_shop_name))) then
+    raise exception 'Bu dükkan adı başka bir işletmede kullanılıyor.';
+  end if;
+  if exists(select 1 from public.businesses where id <> p_business_id and lower(btrim(slug)) = lower(btrim(p_slug))) then
+    raise exception 'Bu slug başka bir işletmede kullanılıyor.';
+  end if;
+
+  update public.businesses
+     set owner_name = btrim(p_owner_name),
+         shop_name = btrim(p_shop_name),
+         slug = lower(btrim(p_slug)),
+         tenant_project_ref = nullif(btrim(coalesce(p_tenant_project_ref, '')), ''),
+         manual_enabled = coalesce(p_manual_enabled, false),
+         business_type = p_business_type
+   where id = p_business_id
+   returning * into v_row;
+
+  if not found then
+    raise exception 'İşletme bulunamadı.';
+  end if;
+
+  return jsonb_build_object(
+    'id', v_row.id,
+    'public_key', v_row.public_key,
+    'shop_name', v_row.shop_name,
+    'slug', v_row.slug,
+    'manual_enabled', v_row.manual_enabled,
+    'business_type', v_row.business_type
+  );
+end;
+$$;
+
 revoke all on function public.super_admin_create_business(text, text, text, integer, text, text, integer) from public;
 grant execute on function public.super_admin_create_business(text, text, text, integer, text, text, integer) to authenticated;
+revoke all on function public.super_admin_update_business(uuid, text, text, text, text, boolean, text) from public;
+grant execute on function public.super_admin_update_business(uuid, text, text, text, text, boolean, text) to authenticated;

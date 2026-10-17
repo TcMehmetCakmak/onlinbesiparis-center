@@ -4922,6 +4922,70 @@ body{
         ]);
     }
 
+    function isListingBusinessType(type) {
+        const t = String(type || "").toLowerCase();
+        return t === "realestate" || t === "gallery";
+    }
+
+    function currentBusinessIsListing() {
+        return isListingBusinessType(platformBusiness?.business_type);
+    }
+
+    async function resolveBusinessOwnerWhatsAppPhone(businessId) {
+        if (TENANT_SLUG && appSettings?.phone) {
+            const normalized = normalizeCustomerPhone(appSettings.phone);
+            if (normalized) return normalized;
+        }
+        const bid = String(businessId || currentBusinessId || platformBusiness?.business_id || "").trim();
+        if (!bid) return "";
+        try {
+            const { data: settingsRow } = await supabaseClient
+                .from("app_settings")
+                .select("phone")
+                .eq("business_id", bid)
+                .maybeSingle();
+            if (settingsRow?.phone) {
+                const normalized = normalizeCustomerPhone(settingsRow.phone);
+                if (normalized) return normalized;
+            }
+        } catch {}
+        for (const client of [supabaseClient, platformClient]) {
+            if (!client) continue;
+            try {
+                const { data: pwdRows } = await client
+                    .from("business_passwords")
+                    .select("email,owner_phone")
+                    .eq("business_id", bid)
+                    .order("updated_at", { ascending: false })
+                    .limit(5);
+                for (const row of (pwdRows || [])) {
+                    if (String(row?.email || "").startsWith("__")) continue;
+                    const normalized = normalizeCustomerPhone(row?.owner_phone);
+                    if (normalized) return normalized;
+                }
+            } catch {}
+        }
+        return "";
+    }
+
+    async function applyForListingWhatsApp(product, selectedVariantId = null) {
+        if (!product) return;
+        const phone = await resolveBusinessOwnerWhatsAppPhone(product.business_id);
+        if (!phone) {
+            alert("İşletmenin WhatsApp / telefon numarası henüz tanımlanmamış.");
+            return;
+        }
+        const variantObj = selectedVariantId
+            ? (product.variants || []).find(v => String(v.id) === String(selectedVariantId))
+            : null;
+        const productTitle = variantObj?.variant_name
+            ? `${product.name} (${variantObj.variant_name})`
+            : String(product.name || "ilan").trim();
+        const message = `Merhaba, "${productTitle}" ürünü ile ilgileniyorum. Detayları konuşabilir miyiz?`;
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+    }
+
     function renderLicenseState() {
         const banner = document.getElementById("licenseBanner");
         const orderItemsCard = document.getElementById("orderItemsCard");
@@ -4947,10 +5011,21 @@ body{
         platformBusinessActive = licenseIsActive(platformBusiness);
         renderInstagramProfileLink();
         const inactive = !platformBusinessActive;
+        const isListing = currentBusinessIsListing();
+
+        const headingEl = document.querySelector("#orderItemsCard .order-heading-row h2");
+        if (headingEl) {
+            headingEl.textContent = isListing ? "İlanlar" : "Ürünler";
+        }
+        const searchInputEl = document.getElementById("productSearchInput");
+        if (searchInputEl) {
+            searchInputEl.placeholder = isListing ? "🔎 İlan adına göre ara..." : "🔎 Ürün adına göre ara...";
+            searchInputEl.setAttribute("aria-label", isListing ? "İlan adına göre ara" : "Ürün adına göre ara");
+        }
 
         orderItemsCard?.classList.toggle("hidden", inactive);
-        customerInfoCard?.classList.toggle("hidden", inactive);
-        cartOpenButton?.classList.toggle("hidden", inactive);
+        customerInfoCard?.classList.toggle("hidden", inactive || isListing);
+        cartOpenButton?.classList.toggle("hidden", inactive || isListing);
         if (typeof window.renderAddressButton === "function") {
             window.renderAddressButton();
         } else {
@@ -5667,16 +5742,24 @@ body{
                 addButton.className = "product-add-button";
                 addButton.id = `add-cart-${product.id}`;
 
-                const qty = getItemQuantity(product.id);
-                addButton.textContent = qty > 0
-                    ? `Sepette (${qty})`
-                    : "Sepete Ekle";
+                if (currentBusinessIsListing()) {
+                    addButton.textContent = "📲 İlana Başvur";
+                    addButton.onclick = (event) => {
+                        event.stopPropagation();
+                        applyForListingWhatsApp(product);
+                    };
+                } else {
+                    const qty = getItemQuantity(product.id);
+                    addButton.textContent = qty > 0
+                        ? `Sepette (${qty})`
+                        : "Sepete Ekle";
 
-                if (qty > 0) {
-                    addButton.classList.add("added");
+                    if (qty > 0) {
+                        addButton.classList.add("added");
+                    }
+
+                    addButton.onclick = () => product.product_type === 'SIZE' ? openProductDetail(product.id) : addProductToCart(product.id);
                 }
-
-                addButton.onclick = () => product.product_type === 'SIZE' ? openProductDetail(product.id) : addProductToCart(product.id);
 
                 row.appendChild(left);
                 if(String(platformBusiness?.business_type||"ecommerce").toLowerCase()!=="food") {
@@ -6003,6 +6086,7 @@ body{
     }
 
     function updateProductAddButton(productId) {
+        if (currentBusinessIsListing()) return;
         const button =
             document.getElementById(`add-cart-${productId}`);
 
@@ -6117,6 +6201,7 @@ body{
     let cartPageSavedScrollY = 0;
 
     function openCartPage() {
+        if (currentBusinessIsListing()) return;
         cartPageSavedScrollY =
             window.scrollY || window.pageYOffset || 0;
 
@@ -9669,11 +9754,19 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             viewBtn.type = "button";
             viewBtn.className = "product-add-button";
             viewBtn.style.marginTop = "10px";
-            viewBtn.textContent = "Ürünü İncele";
-            viewBtn.onclick = (e) => {
-                e.stopPropagation();
-                openRootProductDetail(product.id);
-            };
+            if (isListingBusinessType(product.business_type)) {
+                viewBtn.textContent = "📲 İlana Başvur";
+                viewBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    applyForListingWhatsApp(product);
+                };
+            } else {
+                viewBtn.textContent = "Ürünü İncele";
+                viewBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openRootProductDetail(product.id);
+                };
+            }
             row.appendChild(viewBtn);
 
             list.appendChild(row);
@@ -10671,7 +10764,16 @@ function openProductDetail(productId){
  }
  loadProductQuestionsV1(product.id,false);
 
- if (!TENANT_SLUG) {
+ const isListingProduct = isListingBusinessType(product.business_type || platformBusiness?.business_type);
+
+ if (isListingProduct) {
+   if (ecommerceAddButton) {
+     ecommerceAddButton.textContent = "📲 İlana Başvur";
+     ecommerceAddButton.onclick = () => {
+       applyForListingWhatsApp(product, detailSelectedVariant);
+     };
+   }
+ } else if (!TENANT_SLUG) {
    const redirectLabel = `🏪 ${product.business_name || "İşletme"} Sayfasına Git ve Sepete Ekle`;
    if (foodAddButton) {
      foodAddButton.textContent = "🏪 İşletmeye Git";

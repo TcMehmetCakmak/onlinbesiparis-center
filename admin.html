@@ -1295,11 +1295,17 @@ const platformClient = window.PLATFORM_CONFIG?.url && window.PLATFORM_CONFIG?.ke
   : null;
 
 const SUBSCRIPTION_PACKAGES = [
-  { tier: 1, limit: 20, name: "Başlangıç", price: "1.000 TL" },
-  { tier: 2, limit: 100, name: "Pro", price: "2.000 TL" },
-  { tier: 3, limit: 250, name: "Premium", price: "3.000 TL" },
-  { tier: 4, limit: 500, name: "Elite", price: "5.000 TL" },
-  { tier: 5, limit: 1000, name: "Ultimate", price: "8.000 TL" }
+  { tier: 1, limit: 20, name: "Başlangıç", price: "1.000 TL", unit: "Ürün" },
+  { tier: 2, limit: 100, name: "Pro", price: "2.000 TL", unit: "Ürün" },
+  { tier: 3, limit: 250, name: "Premium", price: "3.000 TL", unit: "Ürün" },
+  { tier: 4, limit: 500, name: "Elite", price: "5.000 TL", unit: "Ürün" },
+  { tier: 5, limit: 1000, name: "Ultimate", price: "8.000 TL", unit: "Ürün" }
+];
+const LISTING_SUBSCRIPTION_PACKAGES = [
+  { tier: 1, limit: 7, name: "Başlangıç", price: "1.000 TL", unit: "İlan" },
+  { tier: 2, limit: 18, name: "Pro", price: "2.000 TL", unit: "İlan" },
+  { tier: 3, limit: 35, name: "Premium", price: "3.000 TL", unit: "İlan" },
+  { tier: 4, limit: 50, name: "Elite", price: "5.000 TL", unit: "İlan" }
 ];
 let currentPackageTier = 1;
 
@@ -1347,31 +1353,64 @@ function isFoodBusiness(){
   return platformBusiness?.business_type === "food";
 }
 
+function isRealEstateBusiness(){
+  return platformBusiness?.business_type === "realestate";
+}
+
+function isGalleryBusiness(){
+  return platformBusiness?.business_type === "gallery";
+}
+
+function isListingBusiness(){
+  return isRealEstateBusiness() || isGalleryBusiness();
+}
+
+function getMaxProductImages(){
+  return isListingBusiness() ? 25 : 5;
+}
+
+function getSubscriptionPackages(){
+  return isListingBusiness() ? LISTING_SUBSCRIPTION_PACKAGES : SUBSCRIPTION_PACKAGES;
+}
+
 function businessTypeAdminLabel(){
-  return isFoodBusiness() ? "Yemek" : "E-Ticaret";
+  if(isFoodBusiness()) return "Yemek";
+  if(isRealEstateBusiness()) return "Gayrimenkul";
+  if(isGalleryBusiness()) return "Galeri";
+  return "E-Ticaret";
 }
 
 function applyAdminBusinessTypeUi(){
   const food=isFoodBusiness();
+  const listing=isListingBusiness();
+  const maxImages=getMaxProductImages();
   const tab=document.getElementById("productsTabButton");
   const title=document.getElementById("productManagementTitle");
   const help=document.getElementById("productManagementHelp");
   const add=document.getElementById("newProductButton");
+  const galleryHelp=document.querySelector(".product-gallery-help");
 
   if(tab){
     const badgeHtml = tab.querySelector('#productTotalCount')?.outerHTML || '<span id="productTotalCount" class="badge badge-active hidden" style="margin-left:5px">0</span>';
-    tab.innerHTML = (food ? "🍽️ Menü" : "📦 Ürünler") + " " + badgeHtml;
+    const tabLabel = food ? "🍽️ Menü" : isRealEstateBusiness() ? "🏠 İlanlar" : isGalleryBusiness() ? "🚗 İlanlar" : "📦 Ürünler";
+    tab.innerHTML = tabLabel + " " + badgeHtml;
   }
-  if(title)title.textContent=food ? "Menü Yönetimi" : "Ürün Yönetimi";
+  if(title)title.textContent=food ? "Menü Yönetimi" : listing ? "İlan Yönetimi" : "Ürün Yönetimi";
   if(help){
     help.textContent=food
       ? "Yemek ürünlerini, fotoğrafları ve ekmek / yan ürün / içecek seçeneklerini yönetin."
-      : "Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.";
+      : listing
+        ? "İlanları, fiyatları ve ilan fotoğraflarını (en fazla 25 adet) yönetin."
+        : "Ad, fiyat ve ürün fotoğrafları doğrudan müşteri sayfasına yansır.";
   }
-  if(add)add.textContent=food ? "+ Menü Ürünü Ekle" : "+ Yeni Ürün";
+  if(add)add.textContent=food ? "+ Menü Ürünü Ekle" : listing ? "+ Yeni İlan" : "+ Yeni Ürün";
+  if(galleryHelp){
+    galleryHelp.textContent=`En fazla ${maxImages} fotoğraf. Yüklemeden önce fotoğraflar tarayıcıda maksimum 1600 px'e küçültülür ve WebP formatına dönüştürülür. Ana fotoğraf müşteri ${listing ? "ilan" : "ürün"} listesinde gösterilir.`;
+  }
 
   const foodArea=document.getElementById("foodProductOptionsArea");
   foodArea?.classList.toggle("hidden",!food);
+  renderSubscriptionCard();
 }
 function toast(message) {
   const el=document.getElementById("toast");
@@ -2193,7 +2232,9 @@ function renderSubscriptionCard() {
   updateSubscriptionBadge();
   const el = document.getElementById("subscriptionPackageGrid");
   if(!el) return;
-  el.innerHTML = SUBSCRIPTION_PACKAGES.map(pkg => {
+  const packages = getSubscriptionPackages();
+  const unitLabel = isListingBusiness() ? "İlan" : "Ürün";
+  el.innerHTML = packages.map(pkg => {
     const isActive = pkg.tier === currentPackageTier;
     const isPending = pendingPackageRequest && pkg.tier === pendingPackageRequest.requested_tier;
     let btnHtml = '';
@@ -2212,7 +2253,7 @@ function renderSubscriptionCard() {
     return `<div class="card ${isActive ? 'active-package' : ''}" style="position:relative; border: 2px solid ${isActive ? '#16803a' : '#e6e9ee'}; cursor:${isActive || (isPending && (!pendingPackageRequest.question || pendingPackageRequest.answer)) ? 'default' : 'pointer'}" ${isActive || isPending ? '' : `onclick="requestPackage(${pkg.tier})"`}>
       ${badgeHtml}
       <div style="font-weight:bold; font-size:16px; margin-bottom:8px">${pkg.name}</div>
-      <div class="muted" style="margin-bottom:8px">Maksimum ${pkg.limit} Ürün</div>
+      <div class="muted" style="margin-bottom:8px">Maksimum ${pkg.limit} ${unitLabel}</div>
       <div style="font-weight:bold; color:#2563eb">${pkg.price}</div>
       ${btnHtml}
     </div>`;
@@ -3080,7 +3121,8 @@ function getAdminProductPriceText(product){
 function updateSubscriptionBadge() {
   const badge = document.getElementById("subscriptionUsageBadge");
   if (!badge) return;
-  const currentPkg = SUBSCRIPTION_PACKAGES.find(x => x.tier === currentPackageTier) || SUBSCRIPTION_PACKAGES[0];
+  const packages = getSubscriptionPackages();
+  const currentPkg = packages.find(x => x.tier === currentPackageTier) || packages[0];
   const limit = currentPkg.limit;
   const count = products.length;
   let pct = (count / limit) * 100;
@@ -3107,7 +3149,7 @@ function renderProducts(){
   }
   const el=document.getElementById("productList");
   if(!products.length){
-    el.innerHTML='<div class="empty">Henüz ürün yok.</div>';
+    el.innerHTML=`<div class="empty">Henüz ${isListingBusiness() ? "ilan" : "ürün"} yok.</div>`;
     return;
   }
 
@@ -3315,9 +3357,10 @@ function getFoodProductOptionsPayload(){
 
 function openProductModal(p=null){
   if (!p) {
-      const currentPkg = SUBSCRIPTION_PACKAGES.find(x => x.tier === currentPackageTier) || SUBSCRIPTION_PACKAGES[0];
+      const packages = getSubscriptionPackages();
+      const currentPkg = packages.find(x => x.tier === currentPackageTier) || packages[0];
       if (products.length >= currentPkg.limit) {
-          alert(`Paket hakkınız doldu (Maksimum ${currentPkg.limit} ürün). Lütfen Genel Ayarlar'dan paketinizi yükseltiniz.`);
+          alert(`Paket hakkınız doldu (Maksimum ${currentPkg.limit} ${isListingBusiness() ? "ilan" : "ürün"}). Lütfen Genel Ayarlar'dan paketinizi yükseltiniz.`);
           return;
       }
   }
@@ -3351,7 +3394,7 @@ function openProductModal(p=null){
 
   document.getElementById("productActive").checked=p?.active!==false;
   document.getElementById("productImageFiles").value="";
-  document.getElementById("modalTitle").textContent=p?"Ürünü Düzenle":"Yeni Ürün";
+  document.getElementById("modalTitle").textContent=p?(isListingBusiness()?"İlanı Düzenle":"Ürünü Düzenle"):(isListingBusiness()?"Yeni İlan":"Yeni Ürün");
   setProductGalleryStatus("");
   renderProductImageEditor();
   toggleProductVariantFields();
@@ -3414,9 +3457,10 @@ function handleProductImageSelection(fileList){
   const files=Array.from(fileList||[]);
   if(!files.length)return;
 
-  const available=5-currentProductImages.length-pendingProductFiles.length;
+  const maxImages=getMaxProductImages();
+  const available=maxImages-currentProductImages.length-pendingProductFiles.length;
   if(available<=0){
-    setProductGalleryStatus("Bu ürün için en fazla 5 fotoğraf eklenebilir.",true);
+    setProductGalleryStatus(`Bu ${isListingBusiness() ? "ilan" : "ürün"} için en fazla ${maxImages} fotoğraf eklenebilir.`,true);
     document.getElementById("productImageFiles").value="";
     return;
   }
@@ -3443,7 +3487,7 @@ function handleProductImageSelection(fileList){
   renderProductImageEditor();
 
   if(rejected>0){
-    setProductGalleryStatus(`${rejected} dosya eklenmedi. En fazla 5 adet JPG/PNG/WebP kullanılabilir.`,true);
+    setProductGalleryStatus(`${rejected} dosya eklenmedi. En fazla ${maxImages} adet JPG/PNG/WebP kullanılabilir.`,true);
   }else{
     setProductGalleryStatus(`${pendingProductFiles.length} yeni fotoğraf kaydedilmeyi bekliyor.`);
   }
