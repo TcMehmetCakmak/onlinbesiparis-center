@@ -1439,7 +1439,11 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
       await primaryTenant.storage.from('advertisement-images').remove(Array.from(adStoragePaths)).catch(()=>{});
     }
     if(medStoragePaths.size){
-      await primaryTenant.storage.from('medicine-prescriptions').remove(Array.from(medStoragePaths)).catch(()=>{});
+      const medArr=Array.from(medStoragePaths);
+      await Promise.allSettled([
+        primaryTenant.storage.from('prescription-requests').remove(medArr),
+        primaryTenant.storage.from('medicine-prescriptions').remove(medArr)
+      ]);
     }
   }
 
@@ -1457,6 +1461,7 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
       c.from('product_reviews').delete().eq('business_id',bid),
       c.from('advertisement_images').delete().eq('business_id',bid),
       c.from('notifications').delete().eq('business_id',bid),
+      c.from('order_verifications').delete().eq('business_id',bid),
       c.from('orders').delete().eq('business_id',bid),
       c.from('reviews').delete().eq('business_id',bid),
       c.from('medicine_requests').delete().eq('business_id',bid)

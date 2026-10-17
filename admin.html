@@ -2875,6 +2875,8 @@ function renderMedicineRequests(){
   }
 
   if(!medicineRequests.length){
+    closeMedicinePrescriptionPhotoModal();
+    closeMedicineInformModal();
     list.innerHTML='<div class="empty" style="grid-column:1/-1">Henüz ilaç talebi yok.</div>';
     return;
   }
@@ -5154,7 +5156,7 @@ function subscribeAdminRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:businessFilter},async()=>{await loadAdminNotifications();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisements",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
     .on("postgres_changes",{event:"*",schema:"public",table:"advertisement_images",filter:businessFilter},async()=>{await loadAdminAdvertisements();})
-    // .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{await loadAdminSettings();})
+    .on("postgres_changes",{event:"*",schema:"public",table:"app_settings",filter:businessFilter},async()=>{if(!adminIsTyping())await loadAdminSettings();await refreshAdminLiveData(true);})
     .on("postgres_changes",{event:"*",schema:"public",table:"medicine_requests",filter:businessFilter},async()=>{await loadMedicineRequests();})
     .subscribe(status=>{
       console.log("Admin Realtime bağlantısı:",status);
