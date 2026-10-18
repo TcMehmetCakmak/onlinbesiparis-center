@@ -3034,7 +3034,7 @@ async function resetAdminInactiveViews(){
   const marker=`__inactive_views__:${bid}`;
   try{
     if(platformClient){
-      platformClient.rpc("reset_inactive_business_views",{p_business_id:bid}).catch(()=>{});
+      await platformClient.rpc("reset_inactive_business_views",{p_business_id:bid});
     }
   }catch{}
   const tasks=[

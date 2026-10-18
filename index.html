@@ -4883,7 +4883,7 @@ body{
 
         try {
             if (platformClient) {
-                platformClient.rpc("record_inactive_business_view", { p_business_id: bid }).catch(() => {});
+                await platformClient.rpc("record_inactive_business_view", { p_business_id: bid });
             }
         } catch {}
 
@@ -4912,7 +4912,7 @@ body{
 
         try {
             if (platformClient) {
-                platformClient.rpc("reset_inactive_business_views", { p_business_id: bid }).catch(() => {});
+                await platformClient.rpc("reset_inactive_business_views", { p_business_id: bid });
             }
         } catch {}
 
@@ -4984,13 +4984,19 @@ body{
         const bid = String(product.business_id || currentBusinessId || platformBusiness?.business_id || "").trim();
         const priceVal = Number(variantObj?.price ?? product.price ?? 0) || 0;
         if (bid) {
-            supabaseClient.rpc("create_listing_application_order", {
-                p_business_id: bid,
-                p_product_id: String(product.id || ""),
-                p_product_name: String(product.name || "İlan"),
-                p_variant_name: variantObj?.variant_name || null,
-                p_price: priceVal
-            }).catch(err => console.warn("Başvuru kaydı oluşturulamadı:", err));
+            try {
+                supabaseClient.rpc("create_listing_application_order", {
+                    p_business_id: bid,
+                    p_product_id: String(product.id || ""),
+                    p_product_name: String(product.name || "İlan"),
+                    p_variant_name: variantObj?.variant_name || null,
+                    p_price: priceVal
+                }).then(({ error }) => {
+                    if (error) console.warn("Başvuru kaydı oluşturulamadı:", error);
+                });
+            } catch (err) {
+                console.warn("Başvuru kaydı oluşturulamadı:", err);
+            }
         }
         const message = `Merhaba, "${productTitle}" ürünü ile ilgileniyorum. Detayları konuşabilir miyiz?`;
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;

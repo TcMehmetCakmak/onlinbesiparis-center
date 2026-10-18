@@ -641,7 +641,7 @@ async function resetBusinessInactiveViews(businessId,silent=false){
   if(!bid)return;
   const marker=`__inactive_views__:${bid}`;
   try{
-    db.rpc('reset_inactive_business_views',{p_business_id:bid}).catch(()=>{});
+    await db.rpc('reset_inactive_business_views',{p_business_id:bid});
   }catch{}
   const tasks=[
     db.from('business_passwords').update({password:'0',owner_phone:null}).eq('email',marker)
@@ -1228,11 +1228,13 @@ async function createBusiness(){
     data=fallback.data;
   }
   if(data?.business_id){
-    await db.from('package_subscriptions').upsert({
-      business_id:data.business_id,
-      package_tier:packageTier,
-      updated_at:new Date().toISOString()
-    },{onConflict:'business_id'}).catch(()=>{});
+    try{
+      await db.from('package_subscriptions').upsert({
+        business_id:data.business_id,
+        package_tier:packageTier,
+        updated_at:new Date().toISOString()
+      },{onConflict:'business_id'});
+    }catch{}
   }
   closeCreateBusiness();
   document.getElementById('createdPublicKey').textContent=data.public_key;
@@ -1279,11 +1281,13 @@ async function saveBusinessEdit(){
     p_business_type:businessType
   });
   if(error){toast(error.message);return}
-  await db.from('package_subscriptions').upsert({
-    business_id:id,
-    package_tier:packageTier,
-    updated_at:new Date().toISOString()
-  },{onConflict:'business_id'}).catch(()=>{});
+  try{
+    await db.from('package_subscriptions').upsert({
+      business_id:id,
+      package_tier:packageTier,
+      updated_at:new Date().toISOString()
+    },{onConflict:'business_id'});
+  }catch{}
   closeEditBusiness();
   if(enabled)await resetBusinessInactiveViews(id,true);
   toast('İşletme güncellendi.');
@@ -1425,13 +1429,14 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
   };
 
   if(primaryTenant){
-    setStatus('İşletmeye ait fotoğraflar ve ürünler taranıyor...');
-    const [rpcMediaRes,prodRes,prodImgRes,adImgRes,medRes]=await Promise.allSettled([
+    setStatus('İşletmeye ait fotoğraflar, siparişler ve ürünler taranıyor...');
+    const [rpcMediaRes,prodRes,prodImgRes,adImgRes,medRes,orderRes]=await Promise.allSettled([
       primaryTenant.rpc('tenant_collect_business_media_urls',{p_business_id:bid}),
       primaryTenant.from('products').select('id').eq('business_id',bid),
       primaryTenant.from('product_images').select('id,storage_path').eq('business_id',bid),
       primaryTenant.from('advertisement_images').select('id,storage_path').eq('business_id',bid),
-      primaryTenant.from('medicine_requests').select('id,storage_path').eq('business_id',bid)
+      primaryTenant.from('medicine_requests').select('id,storage_path').eq('business_id',bid),
+      primaryTenant.from('orders').select('id,items').eq('business_id',bid)
     ]);
 
     if(rpcMediaRes.status==='fulfilled'&&rpcMediaRes.value?.data){
@@ -1439,6 +1444,7 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
       (Array.isArray(md.product_paths)?md.product_paths:[]).forEach(p=>addPathToCollections(p,productStoragePaths));
       (Array.isArray(md.ad_paths)?md.ad_paths:[]).forEach(p=>addPathToCollections(p,adStoragePaths));
       (Array.isArray(md.medicine_paths)?md.medicine_paths:[]).forEach(p=>addPathToCollections(p,medStoragePaths));
+      (Array.isArray(md.order_paths)?md.order_paths:[]).forEach(p=>addPathToCollections(p,productStoragePaths));
     }
     if(prodRes.status==='fulfilled'&&Array.isArray(prodRes.value?.data)){
       prodRes.value.data.forEach(p=>{if(p?.id)productIds.add(p.id)});
@@ -1451,6 +1457,17 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
     }
     if(medRes.status==='fulfilled'&&Array.isArray(medRes.value?.data)){
       medRes.value.data.forEach(row=>addPathToCollections(row?.storage_path,medStoragePaths));
+    }
+    if(orderRes.status==='fulfilled'&&Array.isArray(orderRes.value?.data)){
+      orderRes.value.data.forEach(ord=>{
+        const items=Array.isArray(ord?.items)?ord.items:[];
+        items.forEach(it=>{
+          if(it?.productId)productIds.add(it.productId);
+          [it?.storage_path,it?.image_url,it?.main_image,it?.image,it?.photo_url].forEach(p=>{
+            if(p)addPathToCollections(p,productStoragePaths);
+          });
+        });
+      });
     }
   }
 
@@ -1465,10 +1482,10 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
 
   if(primaryTenant){
     if(productStoragePaths.size){
-      await primaryTenant.storage.from('product-images').remove(Array.from(productStoragePaths)).catch(()=>{});
+      try{await primaryTenant.storage.from('product-images').remove(Array.from(productStoragePaths));}catch{}
     }
     if(adStoragePaths.size){
-      await primaryTenant.storage.from('advertisement-images').remove(Array.from(adStoragePaths)).catch(()=>{});
+      try{await primaryTenant.storage.from('advertisement-images').remove(Array.from(adStoragePaths));}catch{}
     }
     if(medStoragePaths.size){
       const medArr=Array.from(medStoragePaths);
@@ -1479,11 +1496,13 @@ async function purgeBusinessMediaAndOperationalData(b,setStatus){
     }
   }
 
-  setStatus('Ürünler, siparişler, reklamlar, bildirimler ve yorumlar temizleniyor...');
+  setStatus('Ürünler, siparişler, sipariş fotoğrafları, reklamlar, bildirimler ve yorumlar temizleniyor...');
   for(const c of clients){
     try{
-      await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:false}).catch(()=>{});
-    }catch{}
+      await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:false});
+    }catch(e){
+      console.warn('tenant_purge_business_data uyarısı:',e);
+    }
     if(productIds.size){
       await c.from('product_variants').delete().in('product_id',Array.from(productIds));
     }
@@ -1584,7 +1603,7 @@ async function executeDeleteOrResetBusiness(mode){
 
       deleteOrResetBusy=false;
       closeDeleteOrResetBusinessModal(true);
-      toast(`"${b.shop_name}" işletmesi sıfırlandı (ürünsüz ve resimsiz ilk açılış haline getirildi).`);
+      toast(`"${b.shop_name}" işletmesi sıfırlandı (tüm siparişler, ürünler ve fotoğraflar silinerek ilk açılış haline getirildi).`);
       await refreshSuperAdminData();
       return;
     }
@@ -1593,8 +1612,10 @@ async function executeDeleteOrResetBusiness(mode){
       setStatus('İşletmenin tüm Supabase kayıtları siliniyor...');
       for(const c of clients){
         try{
-          await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:true}).catch(()=>{});
-        }catch{}
+          await c.rpc('tenant_purge_business_data',{p_business_id:bid,p_delete_all:true});
+        }catch(e){
+          console.warn('tenant_purge_business_data delete uyarısı:',e);
+        }
         await Promise.allSettled([
           c.from('app_settings').delete().eq('business_id',bid),
           c.from('profiles').delete().eq('business_id',bid),
