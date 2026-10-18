@@ -1092,12 +1092,22 @@ function renderFranchiseRequests(){
   el.innerHTML=franchiseRequests.map(r=>{
     const tier=Math.min(5,Math.max(1,Number(r.package_tier)||1));
     const pkgIcon=PACKAGE_ICONS[tier]||'📦';
-    const pkgLabel=r.package_name||PACKAGE_NAMES[tier]||('Tier '+tier);
+    const rawPkgName=String(r.package_name||'').trim();
+    let requestedTypeLabel='';
+    let pkgLabel=rawPkgName||PACKAGE_NAMES[tier]||('Tier '+tier);
+    if(rawPkgName.includes(' · ')){
+      const parts=rawPkgName.split(' · ');
+      requestedTypeLabel=parts[0].trim();
+      pkgLabel=parts.slice(1).join(' · ').trim()||pkgLabel;
+    }else if(r.business_type){
+      requestedTypeLabel=getBusinessTypeLabel(r.business_type);
+    }
     return `<div class="request">
     <div class="business-head"><div><strong>${esc(r.customer_name)}</strong><div class="muted">${dateTimeTR(r.created_at)} · ${esc(r.business_name||r.business_slug||'Genel')}</div></div><span class="badge ${franchiseClass(r.status)}">${franchiseLabel(r.status)}</span></div>
     <div style="margin-top:10px;line-height:1.7">
       <div><strong>Telefon:</strong> <a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></div>
       ${r.email?`<div><strong>E-posta:</strong> ${esc(r.email)}</div>`:''}
+      ${requestedTypeLabel?`<div><strong>İşletme Tipi:</strong> ${esc(requestedTypeLabel)}</div>`:''}
       <div style="margin:6px 0"><div class="business-package-box pkg-tier-${tier}" style="margin:0"><span class="pkg-icon">${pkgIcon}</span><span><strong>Seçilen Paket:</strong> ${esc(pkgLabel)}</span></div></div>
       ${r.note?`<div><strong>Not:</strong> ${esc(r.note)}</div>`:''}
     </div>

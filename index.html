@@ -1550,6 +1550,7 @@
         }
 
         .franchise-form-card input,
+        .franchise-form-card select,
         .franchise-form-card textarea {
             width: 100%;
             box-sizing: border-box;
@@ -3492,7 +3493,15 @@ body{
       <label>E-posta (opsiyonel)</label>
       <input id="franchiseEmail" type="email" maxlength="160" placeholder="ornek@email.com">
 
-      <label>Abonelik Paketi Seçin</label>
+      <label for="franchiseBusinessType">İşletme Tipi Seçin</label>
+      <select id="franchiseBusinessType" onchange="handleFranchiseBusinessTypeChange()">
+        <option value="ecommerce" selected>🛍️ E-Ticaret</option>
+        <option value="food">🍽️ Yemek</option>
+        <option value="realestate">🏠 Gayrimenkul (Emlak)</option>
+        <option value="gallery">🚗 Galeri</option>
+      </select>
+
+      <label id="franchisePackageSectionLabel">E-Ticaret Abonelik Paketi Seçin</label>
       <input id="franchisePackageTier" type="hidden" value="1">
       <div id="franchisePackageGrid" class="franchise-package-grid">
         <div class="franchise-package-card pkg-tier-1 selected" data-tier="1" onclick="selectFranchisePackage(1)">
@@ -10200,17 +10209,86 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 
     let franchisePageScrollY = 0;
+    let franchiseTypeManuallySelected = false;
 
-    const FRANCHISE_PACKAGES = {
-        1: "Başlangıç paketi (20 Ürün - 1.000 TL)",
-        2: "Pro paketi (100 Ürün - 2.000 TL)",
-        3: "Premium paketi (250 Ürün - 3.000 TL)",
-        4: "Elite paketi (500 Ürün - 5.000 TL)",
-        5: "Ultimate paketi (1000 Ürün - 8.000 TL)"
-    };
+    const FRANCHISE_STANDARD_PACKAGES = [
+        { tier: 1, icon: "🌱", title: "Başlangıç Paketi", limitText: "Maksimum 20 Ürün", priceText: "1.000 TL / Ay", summary: "Başlangıç paketi (20 Ürün - 1.000 TL)" },
+        { tier: 2, icon: "🚀", title: "Pro Paketi", limitText: "Maksimum 100 Ürün", priceText: "2.000 TL / Ay", summary: "Pro paketi (100 Ürün - 2.000 TL)" },
+        { tier: 3, icon: "💎", title: "Premium Paketi", limitText: "Maksimum 250 Ürün", priceText: "3.000 TL / Ay", summary: "Premium paketi (250 Ürün - 3.000 TL)" },
+        { tier: 4, icon: "👑", title: "Elite Paketi", limitText: "Maksimum 500 Ürün", priceText: "5.000 TL / Ay", summary: "Elite paketi (500 Ürün - 5.000 TL)" },
+        { tier: 5, icon: "🔥", title: "Ultimate Paketi", limitText: "Maksimum 1000 Ürün", priceText: "8.000 TL / Ay", summary: "Ultimate paketi (1000 Ürün - 8.000 TL)" }
+    ];
+
+    const FRANCHISE_LISTING_PACKAGES = [
+        { tier: 1, icon: "🌱", title: "Başlangıç Paketi", limitText: "Maksimum 7 İlan", priceText: "1.000 TL / Ay", summary: "Başlangıç paketi (7 İlan - 1.000 TL)" },
+        { tier: 2, icon: "🚀", title: "Pro Paketi", limitText: "Maksimum 18 İlan", priceText: "2.000 TL / Ay", summary: "Pro paketi (18 İlan - 2.000 TL)" },
+        { tier: 3, icon: "💎", title: "Premium Paketi", limitText: "Maksimum 35 İlan", priceText: "3.000 TL / Ay", summary: "Premium paketi (35 İlan - 3.000 TL)" },
+        { tier: 4, icon: "👑", title: "Elite Paketi", limitText: "Maksimum 50 İlan", priceText: "5.000 TL / Ay", summary: "Elite paketi (50 İlan - 5.000 TL)" }
+    ];
+
+    function getSelectedFranchiseBusinessType(){
+        const raw = String(document.getElementById("franchiseBusinessType")?.value || "ecommerce").trim().toLowerCase();
+        if (raw === "food" || raw === "realestate" || raw === "gallery") return raw;
+        return "ecommerce";
+    }
+
+    function getFranchiseBusinessTypeLabel(type){
+        const t = String(type || "").toLowerCase();
+        if (t === "food") return "Yemek";
+        if (t === "realestate") return "Gayrimenkul";
+        if (t === "gallery") return "Galeri";
+        return "E-Ticaret";
+    }
+
+    function getFranchisePackageSectionTitle(type){
+        const t = String(type || "").toLowerCase();
+        if (t === "food") return "Yemek Abonelik Paketi Seçin";
+        if (t === "realestate") return "Gayrimenkul (Emlak) Abonelik Paketi Seçin";
+        if (t === "gallery") return "Galeri Abonelik Paketi Seçin";
+        return "E-Ticaret Abonelik Paketi Seçin";
+    }
+
+    function getFranchisePackagesForType(type){
+        return isListingBusinessType(type) ? FRANCHISE_LISTING_PACKAGES : FRANCHISE_STANDARD_PACKAGES;
+    }
+
+    function renderFranchisePackageGrid(selectedTier = null){
+        const bType = getSelectedFranchiseBusinessType();
+        const packages = getFranchisePackagesForType(bType);
+        const maxTier = packages.length;
+        const input = document.getElementById("franchisePackageTier");
+        const currentTier = selectedTier !== null ? Number(selectedTier) : (Number(input?.value) || 1);
+        const normalizedTier = Math.min(maxTier, Math.max(1, currentTier));
+        if (input) input.value = String(normalizedTier);
+
+        const labelEl = document.getElementById("franchisePackageSectionLabel");
+        if (labelEl) {
+            labelEl.textContent = getFranchisePackageSectionTitle(bType);
+        }
+
+        const gridEl = document.getElementById("franchisePackageGrid");
+        if (!gridEl) return;
+
+        gridEl.innerHTML = packages.map(pkg => `
+        <div class="franchise-package-card pkg-tier-${pkg.tier}${pkg.tier === normalizedTier ? " selected" : ""}" data-tier="${pkg.tier}" onclick="selectFranchisePackage(${pkg.tier})">
+          <div class="franchise-package-check">✓</div>
+          <div class="franchise-package-title">${pkg.icon} ${pkg.title}</div>
+          <div class="franchise-package-limit">${pkg.limitText}</div>
+          <div class="franchise-package-price">${pkg.priceText}</div>
+        </div>`).join("");
+    }
+
+    function handleFranchiseBusinessTypeChange(){
+        franchiseTypeManuallySelected = true;
+        const currentTier = Number(document.getElementById("franchisePackageTier")?.value) || 1;
+        renderFranchisePackageGrid(currentTier);
+    }
 
     function selectFranchisePackage(tier){
-        const normalizedTier = Math.min(5, Math.max(1, Number(tier) || 1));
+        const bType = getSelectedFranchiseBusinessType();
+        const packages = getFranchisePackagesForType(bType);
+        const maxTier = packages.length;
+        const normalizedTier = Math.min(maxTier, Math.max(1, Number(tier) || 1));
         const input = document.getElementById("franchisePackageTier");
         if(input) input.value = String(normalizedTier);
         document.querySelectorAll("#franchisePackageGrid .franchise-package-card").forEach(card => {
@@ -10227,8 +10305,20 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             document.getElementById("franchiseName").value = existingName;
         }
 
+        const typeSelect = document.getElementById("franchiseBusinessType");
+        if (typeSelect && !franchiseTypeManuallySelected) {
+            const defaultType = String(platformBusiness?.business_type || "").toLowerCase();
+            if (["ecommerce", "food", "realestate", "gallery"].includes(defaultType)) {
+                typeSelect.value = defaultType;
+            } else if (!TENANT_SLUG && typeof currentRootCategory === "string" && ["ecommerce", "food", "realestate", "gallery"].includes(currentRootCategory)) {
+                typeSelect.value = currentRootCategory;
+            } else {
+                typeSelect.value = "ecommerce";
+            }
+        }
+
         const currentTier = Number(document.getElementById("franchisePackageTier")?.value) || 1;
-        selectFranchisePackage(currentTier);
+        renderFranchisePackageGrid(currentTier);
 
         franchisePageScrollY = window.scrollY || window.pageYOffset || 0;
 
@@ -10253,8 +10343,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         const phone=document.getElementById("franchisePhone").value.trim();
         const email=document.getElementById("franchiseEmail").value.trim();
         const note=document.getElementById("franchiseNote").value.trim();
-        const packageTier=Math.min(5,Math.max(1,Number(document.getElementById("franchisePackageTier")?.value)||1));
-        const packageName=FRANCHISE_PACKAGES[packageTier]||FRANCHISE_PACKAGES[1];
+        const businessType=getSelectedFranchiseBusinessType();
+        const businessTypeLabel=getFranchiseBusinessTypeLabel(businessType);
+        const packages=getFranchisePackagesForType(businessType);
+        const maxTier=packages.length;
+        const packageTier=Math.min(maxTier,Math.max(1,Number(document.getElementById("franchisePackageTier")?.value)||1));
+        const selectedPkg=packages.find(p=>p.tier===packageTier)||packages[0];
+        const packageName=`${businessTypeLabel} · ${selectedPkg.summary}`;
 
         if(name.length<2){alert("Lütfen ad soyad bilgisi girin.");return;}
         if(phone.replace(/\D/g,"").length<10){alert("Lütfen geçerli bir telefon numarası girin.");return;}
@@ -10276,6 +10371,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                         business_id: platformBusiness?.business_id || null,
                         business_slug: TENANT_SLUG || null,
                         business_name: platformBusiness?.shop_name || appSettings?.shop_name || null,
+                        business_type: businessType,
                         customer_name:name,
                         phone,
                         email:email||null,
@@ -10291,7 +10387,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             document.getElementById("franchisePhone").value="";
             document.getElementById("franchiseEmail").value="";
             document.getElementById("franchiseNote").value="";
-            selectFranchisePackage(1);
+            franchiseTypeManuallySelected = false;
+            renderFranchisePackageGrid(1);
             alert("Bayilik talebiniz alınmıştır. Çalışma arkadaşlarımız en kısa sürede sizinle iletişime geçecektir.");
         }catch(e){
             console.error(e);
