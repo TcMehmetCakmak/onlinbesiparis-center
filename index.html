@@ -9660,6 +9660,9 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
     function navigateToBusinessProduct(product) {
         if (!product || !product.business_slug) return;
+        try {
+            sessionStorage.setItem("pending_open_product_id", String(product.id));
+        } catch {}
         const targetUrl = new URL(`${encodeURIComponent(product.business_slug)}/`, APP_ROOT_URL);
         targetUrl.searchParams.set("product", product.id);
         window.location.href = targetUrl.href;
@@ -9828,19 +9831,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             viewBtn.type = "button";
             viewBtn.className = "product-add-button";
             viewBtn.style.marginTop = "10px";
-            if (isListingBusinessType(product.business_type)) {
-                viewBtn.textContent = "📲 İlana Başvur";
-                viewBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    applyForListingWhatsApp(product);
-                };
-            } else {
-                viewBtn.textContent = "Ürünü İncele";
-                viewBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    openRootProductDetail(product.id);
-                };
-            }
+            viewBtn.textContent = isListingBusinessType(product.business_type)
+                ? "İlanı İncele"
+                : "Ürünü İncele";
+            viewBtn.onclick = (e) => {
+                e.stopPropagation();
+                openRootProductDetail(product.id);
+            };
             row.appendChild(viewBtn);
 
             list.appendChild(row);
@@ -9970,7 +9967,14 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     ========================================= */
 
     async function bootstrapTenantApp() {
-        const targetProductId = new URLSearchParams(window.location.search).get("product");
+        let pendingSessionProductId = null;
+        try {
+            pendingSessionProductId = sessionStorage.getItem("pending_open_product_id");
+            if (pendingSessionProductId) {
+                sessionStorage.removeItem("pending_open_product_id");
+            }
+        } catch {}
+        const targetProductId = new URLSearchParams(window.location.search).get("product") || pendingSessionProductId;
 
         loadOrder();
 
@@ -10963,15 +10967,10 @@ function openProductDetail(productId){
 
  const isListingProduct = isListingBusinessType(product.business_type || platformBusiness?.business_type);
 
- if (isListingProduct) {
-   if (ecommerceAddButton) {
-     ecommerceAddButton.textContent = "📲 İlana Başvur";
-     ecommerceAddButton.onclick = () => {
-       applyForListingWhatsApp(product, detailSelectedVariant);
-     };
-   }
- } else if (!TENANT_SLUG) {
-   const redirectLabel = `🏪 ${product.business_name || "İşletme"} Sayfasına Git ve Sepete Ekle`;
+ if (!TENANT_SLUG) {
+   const redirectLabel = isListingProduct
+     ? "🏪 İşletmeye Git ve İlana Başvur"
+     : `🏪 ${product.business_name || "İşletme"} Sayfasına Git ve Sepete Ekle`;
    if (foodAddButton) {
      foodAddButton.textContent = "🏪 İşletmeye Git";
      foodAddButton.onclick = () => navigateToBusinessProduct(product);
@@ -10979,6 +10978,13 @@ function openProductDetail(productId){
    if (ecommerceAddButton) {
      ecommerceAddButton.textContent = redirectLabel;
      ecommerceAddButton.onclick = () => navigateToBusinessProduct(product);
+   }
+ } else if (isListingProduct) {
+   if (ecommerceAddButton) {
+     ecommerceAddButton.textContent = "📲 İlana Başvur";
+     ecommerceAddButton.onclick = () => {
+       applyForListingWhatsApp(product, detailSelectedVariant);
+     };
    }
  } else {
    if (foodAddButton) {
