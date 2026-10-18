@@ -1926,7 +1926,7 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     let productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details")
+      .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error){
@@ -3370,13 +3370,14 @@ function renderProducts(){
     const priceText=getAdminProductPriceText(p);
     const addressText=String(p.address||"").trim();
     const mapsUrl=String(p.google_maps_url||"").trim();
+    const viewCount=Math.max(0,Number(p.view_count)||0);
 
     return `<div class="product">
       <div class="product-left">
         ${visual}
         <div>
           <strong>${escapeHtml(p.name)}</strong>
-          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf${isFoodBusiness()?` · 🥖 ${(p.bread_options||[]).length} · 🍟 ${(p.side_options||[]).length} · 🥤 ${(p.drink_options||[]).length}`:""}</div>
+          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf · 👁️ ${viewCount.toLocaleString("tr-TR")} görüntülenme${isFoodBusiness()?` · 🥖 ${(p.bread_options||[]).length} · 🍟 ${(p.side_options||[]).length} · 🥤 ${(p.drink_options||[]).length}`:""}</div>
           ${addressText ? `<div class="muted" style="margin-top:3px;font-size:12px">📍 ${escapeHtml(addressText)}${mapsUrl ? ` · <a href="${escapeAttr(mapsUrl)}" target="_blank" rel="noopener noreferrer" style="color:#16803a;font-weight:700;text-decoration:none">Haritada Gör</a>` : ""}</div>` : ""}
         </div>
       </div>

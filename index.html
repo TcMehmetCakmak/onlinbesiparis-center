@@ -5405,7 +5405,7 @@ body{
         try {
             let productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details")
+                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -5745,6 +5745,13 @@ body{
 
                 info.appendChild(name);
                 info.appendChild(price);
+
+                const viewCountEl = document.createElement("div");
+                viewCountEl.className = "product-card-view-count";
+                viewCountEl.setAttribute("data-product-view-count", String(product.id));
+                const viewCountVal = Math.max(0, Number(product.view_count) || 0);
+                viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
+                info.appendChild(viewCountEl);
 
                 if (product.address) {
                     const addrEl = document.createElement("div");
@@ -9770,6 +9777,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             info.appendChild(name);
             info.appendChild(price);
 
+            const viewCountEl = document.createElement("div");
+            viewCountEl.className = "product-card-view-count";
+            viewCountEl.setAttribute("data-product-view-count", String(product.id));
+            const viewCountVal = Math.max(0, Number(product.view_count) || 0);
+            viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
+            info.appendChild(viewCountEl);
+
             if (product.address) {
                 const addrEl = document.createElement("div");
                 addrEl.className = "product-listing-address";
@@ -9859,7 +9873,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             const [productResult, variantResult, imageResult, reviewResult, modResult] = await Promise.all([
                 supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details")
+                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                     .in("business_id", businessIds)
                     .eq("active", true),
                 supabaseClient
@@ -10284,11 +10298,44 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
  .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
  .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{height:42px;min-height:42px;padding:0 6px;font-size:12px}
 }
+.product-card-view-count{
+ display:inline-flex;
+ align-items:center;
+ gap:4px;
+ margin-top:4px;
+ font-size:12px;
+ font-weight:600;
+ color:#64748b;
+}
+#productDetailModal .modal-x-anchor{
+ align-items:center;
+ gap:8px;
+}
+.modal-view-count-badge{
+ pointer-events:auto;
+ height:34px;
+ padding:0 11px;
+ border-radius:999px;
+ background:rgba(255,255,255,.96);
+ color:#1e293b;
+ border:1px solid #e2e8f0;
+ box-shadow:0 4px 16px rgba(0,0,0,.18);
+ font-size:12px;
+ font-weight:700;
+ display:inline-flex;
+ align-items:center;
+ gap:5px;
+ white-space:nowrap;
+ transform:translate(4px,-4px);
+}
 </style>
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
   <div class="product-detail-scroll">
-   <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button></div>
+   <div class="modal-x-anchor">
+    <div id="detailProductViewCountBadge" class="modal-view-count-badge" title="Görüntülenme sayısı">👁️ 0 görüntülenme</div>
+    <button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button>
+   </div>
    <div class="detail-gallery-v15">
 <img id="detailProductImage">
 <button type="button" onclick="changeDetailGallery(-1)">‹</button>
@@ -10680,12 +10727,50 @@ function addFoodProductToCart(product,quantity,selection,variantId=null){
   showCartAddSuccessPopup(product.name);
 }
 
+function updateProductViewCountBadges(productId,count){
+ const safeCount=Math.max(0,Number(count)||0);
+ const formatted=`👁️ ${safeCount.toLocaleString("tr-TR")} görüntülenme`;
+ if(detailProduct && String(detailProduct.id)===String(productId)){
+   const modalBadge=document.getElementById("detailProductViewCountBadge");
+   if(modalBadge){
+     modalBadge.textContent=formatted;
+     modalBadge.title=`${safeCount.toLocaleString("tr-TR")} görüntülenme`;
+   }
+ }
+ document.querySelectorAll(`[data-product-view-count="${CSS.escape(String(productId))}"]`).forEach(el=>{
+   el.textContent=formatted;
+ });
+}
+
+async function recordProductView(product){
+ if(!product || !product.id)return;
+ const nextOptimistic=Math.max(1,(Number(product.view_count)||0)+1);
+ product.view_count=nextOptimistic;
+ updateProductViewCountBadges(product.id,nextOptimistic);
+
+ const bid=String(product.business_id || currentBusinessId || platformBusiness?.business_id || "").trim();
+ if(!bid || !supabaseClient)return;
+ try{
+   const {data,error}=await supabaseClient.rpc("increment_product_view_count",{
+     p_business_id:bid,
+     p_product_id:String(product.id)
+   });
+   if(!error && Number.isFinite(Number(data)) && Number(data)>0){
+     product.view_count=Number(data);
+     updateProductViewCountBadges(product.id,product.view_count);
+   }
+ }catch(err){
+   console.warn("Görüntülenme sayısı güncellenemedi:",err);
+ }
+}
+
 function openProductDetail(productId){
  const product=products.find(p=>String(p.id)===String(productId));
  if(!product)return;
 
  detailProduct=product;
  detailSelectedVariant=null;
+ recordProductView(product);
 
  document.getElementById("detailProductName").textContent=product.name;
  let detailBizBadge = document.getElementById("detailBusinessBadge");
