@@ -5397,12 +5397,21 @@ body{
         if (!currentBusinessId) return;
 
         try {
-            const productResult = await supabaseClient
+            let productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
+
+            if (productResult.error) {
+                productResult = await supabaseClient
+                    .from("products")
+                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+                    .eq("business_id", currentBusinessId)
+                    .eq("active", true)
+                    .order("created_at", { ascending: true });
+            }
 
             if (productResult.error) throw productResult.error;
 
@@ -5730,6 +5739,18 @@ body{
 
                 info.appendChild(name);
                 info.appendChild(price);
+
+                if (product.address) {
+                    const addrEl = document.createElement("div");
+                    addrEl.className = "product-listing-address";
+                    addrEl.style.marginTop = "4px";
+                    addrEl.style.fontSize = "12px";
+                    addrEl.style.fontWeight = "600";
+                    addrEl.style.color = "#2563eb";
+                    addrEl.style.lineHeight = "1.35";
+                    addrEl.textContent = `📍 ${product.address}`;
+                    info.appendChild(addrEl);
+                }
 
                 if(product.detail){
                     const detail = document.createElement("div");
@@ -9743,6 +9764,18 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             info.appendChild(name);
             info.appendChild(price);
 
+            if (product.address) {
+                const addrEl = document.createElement("div");
+                addrEl.className = "product-listing-address";
+                addrEl.style.marginTop = "4px";
+                addrEl.style.fontSize = "12px";
+                addrEl.style.fontWeight = "600";
+                addrEl.style.color = "#2563eb";
+                addrEl.style.lineHeight = "1.35";
+                addrEl.textContent = `📍 ${product.address}`;
+                info.appendChild(addrEl);
+            }
+
             if (product.detail) {
                 const detail = document.createElement("div");
                 detail.className = "product-detail-short";
@@ -9820,7 +9853,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             const [productResult, variantResult, imageResult, reviewResult, modResult] = await Promise.all([
                 supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details")
                     .in("business_id", businessIds)
                     .eq("active", true),
                 supabaseClient
@@ -10692,6 +10725,38 @@ function openProductDetail(productId){
    detailPrice.style.fontWeight="800";
    detailPrice.style.fontSize="20px";
    detailPrice.style.marginTop="10px";
+ }
+
+ let detailAddressBox = document.getElementById("detailListingAddressBox");
+ if (product.address || product.google_maps_url) {
+   if (!detailAddressBox && detailPrice) {
+     detailAddressBox = document.createElement("div");
+     detailAddressBox.id = "detailListingAddressBox";
+     detailAddressBox.style.cssText = "margin-top:10px;padding:10px 12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;font-size:13px;color:#1e3a8a;line-height:1.45;";
+     detailPrice.insertAdjacentElement("afterend", detailAddressBox);
+   }
+   if (detailAddressBox) {
+     detailAddressBox.innerHTML = "";
+     detailAddressBox.style.display = "block";
+     if (product.address) {
+       const addrLine = document.createElement("div");
+       addrLine.style.fontWeight = "600";
+       addrLine.textContent = `📍 Adres: ${product.address}`;
+       detailAddressBox.appendChild(addrLine);
+     }
+     if (product.google_maps_url) {
+       const mapLink = document.createElement("a");
+       mapLink.href = product.google_maps_url;
+       mapLink.target = "_blank";
+       mapLink.rel = "noopener noreferrer";
+       mapLink.style.cssText = "display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#2563eb;font-weight:800;text-decoration:underline;";
+       mapLink.textContent = "🗺️ Konumu Haritada Gör";
+       detailAddressBox.appendChild(mapLink);
+     }
+   }
+ } else if (detailAddressBox) {
+   detailAddressBox.style.display = "none";
+   detailAddressBox.innerHTML = "";
  }
 
  // Ürün modalı açılırken ilk gösterilecek foto ana foto olsun
