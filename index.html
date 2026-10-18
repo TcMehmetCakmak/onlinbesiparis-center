@@ -4830,6 +4830,151 @@ body{
     let inactiveViewResetCheckedForBusinessId = null;
     let activeViewTrackedForBusinessId = null;
 
+    const DEVICE_VISITOR_STORAGE_KEY = "abcsepeti_visitor_id";
+    const DEVICE_VIEWED_ITEMS_STORAGE_KEY = "abcsepeti_viewed_items_v1";
+    const DEVICE_VISITOR_LAST_ACTIVE_KEY = "abcsepeti_visitor_last_active_at";
+    // Hiç aksiyon alınmadan geçen süre (1 saat - Supabase oturum süresi ile uyumlu)
+    const DEVICE_VISITOR_IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+
+    function generateFreshVisitorId() {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+            return "v_" + crypto.randomUUID();
+        }
+        return "v_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 12) + "_" + Math.random().toString(36).slice(2, 12);
+    }
+
+    function isVisitorSessionExpired(lastActiveMs, nowMs) {
+        if (!Number.isFinite(lastActiveMs) || lastActiveMs <= 0) return true;
+        if (nowMs - lastActiveMs >= DEVICE_VISITOR_IDLE_TIMEOUT_MS) return true;
+        const lastDate = new Date(lastActiveMs);
+        const nowDate = new Date(nowMs);
+        if (
+            lastDate.getFullYear() !== nowDate.getFullYear() ||
+            lastDate.getMonth() !== nowDate.getMonth() ||
+            lastDate.getDate() !== nowDate.getDate()
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    function getOrCreateDeviceVisitorId() {
+        const now = Date.now();
+        try {
+            let vid = localStorage.getItem(DEVICE_VISITOR_STORAGE_KEY);
+            const lastActiveRaw = Number(localStorage.getItem(DEVICE_VISITOR_LAST_ACTIVE_KEY) || 0);
+            const expired = !vid || vid.trim().length < 8 || isVisitorSessionExpired(lastActiveRaw, now);
+
+            if (expired) {
+                vid = generateFreshVisitorId();
+                localStorage.setItem(DEVICE_VISITOR_STORAGE_KEY, vid);
+                localStorage.removeItem(DEVICE_VIEWED_ITEMS_STORAGE_KEY);
+                inactiveViewTrackedForBusinessId = null;
+                activeViewTrackedForBusinessId = null;
+            } else {
+                vid = vid.trim();
+            }
+
+            localStorage.setItem(DEVICE_VISITOR_LAST_ACTIVE_KEY, String(now));
+            return vid;
+        } catch {
+            if (
+                !window.__fallbackVisitorId ||
+                isVisitorSessionExpired(Number(window.__fallbackVisitorLastActive || 0), now)
+            ) {
+                window.__fallbackVisitorId = "v_mem_" + now.toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+            }
+            window.__fallbackVisitorLastActive = now;
+            return window.__fallbackVisitorId;
+        }
+    }
+
+    function touchVisitorActivity() {
+        const now = Date.now();
+        try {
+            const lastActiveRaw = Number(localStorage.getItem(DEVICE_VISITOR_LAST_ACTIVE_KEY) || 0);
+            if (lastActiveRaw > 0 && !isVisitorSessionExpired(lastActiveRaw, now)) {
+                localStorage.setItem(DEVICE_VISITOR_LAST_ACTIVE_KEY, String(now));
+            }
+        } catch {}
+    }
+
+    (function bindVisitorActivityListeners() {
+        let lastTouch = 0;
+        const onUserAction = () => {
+            const now = Date.now();
+            if (now - lastTouch < 15000) return;
+            lastTouch = now;
+            touchVisitorActivity();
+        };
+        ["pointerdown", "keydown", "scroll", "touchstart"].forEach(evt => {
+            window.addEventListener(evt, onUserAction, { passive: true });
+        });
+    })();
+
+    function getDeviceViewedMap() {
+        try {
+            getOrCreateDeviceVisitorId();
+            const raw = localStorage.getItem(DEVICE_VIEWED_ITEMS_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+
+    function hasDeviceViewedLocal(scopeKey) {
+        if (!scopeKey) return false;
+        const map = getDeviceViewedMap();
+        return Boolean(map[scopeKey]);
+    }
+
+    function markDeviceViewedLocal(scopeKey) {
+        if (!scopeKey) return;
+        try {
+            const map = getDeviceViewedMap();
+            map[scopeKey] = Date.now();
+            localStorage.setItem(DEVICE_VIEWED_ITEMS_STORAGE_KEY, JSON.stringify(map));
+        } catch {}
+    }
+
+    function clearDeviceViewedLocal(scopeKey) {
+        if (!scopeKey) return;
+        try {
+            const map = getDeviceViewedMap();
+            if (scopeKey in map) {
+                delete map[scopeKey];
+                localStorage.setItem(DEVICE_VIEWED_ITEMS_STORAGE_KEY, JSON.stringify(map));
+            }
+        } catch {}
+    }
+
+    async function shouldCountUniqueBusinessView(businessId, scopeType) {
+        const bid = String(businessId || "").trim();
+        if (!bid) return false;
+        const visitorId = getOrCreateDeviceVisitorId();
+        const localKey = `${scopeType}:${bid}`;
+        if (supabaseClient) {
+            try {
+                const { data, error } = await supabaseClient.rpc("register_unique_business_view", {
+                    p_business_id: bid,
+                    p_scope_type: scopeType,
+                    p_visitor_id: visitorId
+                });
+                if (!error && typeof data === "boolean") {
+                    markDeviceViewedLocal(localKey);
+                    return data;
+                }
+            } catch {}
+        }
+        if (hasDeviceViewedLocal(localKey)) {
+            return false;
+        }
+        markDeviceViewedLocal(localKey);
+        return true;
+    }
+
     async function syncInactiveCounterOnClient(client, businessId, mode = "increment", prefix = "__inactive_views__") {
         if (!client || !businessId) return;
         const markerEmail = `${prefix}:${String(businessId).trim()}`;
@@ -4881,6 +5026,9 @@ body{
         inactiveViewTrackedForBusinessId = bid;
         inactiveViewResetCheckedForBusinessId = null;
 
+        const isFirstUniqueView = await shouldCountUniqueBusinessView(bid, "business_inactive");
+        if (!isFirstUniqueView) return;
+
         try {
             if (platformClient) {
                 await platformClient.rpc("record_inactive_business_view", { p_business_id: bid });
@@ -4898,6 +5046,9 @@ body{
         if (!bid || activeViewTrackedForBusinessId === bid) return;
         activeViewTrackedForBusinessId = bid;
 
+        const isFirstUniqueView = await shouldCountUniqueBusinessView(bid, "business_active");
+        if (!isFirstUniqueView) return;
+
         await Promise.allSettled([
             syncInactiveCounterOnClient(platformClient, bid, "increment", "__active_views__"),
             syncInactiveCounterOnClient(supabaseClient, bid, "increment", "__active_views__")
@@ -4909,10 +5060,19 @@ body{
         if (!bid || inactiveViewResetCheckedForBusinessId === bid) return;
         inactiveViewResetCheckedForBusinessId = bid;
         inactiveViewTrackedForBusinessId = null;
+        clearDeviceViewedLocal(`business_inactive:${bid}`);
 
         try {
             if (platformClient) {
                 await platformClient.rpc("reset_inactive_business_views", { p_business_id: bid });
+            }
+        } catch {}
+        try {
+            if (supabaseClient) {
+                await supabaseClient.rpc("clear_unique_business_views", {
+                    p_business_id: bid,
+                    p_scope_type: "business_inactive"
+                });
             }
         } catch {}
 
@@ -10777,18 +10937,28 @@ function updateProductViewCountBadges(productId,count){
 
 async function recordProductView(product){
  if(!product || !product.id)return;
- const nextOptimistic=Math.max(1,(Number(product.view_count)||0)+1);
- product.view_count=nextOptimistic;
- updateProductViewCountBadges(product.id,nextOptimistic);
-
  const bid=String(product.business_id || currentBusinessId || platformBusiness?.business_id || "").trim();
+ const visitorId=getOrCreateDeviceVisitorId();
+ const localKey=`product:${bid || "global"}:${String(product.id)}`;
+ const alreadyViewedLocally=hasDeviceViewedLocal(localKey);
+
+ if(!alreadyViewedLocally){
+   const nextOptimistic=Math.max(1,(Number(product.view_count)||0)+1);
+   product.view_count=nextOptimistic;
+   updateProductViewCountBadges(product.id,nextOptimistic);
+   markDeviceViewedLocal(localKey);
+ }else{
+   updateProductViewCountBadges(product.id,Math.max(0,Number(product.view_count)||0));
+ }
+
  if(!bid || !supabaseClient)return;
  try{
    const {data,error}=await supabaseClient.rpc("increment_product_view_count",{
      p_business_id:bid,
-     p_product_id:String(product.id)
+     p_product_id:String(product.id),
+     p_visitor_id:visitorId
    });
-   if(!error && Number.isFinite(Number(data)) && Number(data)>0){
+   if(!error && data!==null && data!==undefined && Number.isFinite(Number(data)) && Number(data)>=0){
      product.view_count=Number(data);
      updateProductViewCountBadges(product.id,product.view_count);
    }

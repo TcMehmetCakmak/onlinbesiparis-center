@@ -643,6 +643,11 @@ async function resetBusinessInactiveViews(businessId,silent=false){
   try{
     await db.rpc('reset_inactive_business_views',{p_business_id:bid});
   }catch{}
+  try{
+    if(tenantDb){
+      await tenantDb.rpc('clear_unique_business_views',{p_business_id:bid,p_scope_type:'business_inactive'});
+    }
+  }catch{}
   const tasks=[
     db.from('business_passwords').update({password:'0',owner_phone:null}).eq('email',marker)
   ];

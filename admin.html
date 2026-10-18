@@ -1662,19 +1662,31 @@ async function validateAdminTenant(userId){
   return true;
 }
 
+function resetLocalDeviceVisitorSession(){
+  try{
+    localStorage.removeItem("abcsepeti_visitor_id");
+    localStorage.removeItem("abcsepeti_viewed_items_v1");
+    localStorage.removeItem("abcsepeti_visitor_last_active_at");
+  }catch{}
+}
+
 async function checkSession(){
   try{
     await resolveTenantBusiness();
 
     const {data,error}=await supabaseClient.auth.getSession();
     if(error)throw error;
-    if(!data.session)return;
+    if(!data.session){
+      resetLocalDeviceVisitorSession();
+      return;
+    }
 
     await validateAdminTenant(data.session.user.id);
     showApp();
   }catch(e){
     console.error("Admin oturum kontrolü:",e);
     currentBusinessId=null;
+    resetLocalDeviceVisitorSession();
     await supabaseClient.auth.signOut();
     document.getElementById("loginPage").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
@@ -1805,6 +1817,7 @@ async function login(){
 
     await validateAdminTenant(data.user.id);
     await recordAdminPasswordOnLogin(data.user, password);
+    resetLocalDeviceVisitorSession();
     errorBox.textContent="";
     showApp();
   }catch(e){
@@ -1816,6 +1829,7 @@ async function login(){
 
 async function logout(){
   currentBusinessId=null;
+  resetLocalDeviceVisitorSession();
   await supabaseClient.auth.signOut();
   location.reload();
 }
@@ -3035,6 +3049,11 @@ async function resetAdminInactiveViews(){
   try{
     if(platformClient){
       await platformClient.rpc("reset_inactive_business_views",{p_business_id:bid});
+    }
+  }catch{}
+  try{
+    if(supabaseClient){
+      await supabaseClient.rpc("clear_unique_business_views",{p_business_id:bid,p_scope_type:"business_inactive"});
     }
   }catch{}
   const tasks=[
@@ -6154,6 +6173,7 @@ const adminLiveSyncTimer=setInterval(()=>{
 
 supabaseClient.auth.onAuthStateChange((_event,session)=>{
   if(!session){
+    resetLocalDeviceVisitorSession();
     document.getElementById("loginPage").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
   }
