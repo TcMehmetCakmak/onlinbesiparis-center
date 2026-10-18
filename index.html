@@ -5743,15 +5743,20 @@ body{
                     info.appendChild(star);
                 }
 
-                info.appendChild(name);
-                info.appendChild(price);
+                const nameRow = document.createElement("div");
+                nameRow.className = "product-name-row";
+                nameRow.appendChild(name);
 
-                const viewCountEl = document.createElement("div");
+                const viewCountEl = document.createElement("span");
                 viewCountEl.className = "product-card-view-count";
                 viewCountEl.setAttribute("data-product-view-count", String(product.id));
                 const viewCountVal = Math.max(0, Number(product.view_count) || 0);
-                viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
-                info.appendChild(viewCountEl);
+                viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")}`;
+                viewCountEl.title = `${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
+                nameRow.appendChild(viewCountEl);
+
+                info.appendChild(nameRow);
+                info.appendChild(price);
 
                 if (product.address) {
                     const addrEl = document.createElement("div");
@@ -9774,15 +9779,20 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 ? `${Math.min(...product.variants.map(v => Number(v.price))).toLocaleString("tr-TR")} TL'den başlayan`
                 : `${Number(product.price).toLocaleString("tr-TR")} TL`;
 
-            info.appendChild(name);
-            info.appendChild(price);
+            const nameRow = document.createElement("div");
+            nameRow.className = "product-name-row";
+            nameRow.appendChild(name);
 
-            const viewCountEl = document.createElement("div");
+            const viewCountEl = document.createElement("span");
             viewCountEl.className = "product-card-view-count";
             viewCountEl.setAttribute("data-product-view-count", String(product.id));
             const viewCountVal = Math.max(0, Number(product.view_count) || 0);
-            viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
-            info.appendChild(viewCountEl);
+            viewCountEl.textContent = `👁️ ${viewCountVal.toLocaleString("tr-TR")}`;
+            viewCountEl.title = `${viewCountVal.toLocaleString("tr-TR")} görüntülenme`;
+            nameRow.appendChild(viewCountEl);
+
+            info.appendChild(nameRow);
+            info.appendChild(price);
 
             if (product.address) {
                 const addrEl = document.createElement("div");
@@ -10298,51 +10308,69 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
  .product-detail-card.food-detail-mode>.food-detail-footer .product-review-launch-button,
  .product-detail-card.food-detail-mode>.food-detail-footer #detailAddButton{height:42px;min-height:42px;padding:0 6px;font-size:12px}
 }
+.product-name-row{
+ display:flex;
+ align-items:flex-start;
+ justify-content:space-between;
+ gap:8px;
+ width:100%;
+}
+.product-name-row .product-name{
+ flex:1 1 auto;
+ min-width:0;
+}
 .product-card-view-count{
+ flex:0 0 auto;
  display:inline-flex;
  align-items:center;
  gap:4px;
- margin-top:4px;
  font-size:12px;
- font-weight:600;
+ font-weight:700;
  color:#64748b;
+ white-space:nowrap;
 }
-#productDetailModal .modal-x-anchor{
+.detail-product-title-row{
+ display:flex;
  align-items:center;
- gap:8px;
+ justify-content:space-between;
+ gap:10px;
+ margin-top:8px;
+}
+.detail-product-title-row #detailProductName{
+ margin:0;
+ flex:1 1 auto;
+ min-width:0;
 }
 .modal-view-count-badge{
- pointer-events:auto;
- height:34px;
- padding:0 11px;
+ flex:0 0 auto;
+ height:30px;
+ padding:0 10px;
  border-radius:999px;
- background:rgba(255,255,255,.96);
+ background:#f1f5f9;
  color:#1e293b;
  border:1px solid #e2e8f0;
- box-shadow:0 4px 16px rgba(0,0,0,.18);
- font-size:12px;
+ font-size:13px;
  font-weight:700;
  display:inline-flex;
  align-items:center;
  gap:5px;
  white-space:nowrap;
- transform:translate(4px,-4px);
 }
 </style>
 <div id="productDetailModal" class="product-detail-modal hidden">
  <div class="product-detail-card">
   <div class="product-detail-scroll">
-   <div class="modal-x-anchor">
-    <div id="detailProductViewCountBadge" class="modal-view-count-badge" title="Görüntülenme sayısı">👁️ 0 görüntülenme</div>
-    <button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button>
-   </div>
+   <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button></div>
    <div class="detail-gallery-v15">
 <img id="detailProductImage">
 <button type="button" onclick="changeDetailGallery(-1)">‹</button>
 <button type="button" onclick="changeDetailGallery(1)">›</button>
 <div id="detailGalleryDots"></div>
 </div>
-   <h2 id="detailProductName"></h2>
+   <div id="detailProductTitleRow" class="detail-product-title-row">
+    <h2 id="detailProductName"></h2>
+    <div id="detailProductViewCountBadge" class="modal-view-count-badge" title="Görüntülenme sayısı">👁️ 0</div>
+   </div>
    <p id="detailProductText"></p>
    <div id="detailPrice"></div>
    <div id="detailVariants"></div>
@@ -10729,7 +10757,7 @@ function addFoodProductToCart(product,quantity,selection,variantId=null){
 
 function updateProductViewCountBadges(productId,count){
  const safeCount=Math.max(0,Number(count)||0);
- const formatted=`👁️ ${safeCount.toLocaleString("tr-TR")} görüntülenme`;
+ const formatted=`👁️ ${safeCount.toLocaleString("tr-TR")}`;
  if(detailProduct && String(detailProduct.id)===String(productId)){
    const modalBadge=document.getElementById("detailProductViewCountBadge");
    if(modalBadge){
@@ -10739,6 +10767,7 @@ function updateProductViewCountBadges(productId,count){
  }
  document.querySelectorAll(`[data-product-view-count="${CSS.escape(String(productId))}"]`).forEach(el=>{
    el.textContent=formatted;
+   el.title=`${safeCount.toLocaleString("tr-TR")} görüntülenme`;
  });
 }
 
@@ -10780,7 +10809,8 @@ function openProductDetail(productId){
      detailBizBadge.id = "detailBusinessBadge";
      detailBizBadge.className = "root-product-business-badge";
      detailBizBadge.style.marginBottom = "8px";
-     document.getElementById("detailProductName").insertAdjacentElement("beforebegin", detailBizBadge);
+     const titleAnchor = document.getElementById("detailProductTitleRow") || document.getElementById("detailProductName");
+     titleAnchor.insertAdjacentElement("beforebegin", detailBizBadge);
    }
    detailBizBadge.textContent = `🏪 ${product.business_name}`;
    detailBizBadge.style.display = "inline-flex";

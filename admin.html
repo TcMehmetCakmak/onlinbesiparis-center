@@ -3377,7 +3377,7 @@ function renderProducts(){
         ${visual}
         <div>
           <strong>${escapeHtml(p.name)}</strong>
-          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf · 👁️ ${viewCount.toLocaleString("tr-TR")} görüntülenme${isFoodBusiness()?` · 🥖 ${(p.bread_options||[]).length} · 🍟 ${(p.side_options||[]).length} · 🥤 ${(p.drink_options||[]).length}`:""}</div>
+          <div class="muted">${escapeHtml(priceText)} · ${p.active===false?"Gizli":"Aktif"} · ${(p.images||[]).length} fotoğraf · 👁️ ${viewCount.toLocaleString("tr-TR")}${isFoodBusiness()?` · 🥖 ${(p.bread_options||[]).length} · 🍟 ${(p.side_options||[]).length} · 🥤 ${(p.drink_options||[]).length}`:""}</div>
           ${addressText ? `<div class="muted" style="margin-top:3px;font-size:12px">📍 ${escapeHtml(addressText)}${mapsUrl ? ` · <a href="${escapeAttr(mapsUrl)}" target="_blank" rel="noopener noreferrer" style="color:#16803a;font-weight:700;text-decoration:none">Haritada Gör</a>` : ""}</div>` : ""}
         </div>
       </div>
