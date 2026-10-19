@@ -6371,16 +6371,16 @@ function renderProductVariantRows(){
  if(!el)return;
 
  el.innerHTML=productVariantsDraft.map((v,i)=>`
- <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-   <input placeholder="Beden / Boyut" value="${escapeAttr(v.variant_name||'')}"
+ <div style="display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin-bottom:8px">
+   <input style="flex:0 1 150px;width:150px;min-width:0;padding:9px" placeholder="Beden / Boyut" value="${escapeAttr(v.variant_name||'')}"
     onchange="productVariantsDraft[${i}].variant_name=this.value">
-   <input type="number" placeholder="Fiyat" value="${v.price||''}"
+   <input style="flex:0 1 110px;width:110px;min-width:0;padding:9px" type="number" placeholder="Fiyat" value="${v.price||''}"
     onchange="productVariantsDraft[${i}].price=this.value">
-   <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin:0">
+   <label style="display:flex;flex-shrink:0;align-items:center;gap:6px;white-space:nowrap;margin:0">
     <input type="checkbox" style="width:auto;margin:0" ${v.is_sold_out?'checked':''}
      onchange="productVariantsDraft[${i}].is_sold_out=this.checked"> Tükendi
    </label>
-   <button type="button" class="btn btn-danger"
+   <button type="button" class="btn btn-danger" style="flex-shrink:0;padding:9px 12px" aria-label="Bedeni sil"
     onclick="removeProductVariantRow(${i})">X</button>
  </div>`).join("");
 }
