@@ -1346,7 +1346,7 @@
     box-shadow: 0 18px 60px rgba(0,0,0,.45);
 }
 
-#productGalleryModal.photo-fullscreen{padding:0}
+#productGalleryModal.photo-fullscreen{padding:0;z-index:41000}
 #productGalleryModal.photo-fullscreen .product-gallery-card{
     width:100%;height:100%;max-height:100%;border-radius:0;
     display:flex;flex-direction:column;
@@ -3486,7 +3486,7 @@ body{
                     autocomplete="off"
                     aria-label="Ürün veya işletme ara"
                     oninput="renderRootLandingProducts()"
-                    onkeydown="if(event.key==='Escape'){toggleRootProductSearch(false);}"
+                    onkeydown="if(!event.isComposing && event.key==='Enter'){event.preventDefault();toggleRootProductSearch(false,true);}else if(event.key==='Escape'){toggleRootProductSearch(false);}"
                     style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                 >
                 </div>
@@ -6106,13 +6106,17 @@ body{
 
     function closeProductGallery() {
         const modal = document.getElementById("productGalleryModal");
+        const restoreDetail = modal.dataset.restoreDetail === "true" && detailProduct;
+        delete modal.dataset.restoreDetail;
 
         modal.classList.add("hidden");
         modal.setAttribute("aria-hidden", "true");
         modal.classList.remove("photo-fullscreen");
 
-        document.body.style.overflow = "";
-        if(detailProduct){
+        document.body.style.overflow = modal.dataset.previousOverflow || "";
+        delete modal.dataset.previousOverflow;
+        if(restoreDetail){
+            document.getElementById("productDetailModal").classList.remove("hidden");
             document.getElementById("detailProductImage").focus();
         }
 
@@ -9918,7 +9922,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         openProductDetail(productId);
     }
 
-    function toggleRootProductSearch(forceOpen) {
+    function toggleRootProductSearch(forceOpen,keepQuery=false) {
         const wrap = document.getElementById("rootProductSearch");
         const input = document.getElementById("rootProductSearchInput");
         const button = document.getElementById("rootSearchToggle");
@@ -9929,7 +9933,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         if (open) {
             input.focus();
         } else {
-            input.value = "";
+            if(!keepQuery)input.value = "";
+            input.blur();
             renderRootLandingProducts();
             button.focus();
         }
@@ -11507,6 +11512,9 @@ function openDetailPhotoFullscreen(){
     galleryImages=[...detailGalleryImages];
     galleryIndex=detailGalleryIndex;
     const modal=document.getElementById("productGalleryModal");
+    modal.dataset.restoreDetail="true";
+    modal.dataset.previousOverflow=document.body.style.overflow;
+    document.getElementById("productDetailModal").classList.add("hidden");
     document.getElementById("productGalleryTitle").textContent=detailProduct.name || "Ürün Fotoğrafları";
     modal.classList.add("photo-fullscreen");
     modal.classList.remove("hidden");
