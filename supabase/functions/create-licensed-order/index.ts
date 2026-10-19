@@ -206,6 +206,27 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "Siparişte ürün bulunmuyor." }, 400);
     }
 
+    // Sepete eklendikten sonra tükenen bedenler de siparişe dönüşmesin.
+    const variantIds = [...new Set(items.map((item: { variantId?: string }) => item.variantId).filter(Boolean))];
+    if (variantIds.length) {
+      const { data: variants, error: variantError } = await tenant
+        .from("product_variants")
+        .select("id,product_id,is_sold_out,products!inner(business_id)")
+        .eq("products.business_id", business.business_id)
+        .in("id", variantIds);
+      if (variantError) {
+        console.error("Beden stok kontrolü başarısız:", variantError);
+        return json({ ok: false, error: "Beden stok durumu kontrol edilemedi." }, 500);
+      }
+      for (const item of items) {
+        if (!item.variantId) continue;
+        const variant = variants?.find((v) => String(v.id) === String(item.variantId) && String(v.product_id) === String(item.productId));
+        if (!variant || variant.is_sold_out) {
+          return json({ ok: false, error: "Seçilen beden artık mevcut değil veya tükendi. Lütfen sepetinizi güncelleyin." }, 400);
+        }
+      }
+    }
+
     const phone = normalizePhone(body.p_phone_number);
 
     if (!phone) {

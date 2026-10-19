@@ -1978,7 +1978,7 @@ async function loadAdminProducts(){
 
     const variantResult = await supabaseClient
       .from("product_variants")
-      .select("id,product_id,variant_name,price")
+      .select("id,product_id,variant_name,price,is_sold_out")
       .in("product_id", (productResult.data||[]).map(p=>p.id));
 
     if(variantResult.error) throw variantResult.error;
@@ -4223,7 +4223,8 @@ function openProductModal(p=null){
     productVariantsDraft = Array.isArray(p?.variants)
       ? p.variants.map(v=>({
           variant_name: v.variant_name || v.name || "",
-          price: v.price ?? ""
+          price: v.price ?? "",
+          is_sold_out: v.is_sold_out===true
         }))
       : [];
     renderProductVariantRows();
@@ -4280,7 +4281,7 @@ async function editProduct(id){
 
   const {data:variants,error:variantError}=await supabaseClient
     .from("product_variants")
-    .select("id,product_id,variant_name,price")
+    .select("id,product_id,variant_name,price,is_sold_out")
     .eq("product_id",id)
     .order("created_at",{ascending:true});
 
@@ -4697,7 +4698,8 @@ async function saveProduct(){
       const variantRows = productVariantsDraft.map(v=>({
         product_id:savedProduct.id,
         variant_name:v.variant_name,
-        price:Number(v.price)
+        price:Number(v.price),
+        is_sold_out:v.is_sold_out===true
       }));
 
       const {error:variantError}=await supabaseClient
@@ -6355,7 +6357,7 @@ function toggleProductVariantFields(){
 }
 
 function addProductVariantRow(name="",price=""){
- productVariantsDraft.push({variant_name:name,price:price});
+ productVariantsDraft.push({variant_name:name,price:price,is_sold_out:false});
  renderProductVariantRows();
 }
 
@@ -6369,11 +6371,15 @@ function renderProductVariantRows(){
  if(!el)return;
 
  el.innerHTML=productVariantsDraft.map((v,i)=>`
- <div style="display:flex;gap:8px;margin-bottom:8px">
-   <input placeholder="Beden / Boyut" value="${v.variant_name||''}"
+ <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+   <input placeholder="Beden / Boyut" value="${escapeAttr(v.variant_name||'')}"
     onchange="productVariantsDraft[${i}].variant_name=this.value">
    <input type="number" placeholder="Fiyat" value="${v.price||''}"
     onchange="productVariantsDraft[${i}].price=this.value">
+   <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;margin:0">
+    <input type="checkbox" style="width:auto;margin:0" ${v.is_sold_out?'checked':''}
+     onchange="productVariantsDraft[${i}].is_sold_out=this.checked"> Tükendi
+   </label>
    <button type="button" class="btn btn-danger"
     onclick="removeProductVariantRow(${i})">X</button>
  </div>`).join("");

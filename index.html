@@ -2424,6 +2424,9 @@ body{
 .product-detail-card img{
  width:100%;max-height:280px;object-fit:contain;border-radius:15px;
 }
+.detail-variant.sold-out{background:#f4f4f4;color:#888;cursor:not-allowed}
+.detail-variant.sold-out .variant-name{text-decoration:line-through}
+.variant-sold-out-badge{display:inline-block;background:#b42318;color:#fff;border-radius:6px;padding:3px 7px;font-size:12px;margin-left:6px}
 .detail-variant{
  display:flex;justify-content:space-between;
  padding:12px;border:1px solid #ddd;border-radius:12px;margin:8px 0;
@@ -5656,7 +5659,7 @@ body{
 
             const variantResult = await supabaseClient
                 .from("product_variants")
-                .select("id,product_id,variant_name,price");
+                .select("id,product_id,variant_name,price,is_sold_out");
 
             const variantsByProduct = new Map();
 
@@ -6335,6 +6338,8 @@ body{
         );
 
         if (!product) return;
+        const selectedVariant=(product.variants||[]).find(v=>String(v.id)===String(variantId));
+        if(selectedVariant?.is_sold_out){alert("Bu beden tükendi. Lütfen başka bir beden seçiniz.");return false;}
         const color=getProductColors(product).find(c=>String(c.id)===String(colorId||""));
         if(getProductColors(product).length && !color){openProductDetail(productId);alert("Lütfen renk seçiniz.");return false;}
 
@@ -10174,7 +10179,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                     .eq("active", true),
                 supabaseClient
                     .from("product_variants")
-                    .select("id,product_id,variant_name,price"),
+                    .select("id,product_id,variant_name,price,is_sold_out"),
                 supabaseClient
                     .from("product_images")
                     .select("id,business_id,product_id,storage_path,sort_order,is_main,created_at")
@@ -11153,6 +11158,7 @@ function addFoodProductToCart(product,quantity,selection,variantId=null){
   const color=getProductColors(product).find(c=>String(c.id)===String(detailSelectedColor||""));
   if(getProductColors(product).length && !color){alert("Lütfen renk seçiniz.");return false;}
   const variant=(product.variants||[]).find(v=>String(v.id)===String(variantId||""));
+  if(variant?.is_sold_out){alert("Bu beden tükendi. Lütfen başka bir beden seçiniz.");return false;}
   if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !variant){
     alert("Lütfen beden seçiniz.");
     return;
@@ -11360,10 +11366,10 @@ function openProductDetail(productId){
 
  if(product.product_type==="SIZE"){
    area.innerHTML=(product.variants||[]).map(v=>`
-    <label class="detail-variant">
-      <span>${v.variant_name}</span>
+    <label class="detail-variant ${v.is_sold_out?'sold-out':''}">
+      <span><span class="variant-name">${escapeHtml(v.variant_name)}</span> ${v.is_sold_out?'<span class="variant-sold-out-badge">Tükendi</span>':''}</span>
       <span>${Number(v.price).toLocaleString("tr-TR")} TL
-      <input type="radio" name="detailVariant"
+      <input type="radio" name="detailVariant" ${v.is_sold_out?'disabled aria-disabled="true"':''}
        onchange="detailSelectedVariant='${v.id}';updateFoodDetailPrice()"></span>
     </label>`).join("");
  }else{
