@@ -3408,15 +3408,29 @@ body{
         max-width: 44vw !important;
         min-width: 150px;
     }
+    .root-product-search{display:contents}
+    .root-search-toggle{display:none}
     @media(max-width:600px){
+        #rootLanding .product-search-tools{position:relative}
+        .root-product-search{display:flex;flex:0 0 auto}
+        .root-search-toggle{
+            display:inline-flex;align-items:center;justify-content:center;
+            width:40px;height:40px;margin:0;padding:0;border:1px solid #ddd;
+            border-radius:12px;background:#fff;color:#222;cursor:pointer;
+        }
+        .root-search-toggle[aria-expanded="true"]{background:#eef7f2;border-color:#1f7a4d}
         #rootProductSearchInput {
-            width: 165px !important;
-            max-width: 46vw !important;
-            min-width: 120px;
+            display:none;
+            position:absolute;top:48px;right:0;z-index:30;
+            width:min(300px,calc(100vw - 64px)) !important;
+            max-width:calc(100vw - 64px) !important;
+            min-width:0;
             padding-left: 9px !important;
             padding-right: 9px !important;
-            font-size: 13px !important;
+            font-size:16px !important;
+            box-shadow:0 4px 16px rgba(0,0,0,.15);
         }
+        .root-product-search.search-open #rootProductSearchInput{display:block}
     }
 </style>
 
@@ -3447,6 +3461,10 @@ body{
             <h2 style="margin:0">Ürünler</h2>
 
             <div class="product-search-tools">
+                <div id="rootProductSearch" class="root-product-search">
+                <button id="rootSearchToggle" type="button" class="root-search-toggle" onclick="toggleRootProductSearch()" aria-label="Aramayı aç" aria-controls="rootProductSearchInput" aria-expanded="false" title="Ara">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+                </button>
                 <input
                     id="rootProductSearchInput"
                     type="search"
@@ -3454,8 +3472,10 @@ body{
                     autocomplete="off"
                     aria-label="Ürün veya işletme ara"
                     oninput="renderRootLandingProducts()"
+                    onkeydown="if(event.key==='Escape'){toggleRootProductSearch(false);}"
                     style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                 >
+                </div>
 
                 <select id="rootProductCategoryFilter" class="product-category-filter" aria-label="Ürün tipi" onchange="renderRootLandingProducts()">
                     <option value="all" selected>Hepsi</option>
@@ -3751,14 +3771,6 @@ body{
                         oninput="renderProducts()"
                         style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                     >
-
-                    <select id="productCategoryFilter" class="product-category-filter" aria-label="Ürün tipi" onchange="renderProducts()">
-                        <option value="all" selected>Hepsi</option>
-                        <option value="realestate">Emlak</option>
-                        <option value="vehicle">Vasıta</option>
-                        <option value="food">Yemek</option>
-                        <option value="clothing_accessories">Giyim&amp;Aksesuar</option>
-                    </select>
 
                     <div class="product-filter-wrap">
                         <button
@@ -5864,7 +5876,6 @@ body{
 
     function renderProducts() {
         const list = document.getElementById("productList");
-        const category = document.getElementById("productCategoryFilter")?.value || "all";
         const searchInput = document.getElementById("productSearchInput");
         const searchText = String(searchInput?.value || "")
             .trim()
@@ -5874,7 +5885,6 @@ body{
 
         let visibleProducts = products
             .filter(product => product.active !== false)
-            .filter(product => category === "all" || product.product_category === category)
             .filter(product => {
                 if (!searchText) return true;
 
@@ -5886,7 +5896,7 @@ body{
         visibleProducts = sortVisibleProducts(visibleProducts);
 
         if (!visibleProducts.length) {
-            list.innerHTML = (searchText || category !== "all")
+            list.innerHTML = searchText
                 ? '<div class="small" style="grid-column:1/-1;padding:24px 10px">Aramanızla eşleşen ürün bulunamadı.</div>'
                 : '<div class="small" style="grid-column:1/-1;padding:24px 10px">Henüz ürün bulunmuyor.</div>';
         }
@@ -9887,6 +9897,31 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         openProductDetail(productId);
     }
 
+    function toggleRootProductSearch(forceOpen) {
+        const wrap = document.getElementById("rootProductSearch");
+        const input = document.getElementById("rootProductSearchInput");
+        const button = document.getElementById("rootSearchToggle");
+        const open = typeof forceOpen === "boolean" ? forceOpen : !wrap.classList.contains("search-open");
+        wrap.classList.toggle("search-open", open);
+        button.setAttribute("aria-expanded", String(open));
+        button.setAttribute("aria-label", open ? "Aramayı kapat" : "Aramayı aç");
+        if (open) {
+            input.focus();
+        } else {
+            input.value = "";
+            renderRootLandingProducts();
+            button.focus();
+        }
+    }
+
+    function getProductBusinessIcon(product) {
+        const type = String(product?.business_type || "").toLowerCase();
+        const icons = { realestate: "🏠", gallery: "🚗", food: "🍽️" };
+        if (icons[type]) return icons[type];
+        const categoryIcons = { realestate: "🏠", vehicle: "🚗", food: "🍽️", clothing_accessories: "👗" };
+        return categoryIcons[product?.product_category] || "🏪";
+    }
+
     function renderRootLandingProducts() {
         const list = document.getElementById("rootBusinessList");
         if (!list) return;
@@ -9950,7 +9985,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             if (product.business_name) {
                 const badge = document.createElement("div");
                 badge.className = "root-product-business-badge";
-                badge.textContent = `🏪 ${product.business_name}`;
+                badge.textContent = `${getProductBusinessIcon(product)} ${product.business_name}`;
                 if (product.business_slug) {
                     badge.title = `${product.business_name} müşteri sayfasına git`;
                     badge.setAttribute("role", "link");
@@ -11120,7 +11155,7 @@ function openProductDetail(productId){
      const titleAnchor = document.getElementById("detailProductTitleRow") || document.getElementById("detailProductName");
      titleAnchor.insertAdjacentElement("beforebegin", detailBizBadge);
    }
-   detailBizBadge.textContent = `🏪 ${product.business_name}`;
+   detailBizBadge.textContent = `${getProductBusinessIcon(product)} ${product.business_name}`;
    detailBizBadge.style.display = "inline-flex";
    if (product.business_slug) {
      detailBizBadge.title = `${product.business_name} müşteri sayfasına git`;
