@@ -47,7 +47,7 @@ Bu rehber, **Sümeyra Çanta** işletmesini sıfırdan açmak için gereken tüm
     Lisans sonu
     2026-11-17
 
-    Faruk Yıldırım
+    Sirius Ayakkabı
     Business Public Key
     c4384452-75e9-45e9-a24d-5a726d55dc9c
     Business Token
