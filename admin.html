@@ -944,6 +944,15 @@ body.modal-open{
     <label id="productNameLabel" for="productName">Ürün adı</label>
     <input id="productName" placeholder="Ürün adını giriniz...">
 
+    <label for="productCategory">Ürün Tipi</label>
+    <select id="productCategory">
+      <option value="all">Hepsi</option>
+      <option value="realestate">Emlak</option>
+      <option value="vehicle">Vasıta</option>
+      <option value="food">Yemek</option>
+      <option value="clothing_accessories">Giyim&amp;Aksesuar</option>
+    </select>
+
     <label id="productPriceLabel" for="productPrice">Fiyat (TL)</label>
     <input id="productPrice" type="number" min="0" step="0.01" placeholder="150">
 
@@ -994,7 +1003,7 @@ body.modal-open{
     </div>
 
     <div id="productTypeGroup">
-      <label id="productTypeLabel" for="productType">Ürün Tipi</label>
+      <label id="productTypeLabel" for="productType">Varyant Seçimi</label>
       <select id="productType" onchange="toggleProductVariantFields()">
         <option id="productTypeNormalOpt" value="">Normal Ürün</option>
         <option id="productTypeSizeOpt" value="SIZE">Boyut / Bedenli Ürün</option>
@@ -1585,7 +1594,7 @@ function applyProductModalBusinessTypeUi(product=null){
   }
 
   const typeLabel=document.getElementById("productTypeLabel");
-  if(typeLabel)typeLabel.textContent=listing ? "İlan Tipi" : "Ürün Tipi";
+  if(typeLabel)typeLabel.textContent=listing ? "İlan Seçenekleri" : "Varyant Seçimi";
 
   const typeNormalOpt=document.getElementById("productTypeNormalOpt");
   if(typeNormalOpt)typeNormalOpt.textContent=listing ? "Normal İlan" : "Normal Ürün";
@@ -1940,12 +1949,12 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     let productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+      .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error){
       productResult=await supabaseClient.from("products")
-        .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id")
         .eq("business_id",currentBusinessId)
         .order("created_at",{ascending:true});
     }
@@ -4197,6 +4206,7 @@ function openProductModal(p=null){
   document.getElementById("productPrice").value =
     p?.product_type === "SIZE" ? "" : (p?.price ?? "");
   document.getElementById("productDetail").value=p?.detail || "";
+  document.getElementById("productCategory").value=p?.product_category || "all";
 
   // Düzenle ekranında ürün tipi ve varyantları geri yükle
   const productTypeEl = document.getElementById("productType");
@@ -4250,14 +4260,14 @@ async function editProduct(id){
   // Düzenleme için detay ve varyantları tekrar garanti çek
   let {data:detailProduct,error:detailError}=await supabaseClient
     .from("products")
-    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,business_id,address,latitude,longitude,google_maps_url,address_details")
+    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,business_id,address,latitude,longitude,google_maps_url,address_details")
     .eq("id",id)
     .maybeSingle();
 
   if(detailError){
     const fallbackRes=await supabaseClient
       .from("products")
-      .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,business_id")
+      .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,business_id")
       .eq("id",id)
       .maybeSingle();
     detailProduct=fallbackRes.data;
@@ -4589,6 +4599,7 @@ async function saveProduct(){
     price: productType==="SIZE" ? 0 : Number(document.getElementById("productPrice").value),
     detail: document.getElementById("productDetail").value.trim(),
     product_type: productType || null,
+    product_category: document.getElementById("productCategory").value,
     active:document.getElementById("productActive").checked,
     ...(foodOptionsPayload||{}),
     ...listingAddressPayload

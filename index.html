@@ -2711,9 +2711,26 @@ body{
 ========================================================= */
 .product-search-tools{
     display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
     align-items:center;
     gap:8px;
     margin-left:auto;
+}
+
+.product-category-filter{
+    width:auto;
+    max-width:100%;
+    height:40px;
+    margin:0;
+    padding:0 10px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    background:#fff;
+    color:#222;
+    font:inherit;
+    font-size:14px;
+    cursor:pointer;
 }
 
 #productSearchInput{
@@ -3440,6 +3457,14 @@ body{
                     style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                 >
 
+                <select id="rootProductCategoryFilter" class="product-category-filter" aria-label="Ürün tipi" onchange="renderRootLandingProducts()">
+                    <option value="all" selected>Hepsi</option>
+                    <option value="realestate">Emlak</option>
+                    <option value="vehicle">Vasıta</option>
+                    <option value="food">Yemek</option>
+                    <option value="clothing_accessories">Giyim&amp;Aksesuar</option>
+                </select>
+
                 <div class="product-filter-wrap">
                     <button
                         id="rootProductFilterButton"
@@ -3726,6 +3751,14 @@ body{
                         oninput="renderProducts()"
                         style="margin:0;padding:10px 12px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:14px"
                     >
+
+                    <select id="productCategoryFilter" class="product-category-filter" aria-label="Ürün tipi" onchange="renderProducts()">
+                        <option value="all" selected>Hepsi</option>
+                        <option value="realestate">Emlak</option>
+                        <option value="vehicle">Vasıta</option>
+                        <option value="food">Yemek</option>
+                        <option value="clothing_accessories">Giyim&amp;Aksesuar</option>
+                    </select>
 
                     <div class="product-filter-wrap">
                         <button
@@ -5574,7 +5607,7 @@ body{
         try {
             let productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+                .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -5582,7 +5615,7 @@ body{
             if (productResult.error) {
                 productResult = await supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id")
+                    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id")
                     .eq("business_id", currentBusinessId)
                     .eq("active", true)
                     .order("created_at", { ascending: true });
@@ -5831,6 +5864,7 @@ body{
 
     function renderProducts() {
         const list = document.getElementById("productList");
+        const category = document.getElementById("productCategoryFilter")?.value || "all";
         const searchInput = document.getElementById("productSearchInput");
         const searchText = String(searchInput?.value || "")
             .trim()
@@ -5840,6 +5874,7 @@ body{
 
         let visibleProducts = products
             .filter(product => product.active !== false)
+            .filter(product => category === "all" || product.product_category === category)
             .filter(product => {
                 if (!searchText) return true;
 
@@ -5851,7 +5886,7 @@ body{
         visibleProducts = sortVisibleProducts(visibleProducts);
 
         if (!visibleProducts.length) {
-            list.innerHTML = searchText
+            list.innerHTML = (searchText || category !== "all")
                 ? '<div class="small" style="grid-column:1/-1;padding:24px 10px">Aramanızla eşleşen ürün bulunamadı.</div>'
                 : '<div class="small" style="grid-column:1/-1;padding:24px 10px">Henüz ürün bulunmuyor.</div>';
         }
@@ -9855,6 +9890,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     function renderRootLandingProducts() {
         const list = document.getElementById("rootBusinessList");
         if (!list) return;
+        const category = document.getElementById("rootProductCategoryFilter")?.value || "all";
 
         const searchInput = document.getElementById("rootProductSearchInput");
         const searchText = String(searchInput?.value || "").trim().toLocaleLowerCase("tr-TR");
@@ -9863,6 +9899,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
         let visibleProducts = products
             .filter(product => product.active !== false)
+            .filter(product => category === "all" || product.product_category === category)
             .filter(product => {
                 if (!searchText) return true;
                 const pName = String(product.name || "").toLocaleLowerCase("tr-TR");
@@ -9873,7 +9910,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         visibleProducts = sortRootVisibleProducts(visibleProducts);
 
         if (!visibleProducts.length) {
-            list.innerHTML = searchText
+            list.innerHTML = (searchText || category !== "all")
                 ? '<div class="root-business-empty" style="grid-column: 1 / -1;">Aramanızla eşleşen ürün veya işletme bulunamadı.</div>'
                 : '<div class="root-business-empty" style="grid-column: 1 / -1;">Şu anda aktif ürün bulunmuyor.</div>';
             return;
@@ -10049,7 +10086,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             const [productResult, variantResult, imageResult, reviewResult, modResult] = await Promise.all([
                 supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+                    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                     .in("business_id", businessIds)
                     .eq("active", true),
                 supabaseClient
