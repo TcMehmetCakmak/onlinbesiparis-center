@@ -795,7 +795,6 @@ body.modal-open{
           >Dükkan adı yükleniyor...</button>
           <div id="shopNameHelp" class="muted">Dükkan adını değiştirmek için yukarıdaki alana tıklayın.</div>
         </div>
-        <div><label>İkon / emoji</label><input id="settingShopIcon" maxlength="16" placeholder="🍽️"></div>
         <div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
         <div><label>Instagram Profili</label><input id="settingInstagram" maxlength="180" placeholder="https://instagram.com/cakmak-yazilim"></div>
         <div><label>Instagram Buton Yazısı</label><input id="settingInstagramLabel" maxlength="80" placeholder="@mehmet_cakmak_1907"></div>
@@ -2534,7 +2533,6 @@ async function loadAdminSettings(){
         // Ignore column missing error if backend not migrated yet
     }
     if(data)appSettings={...appSettings, ...data};
-    const icon=document.getElementById("settingShopIcon");
     const phone=document.getElementById("settingPhone");
     const instagram=document.getElementById("settingInstagram");
     const instagramLabel=document.getElementById("settingInstagramLabel");
@@ -2545,7 +2543,6 @@ async function loadAdminSettings(){
     const paymentTransfer=document.getElementById("settingPaymentTransfer");
     const paymentTransferWrap=document.getElementById("settingPaymentTransferWrap");
 
-    if(icon)icon.value=appSettings.shop_icon||"";
     if(phone)phone.value=appSettings.phone||"";
     if(instagram)instagram.value=appSettings.instagram_url||"";
     if(instagramLabel)instagramLabel.value=appSettings.instagram_label||"";
@@ -2665,7 +2662,6 @@ document.addEventListener("input",e=>{
   if(e.target?.id==="settingBackgroundColor")document.getElementById("settingBackgroundColorText").value=e.target.value;
 });
 async function saveAppSettings(){
-  const shop_icon=document.getElementById("settingShopIcon").value.trim();
   const phone=document.getElementById("settingPhone").value.trim();
   const instagram_url=document.getElementById("settingInstagram").value.trim();
   const instagram_label=document.getElementById("settingInstagramLabel").value.trim();
@@ -2674,7 +2670,6 @@ async function saveAppSettings(){
   const payment_card_enabled=document.getElementById("settingPaymentCard")?.checked===true;
   const payment_transfer_enabled=(platformBusiness?.business_type !== 'food') && (document.getElementById("settingPaymentTransfer")?.checked===true);
 
-  if(!shop_icon){toast("İkon gerekli.");return;}
   if(!/^#[0-9a-fA-F]{6}$/.test(background_color)){toast("Renk #RRGGBB formatında olmalı.");return;}
 
   try{
@@ -2682,7 +2677,6 @@ async function saveAppSettings(){
       .upsert({
         business_id:currentBusinessId,
         shop_name:platformBusiness?.shop_name||appSettings.shop_name||"İşletme",
-        shop_icon,
         phone:phone||null,
         instagram_url:instagram_url||null,
         instagram_label:instagram_label||null,
