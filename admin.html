@@ -1003,7 +1003,7 @@ body.modal-open{
     </div>
 
     <div id="productTypeGroup">
-      <label id="productTypeLabel" for="productType">Varyant Seçimi</label>
+      <label id="productTypeLabel" for="productType">Boyut Seçimi</label>
       <select id="productType" onchange="toggleProductVariantFields()">
         <option id="productTypeNormalOpt" value="">Normal Ürün</option>
         <option id="productTypeSizeOpt" value="SIZE">Boyut / Bedenli Ürün</option>
@@ -1556,6 +1556,7 @@ function applyAdminBusinessTypeUi(){
 function applyProductModalBusinessTypeUi(product=null){
   const listing=isListingBusiness();
   const maxImages=getMaxProductImages();
+  document.getElementById("productTypeGroup")?.classList.toggle("hidden",listing);
 
   const modalTitle=document.getElementById("modalTitle");
   if(modalTitle){
@@ -1594,7 +1595,7 @@ function applyProductModalBusinessTypeUi(product=null){
   }
 
   const typeLabel=document.getElementById("productTypeLabel");
-  if(typeLabel)typeLabel.textContent=listing ? "İlan Seçenekleri" : "Varyant Seçimi";
+  if(typeLabel)typeLabel.textContent=listing ? "İlan Seçenekleri" : "Boyut Seçimi";
 
   const typeNormalOpt=document.getElementById("productTypeNormalOpt");
   if(typeNormalOpt)typeNormalOpt.textContent=listing ? "Normal İlan" : "Normal Ürün";
