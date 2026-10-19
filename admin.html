@@ -1072,7 +1072,7 @@ body.modal-open{
         Ana fotoğraf müşteri ürün listesinde gösterilir.
       </div>
       <div id="productGalleryStatus" class="product-gallery-status"></div>
-      <p class="muted">Renk seçeneği eklemek için fotoğrafın altına renk adını yazın. Her renk için bir fotoğraf belirleyin; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
+      <p class="muted">Fotoğrafın altına renk adını yazın. Aynı renge ait birden fazla fotoğraf için aynı renk adını kullanın (örneğin Beyaz). Müşteri renk seçtiğinde yalnızca o rengin fotoğraflarını görür; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
       <div id="productImageGrid" class="product-image-grid"></div>
     </div>
 
@@ -4643,13 +4643,6 @@ async function saveProduct(){
   }
 
   const saveButton=document.getElementById("saveProductButton");
-
-  const colorNames=[...currentProductImages,...pendingProductFiles]
-    .map(img=>String(img.colorName||"").trim()).filter(Boolean);
-  if(new Set(colorNames.map(name=>name.toLocaleLowerCase("tr-TR"))).size!==colorNames.length){
-    toast("Her renk için tek bir fotoğraf seçin; renk adları farklı olmalı.");
-    return;
-  }
 
   try{
     productImageBusy=true;

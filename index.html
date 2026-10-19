@@ -10864,8 +10864,22 @@ let detailGalleryImages=[];
 let detailGalleryIndex=0;
 
 function getProductColors(product){
- return (Array.isArray(product?.color_options)?product.color_options:[])
-   .filter(color=>color && color.id && color.name && color.image_path);
+ const groups=new Map();
+ (Array.isArray(product?.color_options)?product.color_options:[])
+   .filter(color=>color && color.id && String(color.name||"").trim() && color.image_path)
+   .forEach(color=>{
+     const name=String(color.name).trim();
+     const key=name.toLocaleLowerCase("tr-TR");
+     if(!groups.has(key))groups.set(key,{...color,name,image_paths:[]});
+     const group=groups.get(key);
+     if(!group.image_paths.includes(color.image_path))group.image_paths.push(color.image_path);
+   });
+ return [...groups.values()];
+}
+function selectDetailColor(color){
+ detailSelectedColor=color.id;
+ detailGalleryImages=color.image_paths.map(storage_path=>({storage_path}));
+ detailGalleryIndex=0;
 }
 function renderDetailColors(){
  const area=document.getElementById("detailColors");
@@ -10881,10 +10895,8 @@ function renderDetailColors(){
    const img=document.createElement("img");img.src=productImagePublicUrl(color.image_path);img.alt=color.name;
    const name=document.createElement("span");name.textContent=color.name;button.append(img,name);
    button.onclick=()=>{
-     detailSelectedColor=color.id;renderDetailColors();
-     let index=detailGalleryImages.findIndex(image=>(image.storage_path||image.url||image)===color.image_path);
-     if(index<0){detailGalleryImages.push({storage_path:color.image_path});index=detailGalleryImages.length-1;}
-     detailGalleryIndex=index;renderDetailGalleryV15();
+     selectDetailColor(color);
+     renderDetailColors();renderDetailGalleryV15();
    };
    options.appendChild(button);
  });
@@ -11330,11 +11342,11 @@ function openProductDetail(productId){
  detailGalleryIndex = 0;
  detailSelectedColor=null;
  const requestedColor=new URLSearchParams(location.search).get("color");
- const selectedColor=getProductColors(product).find(color=>String(color.id)===requestedColor);
+ const requestedOption=(product.color_options||[]).find(color=>String(color.id)===requestedColor);
+ const selectedColor=getProductColors(product).find(color=>
+   String(color.id)===requestedColor || (requestedOption && color.image_paths.includes(requestedOption.image_path)));
  if(selectedColor){
-   detailSelectedColor=selectedColor.id;
-   const colorIndex=detailGalleryImages.findIndex(image=>(image.storage_path||image.url||image)===selectedColor.image_path);
-   if(colorIndex>=0)detailGalleryIndex=colorIndex;
+   selectDetailColor(selectedColor);
  }
  renderDetailColors();
  renderDetailGalleryV15();
