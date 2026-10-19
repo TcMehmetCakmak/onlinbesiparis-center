@@ -1,0 +1,26 @@
+{
+  "id": "/pwa/aseren-manav",
+  "name": "Aşeren Manav",
+  "short_name": "Aşeren Manav",
+  "description": "Aşeren Manav online sipariş uygulaması",
+  "lang": "tr",
+  "start_url": "/aseren-manav/",
+  "scope": "/aseren-manav/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#e63946",
+  "icons": [
+    {
+      "src": "icon-192.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -55,6 +55,14 @@ Bu rehber, **Sümeyra Çanta** işletmesini sıfırdan açmak için gereken tüm
     Lisans sonu
     2027-04-19
 
+    Aşeren Manav
+    Business Public Key
+    5e089b2a-a8ba-476c-a18a-2f510935b6e2
+    Business Token
+    f050e3c0c5ac736a9b108b6346c8a413496a0073d1dc37b5b9d61081aa692656
+    Lisans sonu
+    2026-11-19
+
 ---
 
 ## 2. Adım: Merkezi Supabase'den `business_id` Değerini Alma
@@ -83,6 +91,11 @@ business_id: b5cfea6b-8795-4ed0-b22f-945cea258e8a
 Faruk Yıldırım
 business_id: 93033070-9a51-4501-a4a0-b6beb9552a30
 e61b21e1-b16c-4985-bbf0-3ec0712777e2
+
+Aşeren Manav
+business_id: de7a7238-f7d2-4bdb-b0e6-3da5676c96bf
+
+
 ```
 
 3. Sorgu sonucunda dönen **`business_id`** (UUID) değerini kopyalayın (4. adımda kullanacağız).
@@ -101,7 +114,7 @@ e61b21e1-b16c-4985-bbf0-3ec0712777e2
 5. Kullanıcı listesinde oluşan yeni kullanıcının **`User UID`** (UUID) değerini kopyalayın.
 fd95cdad-9dc1-4733-ac53-cc1302de2afc
 cakmak dürüm: 784468dc-587b-489f-a537-30c0b420ee73
-
+Aşeren Manav: 05fb7ba9-6bd5-4569-aeb3-7ecf3ac06dfa
 ---
 
 ## 4. Adım: Ortak Operasyon Supabase'de Profil, Ayar ve Ürünleri Tanımlama
