@@ -1072,7 +1072,7 @@ body.modal-open{
         Ana fotoğraf müşteri ürün listesinde gösterilir.
       </div>
       <div id="productGalleryStatus" class="product-gallery-status"></div>
-      <p class="muted">Aynı renge ait tüm fotoğraflara aynı renk adını yazabilirsiniz (örneğin Beyaz). Renk kutusunda gösterilecek fotoğrafı “Renk Ana Yap” ile seçin ve ürünü kaydedin. Müşteri renk seçtiğinde yalnızca o rengin fotoğraflarını görür; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
+      <p class="muted">Aynı renge ait tüm fotoğraflara aynı renk adını yazabilirsiniz (örneğin Beyaz). Renk kutusunda gösterilecek fotoğrafı “Ana Renk Yap” ile seçin ve ürünü kaydedin. Müşteri renk seçtiğinde yalnızca o rengin fotoğraflarını görür; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
       <div id="productImageGrid" class="product-image-grid"></div>
     </div>
 
@@ -4464,7 +4464,7 @@ function renderProductImageEditor(){
       <label>Renk adı (isteğe bağlı)</label>
       <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(img.colorName||'')}" oninput="currentProductImages[${currentProductImages.indexOf(img)}].colorName=this.value">
       <div class="actions">
-        <button type="button" class="btn btn-light" onclick="setColorMainImage('existing',${currentProductImages.indexOf(img)})">${img.colorMain?'✓ Renk Ana Fotoğrafı':'Renk Ana Yap'}</button>
+        <button type="button" class="btn btn-light" onclick="setColorMainImage('existing',${currentProductImages.indexOf(img)})">${img.colorMain?'✓ Ana Renk Fotoğrafı':'Ana Renk Yap'}</button>
         ${img.is_main
           ? '<button type="button" class="btn btn-light" disabled>Ana Fotoğraf</button>'
           : `<button type="button" class="btn btn-success" onclick="setExistingMainProductImage('${escapeAttr(img.id)}')">Ana Yap</button>`}
@@ -4481,7 +4481,7 @@ function renderProductImageEditor(){
       <label>Renk adı (isteğe bağlı)</label>
       <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(item.colorName||'')}" oninput="pendingProductFiles[${index}].colorName=this.value">
       <div class="actions">
-        <button type="button" class="btn btn-light" onclick="setColorMainImage('pending',${index})">${item.colorMain?'✓ Renk Ana Fotoğrafı':'Renk Ana Yap'}</button>
+        <button type="button" class="btn btn-light" onclick="setColorMainImage('pending',${index})">${item.colorMain?'✓ Ana Renk Fotoğrafı':'Ana Renk Yap'}</button>
         ${selected
           ? '<button type="button" class="btn btn-light" disabled>Ana Seçildi</button>'
           : `<button type="button" class="btn btn-success" onclick="choosePendingMainImage(${index})">Ana Yap</button>`}
