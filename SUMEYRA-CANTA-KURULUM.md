@@ -47,6 +47,14 @@ Bu rehber, **Sümeyra Çanta** işletmesini sıfırdan açmak için gereken tüm
     Lisans sonu
     2026-11-17
 
+    Faruk Yıldırım
+    Business Public Key
+    c4384452-75e9-45e9-a24d-5a726d55dc9c
+    Business Token
+    352e4d57deb151ea2247d269b78816f244432a237254d39f83b65ee60791fb14
+    Lisans sonu
+    2027-04-19
+
 ---
 
 ## 2. Adım: Merkezi Supabase'den `business_id` Değerini Alma
@@ -71,6 +79,10 @@ business_id: 67ec0a96-6062-4648-b39c-90731839a545
 
 Çakmak Dürüm
 business_id: b5cfea6b-8795-4ed0-b22f-945cea258e8a
+
+Faruk Yıldırım
+business_id: 93033070-9a51-4501-a4a0-b6beb9552a30
+e61b21e1-b16c-4985-bbf0-3ec0712777e2
 ```
 
 3. Sorgu sonucunda dönen **`business_id`** (UUID) değerini kopyalayın (4. adımda kullanacağız).
