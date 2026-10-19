@@ -25,17 +25,33 @@
         content="Online sipariş uygulaması"
     >
 
-    <link id="appManifestLink" rel="manifest" href="manifest.json">
+    <link id="appManifestLink" rel="manifest">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Online Sipariş">
-    <link id="appleTouchIconLink" rel="apple-touch-icon" href="icon-192.png">
+    <link id="appleTouchIconLink" rel="apple-touch-icon">
 
     <link
         id="appFaviconLink"
         rel="icon"
-        href="icon-192.png"
     >
+    <script id="tenant-pwa-head">
+    // Kurulum bilgilerini tarayıcı genel uygulamanın manifestini yüklemeden seç.
+    (() => {
+        const parts = location.pathname.split("/").filter(Boolean);
+        const nested = document.querySelector("base")?.getAttribute("href") === "../";
+        const last = String(parts[parts.length - 1] || "");
+        const pathSlug = nested
+            ? (last.toLowerCase() === "index.html" ? parts[parts.length - 2] : last)
+            : "";
+        const slug = String(new URLSearchParams(location.search).get("tenant") || pathSlug || "").trim().toLowerCase();
+        const root = new URL(nested || last === "platform" ? "../" : "./", location.href);
+        const assets = slug ? new URL(`${encodeURIComponent(slug)}/`, root) : root;
+        document.getElementById("appManifestLink").href = new URL("manifest.json?v=2", assets).href;
+        document.getElementById("appleTouchIconLink").href = new URL("icon-192.png?v=2", assets).href;
+        document.getElementById("appFaviconLink").href = new URL("icon-192.png?v=2", assets).href;
+    })();
+    </script>
 
     <title>Online Sipariş</title>
 
@@ -4852,15 +4868,15 @@ body{
             "Online Sipariş";
 
         if (manifestLink) {
-            manifestLink.href = tenantAssetUrl("manifest.json");
+            manifestLink.href = tenantAssetUrl("manifest.json?v=2");
         }
 
         if (appleIconLink) {
-            appleIconLink.href = tenantAssetUrl("icon-192.png");
+            appleIconLink.href = tenantAssetUrl("icon-192.png?v=2");
         }
 
         if (faviconLink) {
-            faviconLink.href = tenantAssetUrl("icon-192.png");
+            faviconLink.href = tenantAssetUrl("icon-192.png?v=2");
         }
 
         if (appleTitle) {
