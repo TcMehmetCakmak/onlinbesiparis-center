@@ -10873,12 +10873,17 @@ function getProductColors(product){
      if(!groups.has(key))groups.set(key,{...color,name,image_paths:[]});
      const group=groups.get(key);
      if(!group.image_paths.includes(color.image_path))group.image_paths.push(color.image_path);
+     const isProductMain=(product.images||[]).some(image=>image.is_main && image.storage_path===color.image_path);
+     if(color.is_color_main || (!group.is_color_main && isProductMain)){
+       group.image_path=color.image_path;
+       group.is_color_main=!!color.is_color_main;
+     }
    });
  return [...groups.values()];
 }
 function selectDetailColor(color){
  detailSelectedColor=color.id;
- detailGalleryImages=color.image_paths.map(storage_path=>({storage_path}));
+ detailGalleryImages=[color.image_path,...color.image_paths.filter(path=>path!==color.image_path)].map(storage_path=>({storage_path}));
  detailGalleryIndex=0;
 }
 function renderDetailColors(){

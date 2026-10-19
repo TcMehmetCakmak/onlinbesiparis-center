@@ -1072,7 +1072,7 @@ body.modal-open{
         Ana fotoğraf müşteri ürün listesinde gösterilir.
       </div>
       <div id="productGalleryStatus" class="product-gallery-status"></div>
-      <p class="muted">Fotoğrafın altına renk adını yazın. Aynı renge ait birden fazla fotoğraf için aynı renk adını kullanın (örneğin Beyaz). Müşteri renk seçtiğinde yalnızca o rengin fotoğraflarını görür; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
+      <p class="muted">Aynı renge ait tüm fotoğraflara aynı renk adını yazabilirsiniz (örneğin Beyaz). Renk kutusunda gösterilecek fotoğrafı “Renk Ana Yap” ile seçin ve ürünü kaydedin. Müşteri renk seçtiğinde yalnızca o rengin fotoğraflarını görür; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
       <div id="productImageGrid" class="product-image-grid"></div>
     </div>
 
@@ -4202,6 +4202,7 @@ function openProductModal(p=null){
   currentProductImages=Array.isArray(p?.images)?p.images.map(x=>({...x})):[];
   currentProductImages.forEach(img=>{
     img.colorName=(p?.color_options||[]).find(color=>color.image_path===img.storage_path)?.name || "";
+    img.colorMain=!!(p?.color_options||[]).find(color=>color.image_path===img.storage_path)?.is_color_main;
   });
   productImageBusy=false;
 
@@ -4442,6 +4443,15 @@ async function deleteExistingProductImage(imageId){
   }
 }
 
+function setColorMainImage(source,index){
+  const image=(source==="existing"?currentProductImages:pendingProductFiles)[index];
+  const key=String(image?.colorName||"").trim().toLocaleLowerCase("tr-TR");
+  if(!key){toast("Önce fotoğrafa renk adı yazın.");return;}
+  [...currentProductImages,...pendingProductFiles].forEach(item=>{
+    if(String(item.colorName||"").trim().toLocaleLowerCase("tr-TR")===key)item.colorMain=item===image;
+  });
+  renderProductImageEditor();
+}
 function renderProductImageEditor(){
   const grid=document.getElementById("productImageGrid");
   if(!grid)return;
@@ -4454,6 +4464,7 @@ function renderProductImageEditor(){
       <label>Renk adı (isteğe bağlı)</label>
       <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(img.colorName||'')}" oninput="currentProductImages[${currentProductImages.indexOf(img)}].colorName=this.value">
       <div class="actions">
+        <button type="button" class="btn btn-light" onclick="setColorMainImage('existing',${currentProductImages.indexOf(img)})">${img.colorMain?'✓ Renk Ana Fotoğrafı':'Renk Ana Yap'}</button>
         ${img.is_main
           ? '<button type="button" class="btn btn-light" disabled>Ana Fotoğraf</button>'
           : `<button type="button" class="btn btn-success" onclick="setExistingMainProductImage('${escapeAttr(img.id)}')">Ana Yap</button>`}
@@ -4470,6 +4481,7 @@ function renderProductImageEditor(){
       <label>Renk adı (isteğe bağlı)</label>
       <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(item.colorName||'')}" oninput="pendingProductFiles[${index}].colorName=this.value">
       <div class="actions">
+        <button type="button" class="btn btn-light" onclick="setColorMainImage('pending',${index})">${item.colorMain?'✓ Renk Ana Fotoğrafı':'Renk Ana Yap'}</button>
         ${selected
           ? '<button type="button" class="btn btn-light" disabled>Ana Seçildi</button>'
           : `<button type="button" class="btn btn-success" onclick="choosePendingMainImage(${index})">Ana Yap</button>`}
@@ -4699,10 +4711,10 @@ async function saveProduct(){
       await uploadPendingProductImages(savedProduct.id);
     }
 
-    const colorOptions=[...currentProductImages.map(img=>({image:img,name:img.colorName})),
-      ...pendingProductFiles.map(item=>({image:item.uploadedImage,name:item.colorName}))]
+    const colorOptions=[...currentProductImages.map(img=>({image:img,name:img.colorName,colorMain:img.colorMain})),
+      ...pendingProductFiles.map(item=>({image:item.uploadedImage,name:item.colorName,colorMain:item.colorMain}))]
       .filter(entry=>entry.image && String(entry.name||"").trim())
-      .map(entry=>({id:String(entry.image.id),name:String(entry.name).trim(),image_path:entry.image.storage_path}));
+      .map(entry=>({id:String(entry.image.id),name:String(entry.name).trim(),image_path:entry.image.storage_path,is_color_main:!!entry.colorMain}));
     const {error:colorError}=await supabaseClient.from("products")
       .update({color_options:colorOptions}).eq("id",savedProduct.id).eq("business_id",currentBusinessId);
     if(colorError)throw colorError;
