@@ -1346,6 +1346,20 @@
     box-shadow: 0 18px 60px rgba(0,0,0,.45);
 }
 
+#productGalleryModal.photo-fullscreen{padding:0}
+#productGalleryModal.photo-fullscreen .product-gallery-card{
+    width:100%;height:100%;max-height:100%;border-radius:0;
+    display:flex;flex-direction:column;
+}
+#productGalleryModal.photo-fullscreen .product-gallery-stage{
+    flex:1;min-height:0;max-height:none;
+}
+#productGalleryModal.photo-fullscreen .product-gallery-image{
+    width:100%;height:100%;max-height:100%;object-fit:contain;
+}
+#detailProductImage,#productGalleryImage{cursor:zoom-in;touch-action:pan-y;user-select:none}
+#productGalleryModal.photo-fullscreen #productGalleryImage{cursor:default}
+
 .product-gallery-head {
     display: flex;
     align-items: center;
@@ -6095,8 +6109,12 @@ body{
 
         modal.classList.add("hidden");
         modal.setAttribute("aria-hidden", "true");
+        modal.classList.remove("photo-fullscreen");
 
         document.body.style.overflow = "";
+        if(detailProduct){
+            document.getElementById("detailProductImage").focus();
+        }
 
         galleryProduct = null;
         galleryImages = [];
@@ -6111,6 +6129,10 @@ body{
             galleryImages.length;
 
         renderProductGallery();
+        if(document.getElementById("productGalleryModal").classList.contains("photo-fullscreen") && detailProduct && String(detailProduct.id)===String(galleryProduct?.id)){
+            detailGalleryIndex=galleryIndex;
+            renderDetailGalleryV15();
+        }
     }
 
     function goToProductGalleryImage(index) {
@@ -6131,9 +6153,7 @@ body{
         const imageData = galleryImages[galleryIndex];
         const image = document.getElementById("productGalleryImage");
 
-        image.src = productImagePublicUrl(
-            imageData.storage_path
-        );
+        image.src = imageData.storage_path ? productImagePublicUrl(imageData.storage_path) : (imageData.url || imageData);
 
         image.alt =
             `${galleryProduct?.name || "Ürün"} fotoğrafı ${galleryIndex + 1}`;
@@ -6202,6 +6222,7 @@ body{
         changeProductGalleryImage(
             deltaX < 0 ? 1 : -1
         );
+        document.getElementById("productGalleryImage").dataset.swipeUntil=String(Date.now()+500);
     }, { passive: true });
 
     document.getElementById("productGalleryModal")
@@ -10695,7 +10716,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
   <div class="product-detail-scroll">
    <div class="modal-x-anchor"><button type="button" class="modal-persistent-x" onclick="closeProductDetail()" aria-label="Modalı kapat" title="Kapat">×</button></div>
    <div class="detail-gallery-v15">
-<img id="detailProductImage">
+<img id="detailProductImage" tabindex="0" role="button" aria-label="Fotoğrafı tam ekran aç" draggable="false">
 <button type="button" onclick="changeDetailGallery(-1)">‹</button>
 <button type="button" onclick="changeDetailGallery(1)">›</button>
 <div id="detailGalleryDots"></div>
@@ -11479,106 +11500,54 @@ function applyRealCoupon(){
 }
 </script>
 
-<script>
-let gallerySwipeStartV17 = 0;
-let gallerySwipeEndV17 = 0;
-
-function initGallerySwipeV17(){
-    const img = document.getElementById("detailProductImage");
-    if(!img) return;
-
-    img.classList.add("product-gallery-image-v17");
-
-    img.addEventListener("touchstart", function(e){
-        gallerySwipeStartV17 = e.changedTouches[0].screenX;
-    }, {passive:true});
-
-    img.addEventListener("touchend", function(e){
-        gallerySwipeEndV17 = e.changedTouches[0].screenX;
-
-        const diff = gallerySwipeEndV17 - gallerySwipeStartV17;
-
-        if(Math.abs(diff) < 50) return;
-
-        if(diff < 0){
-            if(typeof nextGalleryImage === "function"){
-                nextGalleryImage();
-            }
-        }else{
-            if(typeof previousGalleryImage === "function"){
-                previousGalleryImage();
-            }
-        }
-    }, {passive:true});
+<script id="product-photo-interactions">
+function openDetailPhotoFullscreen(){
+    if(!detailProduct || !detailGalleryImages.length)return;
+    galleryProduct=detailProduct;
+    galleryImages=[...detailGalleryImages];
+    galleryIndex=detailGalleryIndex;
+    const modal=document.getElementById("productGalleryModal");
+    document.getElementById("productGalleryTitle").textContent=detailProduct.name || "Ürün Fotoğrafları";
+    modal.classList.add("photo-fullscreen");
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden","false");
+    document.body.style.overflow="hidden";
+    renderProductGallery();
+    modal.querySelector("button").focus();
 }
-
-document.addEventListener("DOMContentLoaded", initGallerySwipeV17);
-</script>
-
-<script id="productModalSwipeV26">
 (function(){
-    let startX = 0;
-    let startY = 0;
-
-    function bindProductSwipe(){
-        const selectors = [
-            ".product-detail-image",
-            ".product-gallery-image",
-            "#productDetailImage"
-        ];
-
-        let img = null;
-        for(const s of selectors){
-            img = document.querySelector(s);
-            if(img) break;
+    const image=document.getElementById("detailProductImage");
+    let start=null;
+    let suppressClickUntil=0;
+    image.addEventListener("pointerdown",event=>{
+        if(!event.isPrimary || event.button!==0){start=null;return;}
+        start={x:event.clientX,y:event.clientY,id:event.pointerId};
+        image.setPointerCapture(event.pointerId);
+    });
+    image.addEventListener("pointerup",event=>{
+        if(!start || start.id!==event.pointerId)return;
+        const dx=event.clientX-start.x,dy=event.clientY-start.y;
+        start=null;
+        if(Math.abs(dx)>10 || Math.abs(dy)>10)suppressClickUntil=Date.now()+500;
+        if(Math.abs(dx)>=45 && Math.abs(dx)>Math.abs(dy))changeDetailGallery(dx<0?1:-1);
+    });
+    image.addEventListener("pointercancel",()=>{start=null;suppressClickUntil=Date.now()+500;});
+    image.addEventListener("click",()=>{
+        if(Date.now()>=suppressClickUntil)openDetailPhotoFullscreen();
+    });
+    image.addEventListener("keydown",event=>{
+        if(event.key==="Enter" || event.key===" "){
+            event.preventDefault();openDetailPhotoFullscreen();
         }
-
-        if(!img || img.dataset.swipeBoundV26) return;
-
-        img.dataset.swipeBoundV26 = "1";
-
-        img.addEventListener("touchstart", function(e){
-            startX = e.changedTouches[0].screenX;
-            startY = e.changedTouches[0].screenY;
-        }, {passive:true});
-
-        img.addEventListener("touchend", function(e){
-            const endX = e.changedTouches[0].screenX;
-            const endY = e.changedTouches[0].screenY;
-
-            const diffX = endX - startX;
-            const diffY = endY - startY;
-
-            if(Math.abs(diffX) < 50 || Math.abs(diffX) < Math.abs(diffY)){
-                return;
-            }
-
-            if(diffX < 0){
-                if(typeof nextProductImage === "function"){
-                    nextProductImage();
-                } else if(typeof nextGalleryImage === "function"){
-                    nextGalleryImage();
-                }
-            } else {
-                if(typeof previousProductImage === "function"){
-                    previousProductImage();
-                } else if(typeof previousGalleryImage === "function"){
-                    previousGalleryImage();
-                }
-            }
-        }, {passive:true});
-    }
-
-    const observer = new MutationObserver(bindProductSwipe);
-
-    document.addEventListener("DOMContentLoaded", function(){
-        bindProductSwipe();
-        observer.observe(document.body,{childList:true,subtree:true});
+    });
+    const galleryImage=document.getElementById("productGalleryImage");
+    galleryImage.draggable=false;
+    galleryImage.addEventListener("click",()=>{
+        if(Date.now()<Number(galleryImage.dataset.swipeUntil || 0))return;
+        document.getElementById("productGalleryModal").classList.add("photo-fullscreen");
     });
 })();
 </script>
-
-
 <script id="productReviewV31">
 let selectedProductRatingV31 = 0;
 
