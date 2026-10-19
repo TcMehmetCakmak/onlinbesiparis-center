@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
     };
 
     const { data: orderResult, error: orderError } = await tenant.rpc(
-      "create_pending_whatsapp_order_with_coupons",
+      "create_pending_whatsapp_order_with_colors",
       rpcPayload,
     );
 

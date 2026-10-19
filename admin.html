@@ -1072,6 +1072,7 @@ body.modal-open{
         Ana fotoğraf müşteri ürün listesinde gösterilir.
       </div>
       <div id="productGalleryStatus" class="product-gallery-status"></div>
+      <p class="muted">Renk seçeneği eklemek için fotoğrafın altına renk adını yazın. Her renk için bir fotoğraf belirleyin; renk adı boş olan fotoğraflar genel galeride gösterilir.</p>
       <div id="productImageGrid" class="product-image-grid"></div>
     </div>
 
@@ -1950,12 +1951,12 @@ async function loadAll(){
 async function loadAdminProducts(){
   try{
     let productResult=await supabaseClient.from("products")
-      .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+      .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
       .eq("business_id",currentBusinessId)
       .order("created_at",{ascending:true});
     if(productResult.error){
       productResult=await supabaseClient.from("products")
-        .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id")
+        .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,created_at,business_id")
         .eq("business_id",currentBusinessId)
         .order("created_at",{ascending:true});
     }
@@ -4199,6 +4200,9 @@ function openProductModal(p=null){
   pendingProductFiles=[];
   pendingMainImageIndex=null;
   currentProductImages=Array.isArray(p?.images)?p.images.map(x=>({...x})):[];
+  currentProductImages.forEach(img=>{
+    img.colorName=(p?.color_options||[]).find(color=>color.image_path===img.storage_path)?.name || "";
+  });
   productImageBusy=false;
 
   document.getElementById("productId").value=p?.id||"";
@@ -4260,14 +4264,14 @@ async function editProduct(id){
   // Düzenleme için detay ve varyantları tekrar garanti çek
   let {data:detailProduct,error:detailError}=await supabaseClient
     .from("products")
-    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,business_id,address,latitude,longitude,google_maps_url,address_details")
+    .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,business_id,address,latitude,longitude,google_maps_url,address_details")
     .eq("id",id)
     .maybeSingle();
 
   if(detailError){
     const fallbackRes=await supabaseClient
       .from("products")
-      .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,business_id")
+      .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,business_id")
       .eq("id",id)
       .maybeSingle();
     detailProduct=fallbackRes.data;
@@ -4418,7 +4422,9 @@ async function deleteExistingProductImage(imageId){
       .eq("product_id",productId)
       .order("sort_order",{ascending:true})
       .order("created_at",{ascending:true});
-    if(!freshError)currentProductImages=freshImages||[];
+    if(!freshError)currentProductImages=(freshImages||[]).map(img=>({
+      ...img,colorName:currentProductImages.find(old=>String(old.id)===String(img.id))?.colorName||""
+    }));
 
     renderProductImageEditor();
     await loadAdminProducts();
@@ -4445,6 +4451,8 @@ function renderProductImageEditor(){
     return `<div class="product-image-card">
       ${img.is_main?'<span class="product-image-badge">ANA</span>':""}
       <img src="${escapeAttr(url)}" alt="${isListingBusiness() ? "İlan" : "Ürün"} fotoğrafı">
+      <label>Renk adı (isteğe bağlı)</label>
+      <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(img.colorName||'')}" oninput="currentProductImages[${currentProductImages.indexOf(img)}].colorName=this.value">
       <div class="actions">
         ${img.is_main
           ? '<button type="button" class="btn btn-light" disabled>Ana Fotoğraf</button>'
@@ -4459,6 +4467,8 @@ function renderProductImageEditor(){
     return `<div class="product-image-card">
       ${selected?'<span class="product-image-badge">YENİ ANA</span>':""}
       <img src="${escapeAttr(item.previewUrl)}" alt="Yeni ${isListingBusiness() ? "ilan" : "ürün"} fotoğrafı">
+      <label>Renk adı (isteğe bağlı)</label>
+      <input maxlength="60" placeholder="Örn: Siyah" value="${escapeAttr(item.colorName||'')}" oninput="pendingProductFiles[${index}].colorName=this.value">
       <div class="actions">
         ${selected
           ? '<button type="button" class="btn btn-light" disabled>Ana Seçildi</button>'
@@ -4505,6 +4515,7 @@ async function uploadPendingProductImages(productId){
 
   for(let i=0;i<pendingProductFiles.length;i++){
     const item=pendingProductFiles[i];
+    if(item.uploadedImage){uploaded.push(item.uploadedImage);continue;}
     setProductGalleryStatus(`Fotoğraflar hazırlanıyor ve yükleniyor... ${i+1}/${pendingProductFiles.length}`);
 
     const webpBlob=await compressProductImage(item.file);
@@ -4538,6 +4549,7 @@ async function uploadPendingProductImages(productId){
       throw insertError;
     }
 
+    item.uploadedImage=inserted;
     uploaded.push(inserted);
   }
 
@@ -4632,6 +4644,13 @@ async function saveProduct(){
 
   const saveButton=document.getElementById("saveProductButton");
 
+  const colorNames=[...currentProductImages,...pendingProductFiles]
+    .map(img=>String(img.colorName||"").trim()).filter(Boolean);
+  if(new Set(colorNames.map(name=>name.toLocaleLowerCase("tr-TR"))).size!==colorNames.length){
+    toast("Her renk için tek bir fotoğraf seçin; renk adları farklı olmalı.");
+    return;
+  }
+
   try{
     productImageBusy=true;
     saveButton.disabled=true;
@@ -4686,6 +4705,14 @@ async function saveProduct(){
     if(pendingProductFiles.length){
       await uploadPendingProductImages(savedProduct.id);
     }
+
+    const colorOptions=[...currentProductImages.map(img=>({image:img,name:img.colorName})),
+      ...pendingProductFiles.map(item=>({image:item.uploadedImage,name:item.colorName}))]
+      .filter(entry=>entry.image && String(entry.name||"").trim())
+      .map(entry=>({id:String(entry.image.id),name:String(entry.name).trim(),image_path:entry.image.storage_path}));
+    const {error:colorError}=await supabaseClient.from("products")
+      .update({color_options:colorOptions}).eq("id",savedProduct.id).eq("business_id",currentBusinessId);
+    if(colorError)throw colorError;
 
     revokePendingPreviewUrls();
     pendingProductFiles=[];
@@ -4935,6 +4962,11 @@ function openOrderProductDetail(
 
   orderProductDetailImages=getOrderProductImages(product);
   orderProductDetailImageIndex=0;
+  if(orderItem?.colorImage){
+    const index=orderProductDetailImages.findIndex(img=>(img.storage_path||img.url)===orderItem.colorImage);
+    if(index>=0)orderProductDetailImageIndex=index;
+    else orderProductDetailImages.unshift({storage_path:orderItem.colorImage});
+  }
 
   const title=document.getElementById("orderProductFullscreenTitle");
   const grid=document.getElementById("orderProductDetailGrid");
@@ -4974,6 +5006,7 @@ function openOrderProductDetail(
       <div class="order-product-detail-box">
         <div class="order-product-detail-label">${listing ? "Başvuruda seçilen" : "Siparişte seçilen"}</div>
         <div class="order-product-detail-value">${escapeHtml(orderProductDetailItem.variantText||"Standart")}${listing ? "" : ` · ${orderProductDetailItem.quantity} adet`}</div>
+        ${orderItem?.colorName?`<div class="order-product-detail-value">Renk: ${escapeHtml(orderItem.colorName)}</div>`:""}
       </div>
 
       <div class="order-product-detail-box">
@@ -5148,7 +5181,7 @@ function renderOrders(){
     const badge=statusBadge;
     const items=(order.items||[]).map((i,itemIndex)=>{
       const itemProductId = i.productId ?? i.product_id ?? "";
-      const imageUrl=getProductMainImageUrl(itemProductId);
+      const imageUrl=i.colorImage ? productImagePublicUrl(i.colorImage) : getProductMainImageUrl(itemProductId);
       const visual=imageUrl
         ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(i.name||(listing?"İlan":"Ürün"))}" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex:0 0 54px;border:1px solid #eee">`
         : `<div style="width:54px;height:54px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f4f4f4;flex:0 0 54px;font-size:24px">📷</div>`;
@@ -5168,6 +5201,7 @@ function renderOrders(){
         ${visual}
         <div>
           <div><strong>${escapeHtml(i.name || (listing ? "İlan" : "Ürün"))}${variantText ? ` (Beden: ${escapeHtml(variantText)})` : ""}</strong>${listing ? "" : ` × ${i.quantity}`}</div>
+          ${i.colorName?`<div class="muted">Renk: ${escapeHtml(i.colorName)}</div>`:""}
           ${foodText?`<div class="muted" style="margin-top:3px">${escapeHtml(foodText)}</div>`:""}
           <div class="muted">${money(itemPrice)} · Detay için tıkla</div>
         </div>

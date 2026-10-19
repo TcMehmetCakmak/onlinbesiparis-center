@@ -2454,6 +2454,11 @@ body{
 </style>
 <style>
 .detail-gallery-v15{position:relative;text-align:center;}
+.product-color-options{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.product-color-option{width:88px;padding:6px;border:2px solid #ddd;border-radius:12px;background:#fff;color:#222;cursor:pointer}
+.product-color-option[aria-pressed="true"]{border-color:#16803a;background:#eef7f2}
+.product-detail-card .product-color-option img{width:64px;height:64px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 5px}
+.product-color-option span{display:block;overflow-wrap:anywhere;font-size:13px}
 .detail-gallery-v15 img{width:100%;max-height:280px;object-fit:contain;border-radius:15px;}
 .detail-gallery-v15 button{position:absolute;top:45%;border:0;background:#fff;border-radius:50%;font-size:28px;width:40px;height:40px;}
 .detail-gallery-v15 button:first-of-type{left:5px;}
@@ -5633,7 +5638,7 @@ body{
         try {
             let productResult = await supabaseClient
                 .from("products")
-                .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+                .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                 .eq("business_id", currentBusinessId)
                 .eq("active", true)
                 .order("created_at", { ascending: true });
@@ -5641,7 +5646,7 @@ body{
             if (productResult.error) {
                 productResult = await supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id")
+                    .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,created_at,business_id")
                     .eq("business_id", currentBusinessId)
                     .eq("active", true)
                     .order("created_at", { ascending: true });
@@ -6036,7 +6041,7 @@ body{
                         addButton.classList.add("added");
                     }
 
-                    addButton.onclick = () => product.product_type === 'SIZE' ? openProductDetail(product.id) : addProductToCart(product.id);
+                    addButton.onclick = () => product.product_type === 'SIZE' || getProductColors(product).length ? openProductDetail(product.id) : addProductToCart(product.id);
                 }
 
                 row.appendChild(left);
@@ -6256,8 +6261,7 @@ body{
     });
 
     function getItemQuantity(productId) {
-        const item = order.items.find(x => x.productId === productId);
-        return item ? item.quantity : 0;
+        return order.items.filter(x=>String(x.productId)===String(productId)).reduce((sum,item)=>sum+Number(item.quantity||0),0);
     }
 
     /* =========================================
@@ -6325,17 +6329,20 @@ body{
         openCartPage();
     }
 
-    function addProductToCart(productId, variantId = null) {
+    function addProductToCart(productId, variantId = null, colorId = null) {
         const product = products.find(
             p => String(p.id) === String(productId)
         );
 
         if (!product) return;
+        const color=getProductColors(product).find(c=>String(c.id)===String(colorId||""));
+        if(getProductColors(product).length && !color){openProductDetail(productId);alert("Lütfen renk seçiniz.");return false;}
 
         let item = order.items.find(
             x =>
                 String(x.productId) === String(productId) &&
-                String(x.variantId || "") === String(variantId || "")
+                String(x.variantId || "") === String(variantId || "") &&
+                String(x.colorId || "") === String(colorId || "")
         );
 
         if (!item) {
@@ -6343,6 +6350,10 @@ body{
                 .find(v => String(v.id) === String(variantId));
 
             item = {
+                cartItemId: crypto.randomUUID(),
+                colorId: color?.id || null,
+                colorName: color?.name || null,
+                colorImage: color?.image_path || null,
                 productId: product.id,
                 name: product.name,
                 icon: product.icon || "",
@@ -6364,6 +6375,7 @@ body{
         }
 
         item.quantity += 1;
+        if(!item.cartItemId)item.cartItemId=crypto.randomUUID();
 
         calculateTotal();
         saveOrder();
@@ -6372,6 +6384,7 @@ body{
         updateProductAddButton(productId);
 
         showCartAddSuccessPopup(product.name);
+        return true;
     }
 
     function updateProductAddButton(productId) {
@@ -6442,7 +6455,9 @@ body{
 
         list.innerHTML = items.map(({ item, product }) => {
             const mainImage = getProductMainImage(product);
-            const imageHtml = mainImage
+            const imageHtml = item.colorImage
+                ? `<img class="cart-product-image" src="${escapeHtml(productImagePublicUrl(item.colorImage))}" alt="${escapeHtml(item.colorName||product.name)}">`
+                : mainImage
                 ? `<img class="cart-product-image" src="${productImagePublicUrl(mainImage.storage_path)}" alt="${escapeHtml(product.name)}">`
                 : `<div class="cart-product-no-image">📷</div>`;
 
@@ -6458,6 +6473,7 @@ body{
                         <div class="cart-product-name">
                             ${escapeHtml(product.name)}
                             ${item.variantName ? `<div>Beden: ${escapeHtml(item.variantName)}</div>` : ""}
+                            ${item.colorName ? `<div>Renk: ${escapeHtml(item.colorName)}</div>` : ""}
                         </div>
 
                         ${(item.bread || item.side || item.drink) ? `
@@ -8244,7 +8260,9 @@ body{
                 ? ` (Beden: ${escapeHtml(item.variantName)})`
                 : "";
 
-            html += `<div class="summary-row"><span>${escapeHtml(product.icon || "")} ${escapeHtml(product.name)}${variantText} × ${item.quantity}</span><span>${lineTotal.toLocaleString("tr-TR")} TL</span></div>`;
+            const colorText=item.colorName ? ` · Renk: ${escapeHtml(item.colorName)}` : "";
+            const colorPhoto=item.colorImage ? `<img src="${escapeHtml(productImagePublicUrl(item.colorImage))}" alt="${escapeHtml(item.colorName||'')}" style="width:42px;height:42px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:6px">` : "";
+            html += `<div class="summary-row"><span>${colorPhoto}${escapeHtml(product.icon || "")} ${escapeHtml(product.name)}${variantText}${colorText} × ${item.quantity}</span><span>${lineTotal.toLocaleString("tr-TR")} TL</span></div>`;
         });
         document.getElementById("summaryContent").innerHTML = html;
         document.getElementById("summaryTotal").textContent = `${total.toLocaleString("tr-TR")} TL`;
@@ -8375,6 +8393,7 @@ body{
                     productId: item.productId,
                     variantId: item.variantId || null,
                     variantName: item.variantName || null,
+                    colorId: item.colorId || null,
                     bread: item.bread || null,
                     side: item.side || null,
                     drink: item.drink || null,
@@ -8530,6 +8549,8 @@ Sipariş vermek istiyorum:
                 const quantity = Number(item.quantity || 1);
                 const lineTotal = Number(item.lineTotal ?? (itemPrice * quantity));
                 message += `${quantity} adet ${item.name || product?.name}${variantText}\n`;
+                if(item.colorName)message += `   • Renk: ${item.colorName}\n`;
+                if(item.colorImage)message += `   • Renk fotoğrafı: ${productImagePublicUrl(item.colorImage)}\n`;
 
                 const foodOptions = item.foodOptions || item.food_options || {};
                 const bread = foodOptions.bread;
@@ -9904,6 +9925,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         } catch {}
         const targetUrl = new URL(`${encodeURIComponent(product.business_slug)}/`, APP_ROOT_URL);
         targetUrl.searchParams.set("product", product.id);
+        if(detailProduct?.id===product.id && detailSelectedColor)targetUrl.searchParams.set("color",detailSelectedColor);
         window.location.href = targetUrl.href;
     }
 
@@ -10147,7 +10169,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             const [productResult, variantResult, imageResult, reviewResult, modResult] = await Promise.all([
                 supabaseClient
                     .from("products")
-                    .select("id,name,icon,price,detail,product_type,product_category,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
+                    .select("id,name,icon,price,detail,product_type,product_category,color_options,bread_options,side_options,drink_options,active,created_at,business_id,address,latitude,longitude,google_maps_url,address_details,view_count")
                     .in("business_id", businessIds)
                     .eq("active", true),
                 supabaseClient
@@ -10733,6 +10755,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
    <p id="detailProductText"></p>
    <div id="detailPrice"></div>
    <div id="detailVariants"></div>
+   <div id="detailColors"></div>
    <div id="foodProductSelections" class="hidden"></div>
 
    <div class="product-detail-action-row">
@@ -10835,9 +10858,38 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
 <script>
 let detailSelectedVariant=null;
+let detailSelectedColor=null;
 let detailProduct=null;
 let detailGalleryImages=[];
 let detailGalleryIndex=0;
+
+function getProductColors(product){
+ return (Array.isArray(product?.color_options)?product.color_options:[])
+   .filter(color=>color && color.id && color.name && color.image_path);
+}
+function renderDetailColors(){
+ const area=document.getElementById("detailColors");
+ area.replaceChildren();
+ const colors=getProductColors(detailProduct);
+ if(!colors.length)return;
+ const label=document.createElement("strong");label.textContent="Renk seçimi";area.appendChild(label);
+ const options=document.createElement("div");options.className="product-color-options";
+ colors.forEach(color=>{
+   const button=document.createElement("button");button.type="button";button.className="product-color-option";
+   button.setAttribute("aria-pressed",String(String(detailSelectedColor||"")===String(color.id)));
+   button.setAttribute("aria-label",`${color.name} rengini seç ve fotoğrafını aç`);
+   const img=document.createElement("img");img.src=productImagePublicUrl(color.image_path);img.alt=color.name;
+   const name=document.createElement("span");name.textContent=color.name;button.append(img,name);
+   button.onclick=()=>{
+     detailSelectedColor=color.id;renderDetailColors();
+     let index=detailGalleryImages.findIndex(image=>(image.storage_path||image.url||image)===color.image_path);
+     if(index<0){detailGalleryImages.push({storage_path:color.image_path});index=detailGalleryImages.length-1;}
+     detailGalleryIndex=index;renderDetailGalleryV15();openDetailPhotoFullscreen();
+   };
+   options.appendChild(button);
+ });
+ area.appendChild(options);
+}
 
 let productQuestionsCache = new Map();
 let productQuestionModalProductId = null;
@@ -11081,6 +11133,8 @@ function getFoodProductBasePrice(product,variantId=detailSelectedVariant){
   return Number.isFinite(price)?price:0;
 }
 function addFoodProductToCart(product,quantity,selection,variantId=null){
+  const color=getProductColors(product).find(c=>String(c.id)===String(detailSelectedColor||""));
+  if(getProductColors(product).length && !color){alert("Lütfen renk seçiniz.");return false;}
   const variant=(product.variants||[]).find(v=>String(v.id)===String(variantId||""));
   if(String(product.product_type||"").toUpperCase()==="SIZE" && (product.variants||[]).length && !variant){
     alert("Lütfen beden seçiniz.");
@@ -11089,13 +11143,14 @@ function addFoodProductToCart(product,quantity,selection,variantId=null){
   const variantName=variant?.variant_name||null;
   const basePrice=getFoodProductBasePrice(product,variantId);
   const selectionWithVariant={...selection,variantId:variantId||""};
-  const selectionKey=getFoodSelectionKey(selectionWithVariant);
+  const selectionKey=getFoodSelectionKey(selectionWithVariant)+(color ? `||color:${color.id}` : "");
   const extrasTotal=[...(selection.sideSelections||[]),...(selection.drinkSelections||[])].reduce((sum,x)=>sum+Number(x.price||0),0);
   const unitPrice=basePrice+extrasTotal;
   let item=order.items.find(x=>String(x.productId)===String(product.id)&&String(x.selectionKey||"")===selectionKey&&String(x.variantId||"")===String(variantId||""));
   if(!item){
     item={
       cartItemId:crypto.randomUUID(),productId:product.id,name:product.name,icon:product.icon||"",variantId:variantId||null,variantName,
+      colorId:color?.id||null,colorName:color?.name||null,colorImage:color?.image_path||null,
       basePrice,extrasTotal,price:unitPrice,quantity:0,selectionKey,bread:selection.bread||null,
       side:(selection.sideSelections||[]).map(x=>x.name).join(", ")||null,
       drink:(selection.drinkSelections||[]).map(x=>x.name).join(", ")||null,
@@ -11112,6 +11167,7 @@ function addFoodProductToCart(product,quantity,selection,variantId=null){
   item.quantity+=Number(quantity||1);
   calculateTotal();saveOrder();updateCartUi();renderCartProducts();
   showCartAddSuccessPopup(product.name);
+  return true;
 }
 
 function updateProductViewCountBadges(productId,count){
@@ -11272,6 +11328,15 @@ function openProductDetail(productId){
 
  detailGalleryImages = galleryImages;
  detailGalleryIndex = 0;
+ detailSelectedColor=null;
+ const requestedColor=new URLSearchParams(location.search).get("color");
+ const selectedColor=getProductColors(product).find(color=>String(color.id)===requestedColor);
+ if(selectedColor){
+   detailSelectedColor=selectedColor.id;
+   const colorIndex=detailGalleryImages.findIndex(image=>(image.storage_path||image.url||image)===selectedColor.image_path);
+   if(colorIndex>=0)detailGalleryIndex=colorIndex;
+ }
+ renderDetailColors();
  renderDetailGalleryV15();
 
  const area=document.getElementById("detailVariants");
@@ -11364,7 +11429,7 @@ function openProductDetail(productId){
          alert("Lütfen beden seçiniz.");
          return;
        }
-       addFoodProductToCart(product,foodDetailQuantity,selection,detailSelectedVariant);
+       if(!addFoodProductToCart(product,foodDetailQuantity,selection,detailSelectedVariant))return;
        closeProductDetail();
      };
    }
@@ -11375,7 +11440,7 @@ function openProductDetail(productId){
           alert("Lütfen beden seçiniz.");
           return;
        }
-       addProductToCart(product.id, detailSelectedVariant);
+       if(!addProductToCart(product.id, detailSelectedVariant, detailSelectedColor))return;
        closeProductDetail();
      };
    }
