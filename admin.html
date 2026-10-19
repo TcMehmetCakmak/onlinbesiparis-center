@@ -1621,10 +1621,11 @@ function applyProductModalBusinessTypeUi(product=null){
     addressArea.classList.toggle("hidden",!listing);
   }
 }
-function toast(message) {
+function toast(message,duration=2200) {
   const el=document.getElementById("toast");
+  clearTimeout(toast.hideTimer);
   el.textContent=message; el.style.display="block";
-  setTimeout(()=>el.style.display="none",2200);
+  if(duration>0)toast.hideTimer=setTimeout(()=>el.style.display="none",duration);
 }
 async function resolveTenantBusiness(){
   if(!platformClient||!TENANT_SLUG){
@@ -4187,6 +4188,10 @@ async function getProductListingLocation() {
 }
 
 function openProductModal(p=null){
+  if(productImageBusy){
+    toast("Ürün işlemi devam ediyor. Lütfen tamamlanmasını bekleyin.");
+    return;
+  }
   if (!p) {
       const packages = getSubscriptionPackages();
       const currentPkg = packages.find(x => x.tier === currentPackageTier) || packages[0];
@@ -4637,6 +4642,11 @@ async function saveProduct(){
     saveButton.disabled=true;
     saveButton.textContent="Kaydediliyor...";
 
+    // Taslak fotoğrafları temizlemeden formu gizle; yükleme arka planda sürer.
+    closeProductListingAddressModal();
+    document.getElementById("productModal").classList.add("hidden");
+    toast("Ürünleriniz yükleniyor...",0);
+
     let savedProduct;
 
     if(id){
@@ -4691,6 +4701,8 @@ async function saveProduct(){
     toast(`${itemNoun} ve fotoğrafları kaydedildi ve müşteri ekranına yansıtıldı.`);
   }catch(e){
     console.error(`${itemNoun} kaydedilemedi:`,e);
+    // Hata halinde mevcut form ve fotoğraflarla tekrar denemeye izin ver.
+    document.getElementById("productModal").classList.remove("hidden");
     setProductGalleryStatus(e.message||`${itemNoun} kaydedilemedi.`,true);
     toast(e.message||`${itemNoun} kaydedilemedi.`);
   }finally{
