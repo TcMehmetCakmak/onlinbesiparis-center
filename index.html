@@ -10877,14 +10877,14 @@ function renderDetailColors(){
  colors.forEach(color=>{
    const button=document.createElement("button");button.type="button";button.className="product-color-option";
    button.setAttribute("aria-pressed",String(String(detailSelectedColor||"")===String(color.id)));
-   button.setAttribute("aria-label",`${color.name} rengini seç ve fotoğrafını aç`);
+   button.setAttribute("aria-label",`${color.name} rengini seç ve fotoğrafını galeride göster`);
    const img=document.createElement("img");img.src=productImagePublicUrl(color.image_path);img.alt=color.name;
    const name=document.createElement("span");name.textContent=color.name;button.append(img,name);
    button.onclick=()=>{
      detailSelectedColor=color.id;renderDetailColors();
      let index=detailGalleryImages.findIndex(image=>(image.storage_path||image.url||image)===color.image_path);
      if(index<0){detailGalleryImages.push({storage_path:color.image_path});index=detailGalleryImages.length-1;}
-     detailGalleryIndex=index;renderDetailGalleryV15();openDetailPhotoFullscreen();
+     detailGalleryIndex=index;renderDetailGalleryV15();
    };
    options.appendChild(button);
  });
