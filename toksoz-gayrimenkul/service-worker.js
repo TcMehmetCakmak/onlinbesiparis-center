@@ -1,8 +1,8 @@
-const CACHE_NAME = "toksoz-gayrimenkul-pwa-v1";
+const CACHE_NAME = "toksoz-gayrimenkul-pwa-v2";
 const STATIC_ASSETS = [
-  "./manifest.json",
-  "./icon-192.png",
-  "./icon-512.png"
+  "./manifest.json?v=2",
+  "./icon-192.png?v=2",
+  "./icon-512.png?v=2"
 ];
 
 self.addEventListener("install", event => {
@@ -17,7 +17,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+      Promise.all(keys.filter(key => key.startsWith("toksoz-gayrimenkul-pwa-") && key !== CACHE_NAME).map(key => caches.delete(key)))
     )
   );
   self.clients.claim();
@@ -33,6 +33,7 @@ self.addEventListener("fetch", event => {
   const dynamic =
     event.request.mode === "navigate" ||
     path.endsWith("/index.html") ||
+    path.endsWith("/manifest.json") ||
     path.endsWith("/admin.html") ||
     path.endsWith("/supabase-config.js") ||
     path.endsWith("/platform-config.js");

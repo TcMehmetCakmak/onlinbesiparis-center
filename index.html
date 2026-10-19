@@ -38,6 +38,11 @@
     <script id="tenant-pwa-head">
     // Kurulum bilgilerini tarayıcı genel uygulamanın manifestini yüklemeden seç.
     (() => {
+        // İşletme sayfası document.write ile yüklenirken erken gelen istemi sakla.
+        window.addEventListener("beforeinstallprompt", event => {
+            event.preventDefault();
+            window.pendingTenantInstallPrompt = event;
+        });
         const parts = location.pathname.split("/").filter(Boolean);
         const nested = document.querySelector("base")?.getAttribute("href") === "../";
         const last = String(parts[parts.length - 1] || "");
@@ -10569,7 +10574,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
        PWA INSTALL + APP-SPECIFIC SERVICE WORKERS
     ========================================= */
 
-    let deferredInstallPrompt = null;
+    let deferredInstallPrompt = window.pendingTenantInstallPrompt || null;
 
     function currentPwaKey() {
         return TENANT_SLUG || "platform";
@@ -10609,6 +10614,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     });
 
     window.addEventListener("appinstalled", () => {
+        window.pendingTenantInstallPrompt = null;
         deferredInstallPrompt = null;
         localStorage.setItem(`online_order_pwa_installed_${currentPwaKey()}`, "1");
         refreshInstallButton();
@@ -10627,6 +10633,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             }
 
             deferredInstallPrompt = null;
+            window.pendingTenantInstallPrompt = null;
             refreshInstallButton();
             return;
         }
@@ -10697,7 +10704,11 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
     refreshInstallButton();
 
     if ("serviceWorker" in navigator) {
-        window.addEventListener("load", registerAppSpecificServiceWorker);
+        if(document.readyState === "complete"){
+            registerAppSpecificServiceWorker();
+        }else{
+            window.addEventListener("load", registerAppSpecificServiceWorker, {once:true});
+        }
     }
 
 </script>
