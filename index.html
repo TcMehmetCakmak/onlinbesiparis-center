@@ -1380,7 +1380,7 @@
     width:100%;height:100%;max-height:100%;object-fit:contain;
 }
 #detailProductImage,#productGalleryImage{cursor:zoom-in;touch-action:pan-y;user-select:none}
-#productGalleryModal.photo-fullscreen #productGalleryImage{cursor:default}
+#productGalleryModal.photo-fullscreen #productGalleryImage{cursor:default;touch-action:none;transform-origin:center}
 #productGalleryModal.photo-fullscreen .modal-x-anchor{
     top:calc(20px + env(safe-area-inset-top, 0px));
     padding-right:calc(20px + env(safe-area-inset-right, 0px));
@@ -6221,6 +6221,7 @@ body{
     }
 
     function renderProductGallery() {
+        document.getElementById("productGalleryImage").resetPhotoZoom?.();
         if (!galleryImages.length) return;
 
         const imageData = galleryImages[galleryIndex];
@@ -6257,6 +6258,7 @@ body{
     const galleryStage = document.getElementById("productGalleryStage");
 
     galleryStage.addEventListener("touchstart", event => {
+        if(event.touches.length!==1){galleryTouchStartX=null;galleryTouchStartY=null;return;}
         const touch = event.changedTouches?.[0];
 
         if (!touch) return;
@@ -6266,6 +6268,9 @@ body{
     }, { passive: true });
 
     galleryStage.addEventListener("touchend", event => {
+        if(Date.now()<Number(document.getElementById("productGalleryImage").dataset.swipeUntil||0)){
+            galleryTouchStartX=null;galleryTouchStartY=null;return;
+        }
         const touch = event.changedTouches?.[0];
 
         if (
@@ -11707,6 +11712,57 @@ function openDetailPhotoFullscreen(){
     });
     const galleryImage=document.getElementById("productGalleryImage");
     galleryImage.draggable=false;
+    let zoom=1,panX=0,panY=0,gesture=null;
+    const fullscreen=()=>document.getElementById("productGalleryModal").classList.contains("photo-fullscreen");
+    const point=touches=>{
+        const a=touches[0],b=touches[1]||a;
+        return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,
+            distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)};
+    };
+    function paintZoom(){
+        const maxX=galleryImage.clientWidth*(zoom-1)/2;
+        const maxY=galleryImage.clientHeight*(zoom-1)/2;
+        panX=Math.max(-maxX,Math.min(maxX,panX));
+        panY=Math.max(-maxY,Math.min(maxY,panY));
+        galleryImage.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+    }
+    galleryImage.resetPhotoZoom=()=>{
+        zoom=1;panX=0;panY=0;gesture=null;galleryImage.style.transform="";
+    };
+    function beginZoom(touches){
+        const p=point(touches);
+        gesture={...p,count:touches.length,zoom,panX,panY};
+    }
+    function blockSwipe(event){
+        event.preventDefault();event.stopPropagation();
+        galleryImage.dataset.swipeUntil=String(Date.now()+600);
+    }
+    galleryImage.addEventListener("touchstart",event=>{
+        if(!fullscreen() || (event.touches.length<2 && zoom===1))return;
+        blockSwipe(event);beginZoom(event.touches);
+    },{passive:false});
+    galleryImage.addEventListener("touchmove",event=>{
+        if(!fullscreen() || !gesture)return;
+        blockSwipe(event);
+        if(gesture.count!==event.touches.length){beginZoom(event.touches);return;}
+        const p=point(event.touches);
+        if(event.touches.length>=2){
+            zoom=Math.max(1,Math.min(4,gesture.zoom*p.distance/Math.max(1,gesture.distance)));
+        }
+        const ratio=zoom/gesture.zoom;
+        // Keep the image point beneath the pinch midpoint in place.
+        const rect=galleryImage.parentElement.getBoundingClientRect();
+        panX=p.x-(rect.left+rect.width/2)-(gesture.x-(rect.left+rect.width/2)-gesture.panX)*ratio;
+        panY=p.y-(rect.top+rect.height/2)-(gesture.y-(rect.top+rect.height/2)-gesture.panY)*ratio;
+        paintZoom();
+    },{passive:false});
+    galleryImage.addEventListener("touchend",event=>{
+        if(!gesture)return;
+        blockSwipe(event);
+        if(event.touches.length)beginZoom(event.touches);
+        else gesture=null;
+    },{passive:false});
+    galleryImage.addEventListener("touchcancel",()=>{gesture=null;galleryImage.dataset.swipeUntil=String(Date.now()+600);});
     galleryImage.addEventListener("click",()=>{
         if(Date.now()<Number(galleryImage.dataset.swipeUntil || 0))return;
         document.getElementById("productGalleryModal").classList.add("photo-fullscreen");
