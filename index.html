@@ -6048,7 +6048,9 @@ body{
 
                 const name = document.createElement("div");
                 name.className = "product-name";
-                name.textContent = product.name;
+                const nameChars = Array.from(String(product.name || ""));
+                name.textContent = nameChars.length > 16 ? nameChars.slice(0, 16).join("") + "..." : product.name;
+                name.title = product.name;
 
                 const price = document.createElement("div");
                 price.className = "price";
@@ -10158,7 +10160,9 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
             const name = document.createElement("div");
             name.className = "product-name";
-            name.textContent = product.name;
+            const nameChars = Array.from(String(product.name || ""));
+            name.textContent = nameChars.length > 16 ? nameChars.slice(0, 16).join("") + "..." : product.name;
+            name.title = product.name;
 
             const price = document.createElement("div");
             price.className = "price";
