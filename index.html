@@ -5,6 +5,7 @@
 
 <head>
     <base href="./">
+    <script src="product-list-scroll.js?v=1" defer></script>
     <script src="product-image-recovery.js?v=1"></script>
 
     <meta charset="UTF-8">
@@ -2772,7 +2773,20 @@ body{
 /* =========================================================
    ÜRÜN ARAMA + SIRALAMA / FİLTRE BUTONU
 ========================================================= */
-#rootLanding .root-landing-card > .order-heading-row,
+#rootLanding{
+    height:100dvh;margin:0 auto!important;box-sizing:border-box;
+    padding-top:6px;padding-bottom:6px;
+}
+#rootLanding .root-landing-card{
+    height:100%;min-height:0;display:flex;flex-direction:column;box-sizing:border-box;
+}
+#rootLanding .root-landing-card > :not(#rootBusinessList){flex-shrink:0}
+#rootBusinessList{
+    flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;
+    align-content:start;scrollbar-gutter:stable;padding:4px;
+    -webkit-overflow-scrolling:touch;
+}
+#rootLanding .root-landing-card > .order-heading-row{position:relative;z-index:100;background:#fff}
 #orderItemsCard > .order-heading-row{
     position:sticky;
     top:0;
