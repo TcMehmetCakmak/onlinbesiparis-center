@@ -1,4 +1,5 @@
-const CACHE_NAME = "aseren-manav-pwa-v1";
+const CACHE_NAME = "aseren-manav-pwa-v2";
+const CACHE_PREFIX = "aseren-manav-pwa-v";
 const STATIC_ASSETS = [
   "./manifest.json",
   "./icon-192.png",
@@ -17,7 +18,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+      Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)))
     )
   );
   self.clients.claim();
@@ -49,9 +50,16 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(cached =>
       cached ||
-      fetch(event.request).then(response => {
+      fetch(event.request).then(async response => {
         if (response.ok) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+          // Clone before returning the response to the browser.
+          const cacheResponse = response.clone();
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, cacheResponse);
+          } catch (error) {
+            console.warn("Önbelleğe yazılamadı; ağ yanıtı kullanılacak:", error);
+          }
         }
         return response;
       })

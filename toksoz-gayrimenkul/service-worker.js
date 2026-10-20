@@ -1,4 +1,5 @@
-const CACHE_NAME = "toksoz-gayrimenkul-pwa-v2";
+const CACHE_NAME = "toksoz-gayrimenkul-pwa-v3";
+const CACHE_PREFIX = "toksoz-gayrimenkul-pwa-v";
 const STATIC_ASSETS = [
   "./manifest.json?v=2",
   "./icon-192.png?v=2",
@@ -50,9 +51,16 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(cached =>
       cached ||
-      fetch(event.request).then(response => {
+      fetch(event.request).then(async response => {
         if (response.ok) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+          // Clone before returning the response to the browser.
+          const cacheResponse = response.clone();
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, cacheResponse);
+          } catch (error) {
+            console.warn("Önbelleğe yazılamadı; ağ yanıtı kullanılacak:", error);
+          }
         }
         return response;
       })

@@ -4535,10 +4535,20 @@ async function uploadPendingProductImages(productId){
     const webpBlob=await compressProductImage(item.file);
     const objectPath=`${currentBusinessId}/${productId}/${crypto.randomUUID()}.webp`;
 
-    const r2Response = await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`, {
-        method: "POST",
-        body: webpBlob
-    });
+    let r2Response;
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        r2Response=await fetch(`https://image-uploader.tc-mehmetcakmak.workers.dev/?file=${encodeURIComponent(objectPath)}`, {
+          method:"POST",body:webpBlob
+        });
+        if(r2Response.status!==429 && r2Response.status<500)break;
+        if(attempt===2)break;
+      }catch(error){
+        if(attempt===2)throw new Error("Fotoğraf sunucusuna bağlanılamadı (ağ/SSL). İnternet bağlantınızı kontrol edip tekrar kaydedin. Fotoğraflar taslakta korunuyor.");
+      }
+      setProductGalleryStatus(`Fotoğraf bağlantısı yeniden deneniyor (${attempt+1}/2)...`);
+      await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+    }
     
     if (!r2Response.ok) {
         const errText = await r2Response.text();
