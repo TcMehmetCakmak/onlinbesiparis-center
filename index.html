@@ -5,6 +5,7 @@
 
 <head>
     <base href="./">
+    <script src="product-image-recovery.js?v=1"></script>
 
     <meta charset="UTF-8">
 
@@ -10258,6 +10259,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
 
             if (productResult.error) throw productResult.error;
 
+            if (imageResult.error) throw imageResult.error;
             const variantsByProduct = new Map();
             if (!variantResult.error) {
                 (variantResult.data || []).forEach(v => {
