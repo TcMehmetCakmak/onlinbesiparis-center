@@ -1380,6 +1380,17 @@
 }
 #detailProductImage,#productGalleryImage{cursor:zoom-in;touch-action:pan-y;user-select:none}
 #productGalleryModal.photo-fullscreen #productGalleryImage{cursor:default}
+#productGalleryModal.photo-fullscreen .modal-x-anchor{
+    top:calc(20px + env(safe-area-inset-top, 0px));
+    padding-right:calc(20px + env(safe-area-inset-right, 0px));
+    overflow:visible;
+}
+#productGalleryModal.photo-fullscreen .modal-persistent-x{
+    width:48px;height:48px;min-width:48px;
+    transform:none;
+    box-shadow:0 4px 18px rgba(0,0,0,.4);
+}
+#productGalleryModal.photo-fullscreen .modal-persistent-x:active{transform:scale(.94)}
 
 .product-gallery-head {
     display: flex;
