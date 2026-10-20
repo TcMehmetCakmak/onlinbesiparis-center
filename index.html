@@ -2772,6 +2772,16 @@ body{
 /* =========================================================
    ÜRÜN ARAMA + SIRALAMA / FİLTRE BUTONU
 ========================================================= */
+#rootLanding .root-landing-card > .order-heading-row,
+#orderItemsCard > .order-heading-row{
+    position:sticky;
+    top:0;
+    z-index:100;
+    background:#fff;
+    padding:calc(12px + env(safe-area-inset-top, 0px)) 0 12px;
+    box-shadow:0 6px 8px -8px rgba(0,0,0,.3);
+    overflow:visible;
+}
 .product-search-tools{
     display:flex;
     flex-wrap:wrap;

@@ -32,6 +32,11 @@
 body{margin:0;font-family:Arial,sans-serif;background:#f4f5f7;color:#222}
 button,input,select{font:inherit}
 .hidden{display:none!important}
+#productsTab > .card > .header{
+  position:sticky;top:0;z-index:100;background:#fff;
+  padding:calc(12px + env(safe-area-inset-top, 0px)) 0 12px;
+  box-shadow:0 6px 8px -8px rgba(0,0,0,.3);
+}
 .container{max-width:1180px;margin:auto;padding:24px}
 .login{max-width:420px;margin:70px auto;background:#fff;border-radius:18px;padding:28px;box-shadow:0 8px 30px #00000012}
 .login-password-wrap{position:relative}
