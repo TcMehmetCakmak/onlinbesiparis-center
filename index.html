@@ -3530,6 +3530,17 @@ body{
 }
 </style>
 <style id="responsive-product-lists">
+html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-width:100%;overflow-x:clip}
+#rootLanding,#rootLanding .root-landing-card{width:100%;max-width:100%;min-width:0}
+#rootLanding .root-landing-card{overflow-x:clip}
+#rootLanding .root-landing-actions{min-width:0;max-width:100%;flex-wrap:wrap}
+#rootBusinessList{width:100%;box-sizing:border-box;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
+#rootBusinessList .product-info{min-width:0;max-width:100%}
+#rootLanding .product-search-tools{flex:0 1 auto;flex-wrap:wrap}
+#rootLanding .product-search-tools > *{min-width:0;max-width:100%}
+#rootLanding .product-filter-wrap{max-width:100%}
+#rootLanding .product-filter-button{white-space:normal;overflow-wrap:anywhere}
+#rootLanding h1{overflow-wrap:anywhere}
 #rootBusinessList,#productList{min-width:0;max-width:100%;overflow-x:hidden}
 #rootBusinessList .product,#productList .product,
 #rootBusinessList .product-main,#productList .product-main{min-width:0;max-width:100%}
@@ -3541,6 +3552,8 @@ body{
 #rootLanding .product-search-tools,#orderItemsCard .product-search-tools{min-width:0;max-width:100%}
 .product-filter-menu{max-width:calc(100vw - 48px)}
 @media(max-width:700px){
+ #rootBusinessList{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #rootLanding .product-search-tools{flex:1 1 180px}
  #rootBusinessList,#productList{gap:10px}
  #rootBusinessList .product,#productList .product{padding:8px}
  #rootLanding .root-landing-card,#orderItemsCard{padding:12px}
