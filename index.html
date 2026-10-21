@@ -2091,7 +2091,7 @@ body {
 
 #productList {
     display:grid;
-    grid-template-columns:repeat(6,minmax(180px,1fr));
+    grid-template-columns:repeat(6,minmax(0,1fr));
     gap:16px;
 }
 
@@ -2178,10 +2178,10 @@ body {
 }
 
 @media(max-width:1200px){
- #productList{grid-template-columns:repeat(4,1fr);}
+ #productList{grid-template-columns:repeat(4,minmax(0,1fr));}
 }
 @media(max-width:700px){
- #productList{grid-template-columns:repeat(2,1fr);}
+ #productList{grid-template-columns:repeat(2,minmax(0,1fr));}
  .container{padding:10px !important;}
 }
 
@@ -3427,14 +3427,14 @@ body{
     }
     #rootBusinessList {
         display: grid;
-        grid-template-columns: repeat(6, minmax(180px, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 16px;
     }
     @media(max-width:1200px){
-        #rootBusinessList { grid-template-columns: repeat(4, 1fr); }
+        #rootBusinessList { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
     @media(max-width:700px){
-        #rootBusinessList { grid-template-columns: repeat(2, 1fr); }
+        #rootBusinessList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     #rootBusinessList .product {
         display: flex;
@@ -3527,6 +3527,30 @@ body{
 @media(max-width:480px){
  .root-landing-actions{gap:2px;flex-wrap:nowrap}
  .root-landing-actions .header-nav-button{padding:8px 3px!important;font-size:11px!important;min-width:0}
+}
+</style>
+<style id="responsive-product-lists">
+#rootBusinessList,#productList{min-width:0;max-width:100%;overflow-x:hidden}
+#rootBusinessList .product,#productList .product,
+#rootBusinessList .product-main,#productList .product-main{min-width:0;max-width:100%}
+#rootBusinessList .product,#productList .product{overflow-wrap:anywhere}
+#rootBusinessList .product img,#productList .product img{max-width:100%}
+#rootBusinessList .product-name-row,#productList .product-name-row{flex-wrap:wrap}
+#rootBusinessList .product-add-button,#productList .product-add-button{min-width:0;max-width:100%;white-space:normal}
+#rootLanding .order-heading-row,#orderItemsCard .order-heading-row{min-width:0;flex-wrap:wrap}
+#rootLanding .product-search-tools,#orderItemsCard .product-search-tools{min-width:0;max-width:100%}
+.product-filter-menu{max-width:calc(100vw - 48px)}
+@media(max-width:700px){
+ #rootBusinessList,#productList{gap:10px}
+ #rootBusinessList .product,#productList .product{padding:8px}
+ #rootLanding .root-landing-card,#orderItemsCard{padding:12px}
+ #rootProductCategoryFilter{min-width:0;max-width:100%;flex:1 1 100px;width:auto}
+ #productSearchInput{min-width:0;width:auto!important;max-width:100%!important;flex:1 1 100px}
+ #orderItemsCard .product-search-tools{flex:1 1 180px}
+ .product-filter-button{min-width:0;max-width:100%}
+}
+@media(max-width:359px){
+ #rootBusinessList,#productList{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 <div id="rootLanding" class="root-landing hidden">
