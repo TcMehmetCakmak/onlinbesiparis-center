@@ -204,3 +204,97 @@ Tarih gece yarısı kendiliğinden geçtiğinde DB write olmadığı için tenan
 9. Güncel `index.html` ve `admin.html` dosyalarını deploy et.
 10. Test siparişi ver ve isim değişikliği talebi oluştur.
 
+# Otomatik işletme SEO yayını (23 Ekim 2026)
+
+Mevcut yayın GitHub Pages üzerinde statik HTML sunuyor. Tenant klasörlerindeki eski
+yükleyiciler yalnızca "Yükleniyor..." döndürüyor. `seo/core.cjs`, merkezi
+`business_public` kayıtlarıyla operasyonel `app_settings` kayıtlarını business_id
+üzerinden birleştirir; işletme adreslerini değiştirmez. Gizli anahtar gerekmez.
+
+## Kurulum ve yayın
+
+1. Operasyonel Supabase projesinde `seo/settings.sql` çalıştırın. Yeni description,
+   seo_image_url, seo_indexable ve is_public alanları mevcut app_settings politikalarını
+   kullanır. Yönetim panelindeki "İşletme arama bilgileri" bu alanları kaydeder.
+   Migration uygulanmazsa eski alanlar okunur ve tarafsız açıklama üretilir; yeni
+   yönetim alanları devre dışı kalır. Gerçek açıklama/görsel uydurulmaz.
+2. `npm run test:seo` ve `npm run build:seo` çalıştırın. Yayın çıktısı yalnızca dist/
+   klasörüdür. Üretici kaynak tenant dosyalarını değiştirmez; eski kaynak index.html
+   yükleyicileri yerine dist içindeki hazırlanmış sayfalar yayımlanmalıdır.
+3. GitHub deposunda Settings > Pages > Source: GitHub Actions seçin. main dalına
+   eklenecek `.github/workflows/seo-pages.yml`, test ve build ardından dist çıktısını
+   yayımlar. workflow_dispatch ile hemen, cron ile yaklaşık 15 dakikalık aralıklarla
+   yeniden yayın yapılır. GitHub kuyrukları nedeniyle bu süre kesin değildir.
+4. Anlık SSR ve gerçek HTTP 301 gerekiyorsa Node 22 üzerinde `npm start` çalıştırın;
+   HTTPS reverse proxy üzerinden aynı alan adına bağlayın. PORT varsayılanı 3000.
+   Node sunucusu her istekte güncel veriyi okur; upstream hatasında 503 üretir.
+   Domain/proxy/Pages ayarları bu çalışma sırasında değiştirilmedi.
+
+Yeni işletmeler kod değişikliği olmadan sonraki prerender yayınına ve sitemap'e
+eklenir. İsim/açıklama/görsel değişiklikleri de bu şekilde güncellenir. Node yayını
+sonraki istekte günceldir. Lisansı bitmiş/pasif işletmeler noindex olup sitemap'ten
+çıkarılır; is_public=false kayıtlar sayfa üretiminden çıkarılır ve SSR'de 404 döner.
+Bu SEO görünürlüğü ayarı veritabanı erişim güvenliğinin yerine geçmez.
+
+## URL ve eczane politikası
+
+Gerçek Şifa kaydı `Şifa Eczane`, slug `sifa-eczane` olarak kayıtlıdır; kaynakta da
+yalnızca sifa-eczane klasörü vardır. `/sifa-eczanesi/` canlıda bu nedenle 404 döndü.
+Mevcut URL korunur. Node sunucusunda yanlış yazılan adres 301 ile /sifa-eczane/
+adresine yönlenir. GitHub Pages gerçek 301 desteklemediğinden statik alias sayfası
+HTTP 200 ile meta refresh, noindex ve hedef canonical içerir; bunu HTTP 301 sanmayın.
+Gerçek 301 zorunluysa Node yayını veya hosting üzerinde yönlendirme kuralı gerekir.
+
+Eczane adı/türü taşıyan kayıtlardan ürün, ilaç, reçete veya satış metni üretilmez;
+bu kayıtlar noindex ve sitemap dışında tutulur. Mevcut sipariş/reçete işlevleri
+değiştirilmedi; bu karar onların mevzuata uygun olduğunu doğrulamaz. Eczane adına
+site ve tanıtım için ayrıca hukuki değerlendirme gerekir:
+https://www.rekabet.gov.tr/Karar?kararId=bfcfbd34-937a-4106-8603-387e9603e318
+
+Fiziksel konum doğrulayan işletme verisi bulunmadığından Organization kullanılır;
+LocalBusiness, adres, yıldız puanı veya yorum üretilmez. HTTPS görsel kaydı varsa
+og:image eklenir; yoksa görsel uydurulmaz. Gerçek işletme bilgileri ilk HTML'de
+bulunur, sepet/ödeme/WhatsApp kodu mevcut ortak uygulamada çalışmaya devam eder.
+
+## Doğrulama sonuçları
+
+Canlı site, değişiklikler yayımlanmadan önce: / 200 ve ana sayfa SEO başlığı;
+/orgu-sepeti/ ile /sirius-ayakkabi/ 200 fakat başlık "Yükleniyor...";
+/sifa-eczanesi/ 404. Sunucu başlığı GitHub.com.
+
+Güncel public DB kayıtlarıyla yerel Node yanıtları ve dist HTML doğrulandı:
+
+| URL | HTTP | Başlık / H1 | Canonical | Sitemap |
+| --- | --- | --- | --- | --- |
+| / | 200 | Shopping - Online Alışveriş / ABC Sepeti Shopping - Online Alışveriş | / | Evet |
+| /orgu-sepeti/ | 200 | Örgü Sepeti | /orgu-sepeti/ | Evet |
+| /sifa-eczanesi/ | 301 -> 200 | Şifa Eczane (hedef sayfa) | /sifa-eczane/ | Hayır |
+| /sifa-eczane/ | 200, noindex | Şifa Eczane | /sifa-eczane/ | Hayır |
+| /sirius-ayakkabi/ | 200 | Sirius Ayakkabı | /sirius-ayakkabi/ | Evet |
+
+İşletme title son eki `| ABC Sepeti Shopping` şeklindedir. Description işletme
+kaydından alınır; boşsa `[işletme adı] işletmesinin ABC Sepeti üzerindeki bilgilerini
+inceleyin.` olur. Eczanede yalnızca `[işletme adı] işletme kaydı.` kullanılır.
+
+`node seo/verify.cjs` güncel public kayıtları okuyup yerel HTTP kontrolü yapar ve
+`.temp/seo-verification.json` üretir. Bu canlı yayının doğrulaması değildir.
+Beş test grubu: müşteri/admin JS sözdizimi, HTTP/HTML/canonical/sitemap/301/404,
+veri kaçışı ve uygunluk filtreleri, statik çıktı, upstream 503. Gerçek ödeme ve
+WhatsApp gönderimi yapılmadı; tarayıcı üzerinden uçtan uca ticaret testi yapılmadı.
+
+## Yayından sonra Google Search Console
+
+1. shopping.abcsepeti.com mülkünde mevcut doğrulamayı koruyun; Google doğrulama HTML'i
+   build çıktısına kopyalanır.
+2. Site Haritaları bölümünde `https://shopping.abcsepeti.com/sitemap.xml` gönderin.
+3. URL Denetimi > Canlı URL'yi test et ile /, /orgu-sepeti/ ve /sirius-ayakkabi/
+   adreslerini kontrol edin; HTML, kullanıcı canonical'ı ve indekslenebilirliği
+   doğruladıktan sonra dizine ekleme isteyin. Eczane için indeksleme istemeyin.
+4. Sayfa dizine ekleme raporunda canonical seçimini, yönlendirmeleri ve 404'leri
+   takip edin. Bilerek noindex bırakılan sayfalar hata olarak düzeltilmemelidir.
+
+Sitemap ve yeniden tarama isteği indekslenme veya sıralama garantisi değildir.
+Google kaynakları:
+https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl
+

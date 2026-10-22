@@ -803,6 +803,18 @@ body.modal-open{
           <div id="shopNameHelp" class="muted">Dükkan adını değiştirmek için yukarıdaki alana tıklayın.</div>
         </div>
         <div><label>Telefon / WhatsApp</label><input id="settingPhone" maxlength="24" placeholder="+905xxxxxxxxx"></div>
+        <fieldset id="seoSettingsFields" disabled>
+          <legend>İşletme arama bilgileri</legend>
+          <label for="settingSeoDescription">İşletme açıklaması</label>
+          <textarea id="settingSeoDescription" maxlength="320" placeholder="İşletmeniz hakkında kısa ve gerçek bilgiler"></textarea>
+          <label for="settingSeoImage">İşletme görseli (HTTPS)</label>
+          <input id="settingSeoImage" type="url" placeholder="https://...">
+          <label><input id="settingSeoIndexable" type="checkbox"> Arama motorlarında listelensin</label>
+          <label><input id="settingSeoPublic" type="checkbox"> Halka açık işletme sayfası</label>
+          <p>Eczane kayıtları için ürün veya ilaç tanıtımı yayımlanmaz; arama motorlarında listeleme kapalıdır.</p>
+          <button class="btn btn-dark" type="button" onclick="saveSeoSettings()">Arama bilgilerini kaydet</button>
+        </fieldset>
+        <p id="seoSettingsStatus" role="status"></p>
         <div><label>Instagram Profili</label><input id="settingInstagram" maxlength="180" placeholder="https://instagram.com/cakmak-yazilim"></div>
         <div><label>Instagram Buton Yazısı</label><input id="settingInstagramLabel" maxlength="80" placeholder="@mehmet_cakmak_1907"></div>
         <div>
@@ -2534,6 +2546,7 @@ async function requestPackage(tier) {
   }
 }
 async function loadAdminSettings(){
+  loadSeoSettings();
   try{
     const {data,error}=await supabaseClient.from("app_settings")
       .select("id,shop_name,shop_icon,background_color,phone,instagram_url,instagram_label,payment_cash_enabled,payment_card_enabled,payment_transfer_enabled,branches,business_id").eq("business_id",currentBusinessId).maybeSingle();
@@ -2669,6 +2682,33 @@ function syncSettingsColorFromText(){
 document.addEventListener("input",e=>{
   if(e.target?.id==="settingBackgroundColor")document.getElementById("settingBackgroundColorText").value=e.target.value;
 });
+async function loadSeoSettings(){
+  const fields=document.getElementById("seoSettingsFields");
+  fields.disabled=true;
+  const {data,error}=await supabaseClient.from("app_settings")
+    .select("description,seo_image_url,seo_indexable,is_public").eq("business_id",currentBusinessId).maybeSingle();
+  if(error){document.getElementById("seoSettingsStatus").textContent="Arama bilgileri kullanılamıyor. SEO veritabanı güncellemesini ve bağlantıyı kontrol edin.";return;}
+  document.getElementById("settingSeoDescription").value=data?.description||"";
+  document.getElementById("settingSeoImage").value=data?.seo_image_url||"";
+  document.getElementById("settingSeoIndexable").checked=data?.seo_indexable!==false;
+  document.getElementById("settingSeoPublic").checked=data?.is_public!==false;
+  document.getElementById("seoSettingsStatus").textContent="";
+  fields.disabled=false;
+}
+async function saveSeoSettings(){
+  const image=document.getElementById("settingSeoImage").value.trim();
+  if(image){try{if(new URL(image).protocol!=="https:")throw new Error();}catch{toast("Görsel adresi HTTPS olmalı.");return;}}
+  const {error}=await supabaseClient.from("app_settings").upsert({
+    business_id:currentBusinessId,
+    description:document.getElementById("settingSeoDescription").value.trim()||null,
+    seo_image_url:image||null,
+    seo_indexable:document.getElementById("settingSeoIndexable").checked,
+    is_public:document.getElementById("settingSeoPublic").checked,
+    updated_at:new Date().toISOString()
+  },{onConflict:"business_id"});
+  if(error){toast(error.message);return;}
+  toast("Arama bilgileri kaydedildi.");
+}
 async function saveAppSettings(){
   const phone=document.getElementById("settingPhone").value.trim();
   const instagram_url=document.getElementById("settingInstagram").value.trim();

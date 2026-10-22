@@ -5559,12 +5559,12 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
         if (iconEl) iconEl.textContent = shopIcon;
 
         document.documentElement.style.setProperty("--app-background", backgroundColor);
-        document.title = `${shopIcon} ${shopName} Sipariş`;
+        document.title = window.SERVER_SEO?.title || `${shopName} | ABC Sepeti Shopping`;
 
         const theme = document.getElementById("appThemeColor");
         if (theme) theme.setAttribute("content", backgroundColor);
         const description = document.getElementById("appDescription");
-        if (description) description.setAttribute("content", `${shopName} online sipariş uygulaması`);
+        if (description) description.setAttribute("content", window.SERVER_SEO?.description || `${shopName} işletmesinin ABC Sepeti üzerindeki bilgilerini inceleyin.`);
 
         const adminLink = document.getElementById("tenantAdminLink");
         if (adminLink) {
