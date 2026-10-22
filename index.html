@@ -24,8 +24,22 @@
     <meta
         id="appDescription"
         name="description"
-        content="Online sipariş uygulaması"
+        content="ABC Sepeti Shopping ile online alışveriş yapın. Elektronik, oyuncak, giyim ve daha birçok kategoride ürünleri keşfedin."
     >
+
+    <link rel="canonical" href="https://shopping.abcsepeti.com/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:site_name" content="ABC Sepeti Shopping">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "ABC Sepeti Shopping",
+        "alternateName": "ABC Sepeti",
+        "url": "https://shopping.abcsepeti.com/"
+    }
+    </script>
 
     <link id="appManifestLink" rel="manifest">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -60,7 +74,7 @@
     })();
     </script>
 
-    <title>Online Sipariş</title>
+    <title>Shopping - Online Alışveriş | ABC Sepeti</title>
 
     <style>
 
@@ -3595,7 +3609,7 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
             >🏪Bayilik Aç</button>
         </div>
         <div class="root-landing-header" style="text-align: center;">
-            <h1 style="margin:0;">Online Sipariş</h1>
+            <h1 style="margin:0;">ABC Sepeti Shopping - Online Alışveriş</h1>
         </div>
         <div class="root-landing-muted" style="margin-top: 8px;">
             Sipariş vermek istediğiniz işletmeyi seçin.
@@ -4980,7 +4994,7 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
     let advertisements = [];
 
     if (!TENANT_SLUG) {
-        document.title = "Online Sipariş · İşletme Seç";
+        document.title = "Shopping - Online Alışveriş | ABC Sepeti";
     }
 
     const TENANT_STORAGE_NAMESPACE =
