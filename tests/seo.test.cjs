@@ -7,6 +7,18 @@ const vm=require('node:vm');
 const {root,render,sitemap,metadata}=require('../seo/core.cjs');
 const {createServer}=require('../seo/server.cjs');
 const {build}=require('../seo/build.cjs');
+const {verifyProduction}=require('../seo/verify-production.cjs');
+test('production verification rejects missing sitemap, HTML fallback and noindex pages',async()=>{
+  const origin='https://shopping.abcsepeti.com';
+  const xml=sitemap([]);
+  const html=`<link rel="canonical" href="${origin}/">`;
+  const good=async url=>url.endsWith('sitemap.xml')?new Response(xml,{headers:{'content-type':'application/xml'}}):new Response(html);
+  assert.equal((await verifyProduction(xml,good)).status,200);
+  await assert.rejects(verifyProduction(xml,async()=>new Response('404',{status:404})),/HTTP 404/);
+  await assert.rejects(verifyProduction(xml,async()=>new Response(xml,{headers:{'content-type':'text/html'}})),/Content-Type/);
+  await assert.rejects(verifyProduction(xml,async url=>url.endsWith('sitemap.xml')?good(url):new Response(html+'<meta name="robots" content="noindex, follow">')),/noindex/);
+  await assert.rejects(verifyProduction(sitemap([{shop_name:'New',slug:'new',is_active:true,manual_enabled:true,license_end_date:'2099-01-01'}]),good),/differs/);
+});
 const businesses=[
   {shop_name:'Örgü Sepeti',slug:'orgu-sepeti'},
   {shop_name:'Şifa Eczane',slug:'sifa-eczane'},

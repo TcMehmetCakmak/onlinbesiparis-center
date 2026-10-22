@@ -31,3 +31,7 @@ jobs:
           path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify production sitemap and business pages
+        run: node seo/verify-production.cjs
+        env:
+          SEO_VERIFY_ATTEMPTS: '12'
