@@ -69,16 +69,21 @@ function render(template, businesses, b) {
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, `<script type="application/ld+json">${json(m.schema)}</script>`);
   const og = [['title',m.title],['description',m.description],['url',m.url],['type','website'],...(m.image?[['image',m.image]]:[])];
   html = html.replace('</head>', og.map(([key,value]) => `<meta property="og:${key}" content="${escape(value)}">`).join('\n') + `\n<script>window.SERVER_SEO=${json(m)};</script>\n</head>`);
-  const content = b ? `<section id="businessSeoContent"><p>${escape(m.description)}</p></section>` : `<nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav>`;
+  const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>`;
   if (b) {
     html = html.replace('<base href="./">','<base href="../">')
-      .replace('<span id="shopName">İşletme</span>',`<span id="shopName">${escape(b.shop_name)}</span>`)
-      .replace('<div id="orderPage">',`<div id="orderPage">${content}`);
+      .replace('<span id="shopName">İşletme</span>',`<span id="shopName">${escape(b.shop_name)}</span>`);
   } else {
     html = html.replace('id="rootLanding" class="root-landing hidden"','id="rootLanding" class="root-landing"')
-      .replace('id="tenantAppContainer" class="container"','id="tenantAppContainer" class="container hidden"')
-      .replace('<div class="root-landing-header"',`${content}<div class="root-landing-header"`);
+      .replace('id="tenantAppContainer" class="container"','id="tenantAppContainer" class="container hidden"');
   }
+  html = html.replace('</head>', `<style>
+    .business-info-footer{box-sizing:border-box;width:100%;padding:12px 24px 24px;color:#666;font:14px/1.6 Arial,sans-serif;overflow-wrap:anywhere}
+    .business-info-footer summary{cursor:pointer;width:fit-content}
+    .business-info-footer nav,.business-info-footer p{margin:8px 0 0}
+    .business-info-footer a{color:inherit;display:inline-block;margin:0 8px 4px 0}
+  </style></head>`);
+  html = html.replace('</body>', `<footer class="business-info-footer" id="businessSeoContent">${content}</footer>\n</body>`);
   return html;
 }
 function sitemap(businesses) {

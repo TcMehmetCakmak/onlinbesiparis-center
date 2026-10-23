@@ -42,6 +42,11 @@ test('HTTP routes render source HTML, canonical, links, sitemap, aliases and err
     const b=businesses.find(b=>route===`/${b.slug}/`),m=metadata(b);
     const response=await fetch(origin+route); assert.equal(response.status,200);
     const html=await response.text();
+    const footerStart=html.indexOf('<footer class="business-info-footer"');
+    assert(footerStart>html.lastIndexOf('</script>'));
+    assert(html.slice(footerStart).includes('<details><summary>'));
+    assert(!html.slice(0,footerStart).includes('<nav aria-label="İşletmeler">'));
+    assert(!html.includes('<div id="orderPage"><section id="businessSeoContent">'));
     assert(html.includes(`<title>${m.title}</title>`));
     assert(html.includes(`content="${m.description}"`));
     assert(html.includes(`rel="canonical" href="${m.url}"`));
