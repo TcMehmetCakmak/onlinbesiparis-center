@@ -69,9 +69,10 @@ function render(template, businesses, b) {
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, `<script type="application/ld+json">${json(m.schema)}</script>`);
   const og = [['title',m.title],['description',m.description],['url',m.url],['type','website'],...(m.image?[['image',m.image]]:[])];
   html = html.replace('</head>', og.map(([key,value]) => `<meta property="og:${key}" content="${escape(value)}">`).join('\n') + `\n<script>window.SERVER_SEO=${json(m)};</script>\n</head>`);
-  const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>
+  const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>`;
+  const services = b ? '' : `
     <section class="platform-services" aria-labelledby="platformServicesTitle">
-      <h2 id="platformServicesTitle">İşletmenize özel dijital mağaza, aylık kiralama modeliyle</h2>
+      <h2 id="platformServicesTitle">İşletmenize özel dijital mağaza</h2>
       <p>İşletmenizi yalnızca bir mağaza bağlantısıyla sınırlamayın: Shopping ABC Sepeti ile markanıza özel web sayfası, masaüstü uygulaması ve mobil uygulamayla müşterilerinizin kullandığı cihazlarda yerinizi alın. Küçük işletmelerden büyük işletmelere kadar, ürünlerini internette sergilemek ve siparişlerini takip etmek isteyen işletmelere aylık dijital mağaza kiralama hizmeti sunuyoruz. Yüksek komisyonlu pazaryerlerine alternatif arayan işletmeler, aylık abonelik modeliyle kendi dijital dükkanına sahip olabilir.</p>
       <div class="platform-services-grid">
         <article><h3>İşletmenize özel web sayfası</h3><p>Markanızı, ürünlerinizi ve işletme bilgilerinizi size özel bir web sayfasında tanıtın. Mağaza bağlantınızı paylaşın; müşterileriniz ürünlerinizi inceleyip sipariş oluşturabilsin.</p></article>
@@ -81,25 +82,33 @@ function render(template, businesses, b) {
       </div>
       <p>Web sayfası, masaüstü ve mobil uygulama, online sipariş takibi ve işletme tanıtımını aynı hizmette buluşturun. İşletmenize uygun aylık abonelik seçeneklerini inceleyerek dijital mağazanız için ilk adımı atın.</p>
       <button type="button" class="platform-services-cta" onclick="openFranchisePage()">Dijital mağaza paketlerini inceleyin</button>
+      <p class="platform-products-notice"><strong>Mevcut işletmelerimize ve ürünlerine aşağıdaki <a href="#rootProductsHeading">Ürünler</a> bölümünden ulaşabilirsiniz.</strong></p>
     </section>`;
   if (b) {
     html = html.replace('<base href="./">','<base href="../">')
       .replace('<span id="shopName">İşletme</span>',`<span id="shopName">${escape(b.shop_name)}</span>`);
   } else {
-    html = html.replace('id="rootLanding" class="root-landing hidden"','id="rootLanding" class="root-landing"')
-      .replace('id="tenantAppContainer" class="container"','id="tenantAppContainer" class="container hidden"');
+    html = html.replace('id="rootLanding" class="root-landing hidden"','id="rootLanding" class="root-landing root-landing-with-services"')
+      .replace('id="tenantAppContainer" class="container"','id="tenantAppContainer" class="container hidden"')
+      .replace('<!-- ROOT_PLATFORM_SERVICES -->',services);
   }
   html = html.replace('</head>', `<style>
     .business-info-footer{box-sizing:border-box;width:100%;padding:12px 24px 24px;color:#666;font:14px/1.6 Arial,sans-serif;overflow-wrap:anywhere}
     .business-info-footer summary{cursor:pointer;width:fit-content}
     .business-info-footer nav,.business-info-footer p{margin:8px 0 0}
     .business-info-footer a{color:inherit;display:inline-block;margin:0 8px 4px 0}
-    .platform-services{max-width:1120px;margin:24px auto 0;padding:24px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;color:#374151}
+    #rootLanding.root-landing-with-services{height:auto;min-height:100dvh}
+    #rootLanding.root-landing-with-services .root-landing-card{height:auto}
+    #rootLanding.root-landing-with-services #rootBusinessList{flex:0 0 auto;height:70dvh;min-height:320px}
+    .platform-services{box-sizing:border-box;width:100%;max-width:1120px;margin:24px auto 0;padding:24px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;color:#374151;font-size:14px;line-height:1.6}
     .platform-services h2{font-size:24px;line-height:1.3;color:#222;margin:0 0 12px}
     .platform-services h3{font-size:17px;line-height:1.4;color:#222;margin:0 0 8px}
     .platform-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px;margin:24px 0}
     .platform-services-cta{border:0;border-radius:10px;padding:12px 18px;margin-top:16px;background:#167a4a;color:white;font:inherit;cursor:pointer}
     .platform-services-cta:focus-visible{outline:3px solid #222;outline-offset:3px}
+    .platform-services .platform-products-notice{margin:20px 0 0;padding:16px 18px;border-left:5px solid #167a4a;border-radius:10px;background:#edf8f1;color:#14532d;font-size:18px;line-height:1.6}
+    .platform-products-notice a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+    #rootProductsHeading{scroll-margin-top:20px}
     @media(max-width:600px){.platform-services{padding:18px}.platform-services h2{font-size:20px}}
   </style></head>`);
   html = html.replace('</body>', `<footer class="business-info-footer" id="businessSeoContent">${content}</footer>\n</body>`);

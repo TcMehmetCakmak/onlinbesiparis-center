@@ -56,7 +56,13 @@ test('HTTP routes render source HTML, canonical, links, sitemap, aliases and err
       assert(!html.includes('id="platformServicesTitle"'));
     } else {
       assert(html.includes('<a href="/orgu-sepeti/">Örgü Sepeti</a>'));
-      assert(html.indexOf('id="platformServicesTitle"')>footerStart);
+      const servicesStart=html.indexOf('id="platformServicesTitle"');
+      assert(servicesStart>html.indexOf('id="rootLanding"'));
+      assert(servicesStart<html.indexOf('id="rootProductsHeading"'));
+      assert(!html.slice(footerStart).includes('id="platformServicesTitle"'));
+      assert(html.includes('>İşletmenize özel dijital mağaza</h2>'));
+      assert(html.includes('href="#rootProductsHeading">Ürünler</a> bölümünden ulaşabilirsiniz.'));
+      assert(html.includes('class="root-landing root-landing-with-services"'));
       assert(html.includes('Yüksek komisyonlu pazaryerlerine alternatif'));
       assert(html.includes('onclick="openFranchisePage()">Dijital mağaza paketlerini inceleyin'));
       assert(template.includes(`content="${m.description}"`));
