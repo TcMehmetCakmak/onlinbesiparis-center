@@ -49,7 +49,7 @@ async function load() {
   return {template, businesses:businesses.filter(b => validSlug(b.slug)).map(b => ({...byId.get(b.business_id),...b}))};
 }
 function metadata(b) {
-  if (!b) return {title:'Shopping ABC Sepeti | Online Alışveriş ve Dijital Mağazalar', description:"Shopping ABC Sepeti ile el emeği ürünlerden giyim ve aksesuara, farklı mağazaların ürünlerini keşfedin. Mağazaları inceleyin, siparişinizi kolayca oluşturun.", url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
+  if (!b) return {title:'Shopping ABC Sepeti | Online Alışveriş ve Dijital Mağazalar', description:'Shopping ABC Sepeti ile aylık dijital mağaza kiralayın. İşletmenize özel online mağaza, sipariş takibi, müşteri iletişimi ve tanıtım çözümlerini keşfedin.', url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
   const url = `${origin}/${b.slug}/`;
   const description = pharmacy(b) ? `${b.shop_name} işletme kaydı.` : String(b.description || `${b.shop_name} işletmesinin ABC Sepeti üzerindeki bilgilerini inceleyin.`).trim().slice(0,320);
   // A physical location is not verified by the current data model: Organization is deliberate.
@@ -69,7 +69,18 @@ function render(template, businesses, b) {
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, `<script type="application/ld+json">${json(m.schema)}</script>`);
   const og = [['title',m.title],['description',m.description],['url',m.url],['type','website'],...(m.image?[['image',m.image]]:[])];
   html = html.replace('</head>', og.map(([key,value]) => `<meta property="og:${key}" content="${escape(value)}">`).join('\n') + `\n<script>window.SERVER_SEO=${json(m)};</script>\n</head>`);
-  const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>`;
+  const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>
+    <section class="platform-services" aria-labelledby="platformServicesTitle">
+      <h2 id="platformServicesTitle">İşletmenize özel dijital mağaza, aylık kiralama modeliyle</h2>
+      <p>Shopping ABC Sepeti; küçük işletmelerden büyük işletmelere kadar, ürünlerini internette sergilemek ve siparişlerini takip etmek isteyen işletmeler için dijital mağaza kiralama hizmeti sunar. Yüksek komisyonlu pazaryerlerine alternatif arayan işletmeler, aylık abonelik modeliyle kendilerine özel bir online mağaza oluşturabilir.</p>
+      <div class="platform-services-grid">
+        <article><h3>İşletmeye özel online mağaza</h3><p>Markanızı, ürünlerinizi ve işletme bilgilerinizi kendi dijital dükkanınızda tanıtın. Müşterileriniz ürünlerinizi mağazanıza özel bağlantıdan inceleyebilsin.</p></article>
+        <article><h3>Sipariş takibi ve müşteri iletişimi</h3><p>Online siparişlerinizi ve siparişle iletilen müşteri iletişim bilgilerini işletme panelinizden takip edin. Müşterilerinizle iletişiminizi ve sipariş sürecinizi yönetin.</p></article>
+        <article><h3>İşletme tanıtımı ve reklam içerikleri</h3><p>İşletmenize özel mağaza görünümü, ürün tanıtımları ve reklam içerikleriyle markanızı anlatın. Dijital mağazanızın bağlantısını müşterilerinizle paylaşın.</p></article>
+      </div>
+      <p>Aylık kiralık e-ticaret mağazası, online sipariş sistemi ve işletme tanıtımı ihtiyaçlarınız için abonelik seçeneklerini inceleyin.</p>
+      <button type="button" class="platform-services-cta" onclick="openFranchisePage()">Dijital mağaza paketlerini inceleyin</button>
+    </section>`;
   if (b) {
     html = html.replace('<base href="./">','<base href="../">')
       .replace('<span id="shopName">İşletme</span>',`<span id="shopName">${escape(b.shop_name)}</span>`);
@@ -82,6 +93,13 @@ function render(template, businesses, b) {
     .business-info-footer summary{cursor:pointer;width:fit-content}
     .business-info-footer nav,.business-info-footer p{margin:8px 0 0}
     .business-info-footer a{color:inherit;display:inline-block;margin:0 8px 4px 0}
+    .platform-services{max-width:1120px;margin:24px auto 0;padding:24px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;color:#374151}
+    .platform-services h2{font-size:24px;line-height:1.3;color:#222;margin:0 0 12px}
+    .platform-services h3{font-size:17px;line-height:1.4;color:#222;margin:0 0 8px}
+    .platform-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px;margin:24px 0}
+    .platform-services-cta{border:0;border-radius:10px;padding:12px 18px;margin-top:16px;background:#167a4a;color:white;font:inherit;cursor:pointer}
+    .platform-services-cta:focus-visible{outline:3px solid #222;outline-offset:3px}
+    @media(max-width:600px){.platform-services{padding:18px}.platform-services h2{font-size:20px}}
   </style></head>`);
   html = html.replace('</body>', `<footer class="business-info-footer" id="businessSeoContent">${content}</footer>\n</body>`);
   return html;
