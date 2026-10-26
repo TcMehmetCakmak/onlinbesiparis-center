@@ -49,7 +49,7 @@ async function load() {
   return {template, businesses:businesses.filter(b => validSlug(b.slug)).map(b => ({...byId.get(b.business_id),...b}))};
 }
 function metadata(b) {
-  if (!b) return {title:'Shopping ABC Sepeti | Online Alışveriş ve Dijital Mağazalar', description:'Shopping ABC Sepeti ile aylık dijital mağaza kiralayın. İşletmenize özel online mağaza, sipariş takibi, müşteri iletişimi ve tanıtım çözümlerini keşfedin.', url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
+  if (!b) return {title:'Shopping ABC Sepeti | Online Alışveriş ve Dijital Mağazalar', description:'Shopping ABC Sepeti ile işletmenize özel web sayfası, masaüstü ve mobil uygulamaya sahip olun. Aylık kiralama ile mağazanızı ve siparişlerinizi yönetin.', url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
   const url = `${origin}/${b.slug}/`;
   const description = pharmacy(b) ? `${b.shop_name} işletme kaydı.` : String(b.description || `${b.shop_name} işletmesinin ABC Sepeti üzerindeki bilgilerini inceleyin.`).trim().slice(0,320);
   // A physical location is not verified by the current data model: Organization is deliberate.
@@ -72,13 +72,14 @@ function render(template, businesses, b) {
   const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>
     <section class="platform-services" aria-labelledby="platformServicesTitle">
       <h2 id="platformServicesTitle">İşletmenize özel dijital mağaza, aylık kiralama modeliyle</h2>
-      <p>Shopping ABC Sepeti; küçük işletmelerden büyük işletmelere kadar, ürünlerini internette sergilemek ve siparişlerini takip etmek isteyen işletmeler için dijital mağaza kiralama hizmeti sunar. Yüksek komisyonlu pazaryerlerine alternatif arayan işletmeler, aylık abonelik modeliyle kendilerine özel bir online mağaza oluşturabilir.</p>
+      <p>İşletmenizi yalnızca bir mağaza bağlantısıyla sınırlamayın: Shopping ABC Sepeti ile markanıza özel web sayfası, masaüstü uygulaması ve mobil uygulamayla müşterilerinizin kullandığı cihazlarda yerinizi alın. Küçük işletmelerden büyük işletmelere kadar, ürünlerini internette sergilemek ve siparişlerini takip etmek isteyen işletmelere aylık dijital mağaza kiralama hizmeti sunuyoruz. Yüksek komisyonlu pazaryerlerine alternatif arayan işletmeler, aylık abonelik modeliyle kendi dijital dükkanına sahip olabilir.</p>
       <div class="platform-services-grid">
-        <article><h3>İşletmeye özel online mağaza</h3><p>Markanızı, ürünlerinizi ve işletme bilgilerinizi kendi dijital dükkanınızda tanıtın. Müşterileriniz ürünlerinizi mağazanıza özel bağlantıdan inceleyebilsin.</p></article>
+        <article><h3>İşletmenize özel web sayfası</h3><p>Markanızı, ürünlerinizi ve işletme bilgilerinizi size özel bir web sayfasında tanıtın. Mağaza bağlantınızı paylaşın; müşterileriniz ürünlerinizi inceleyip sipariş oluşturabilsin.</p></article>
+        <article><h3>Masaüstü ve mobil uygulama</h3><p>Mağazanız müşterilerinizin bilgisayarında ve telefonunda da yerini alsın. Uygulama olarak açılabilen dijital mağazanızla ürünlerinize erişimi kolaylaştırın ve yeniden alışveriş yapmak isteyen müşterilerinize pratik bir yol sunun.</p></article>
         <article><h3>Sipariş takibi ve müşteri iletişimi</h3><p>Online siparişlerinizi ve siparişle iletilen müşteri iletişim bilgilerini işletme panelinizden takip edin. Müşterilerinizle iletişiminizi ve sipariş sürecinizi yönetin.</p></article>
         <article><h3>İşletme tanıtımı ve reklam içerikleri</h3><p>İşletmenize özel mağaza görünümü, ürün tanıtımları ve reklam içerikleriyle markanızı anlatın. Dijital mağazanızın bağlantısını müşterilerinizle paylaşın.</p></article>
       </div>
-      <p>Aylık kiralık e-ticaret mağazası, online sipariş sistemi ve işletme tanıtımı ihtiyaçlarınız için abonelik seçeneklerini inceleyin.</p>
+      <p>Web sayfası, masaüstü ve mobil uygulama, online sipariş takibi ve işletme tanıtımını aynı hizmette buluşturun. İşletmenize uygun aylık abonelik seçeneklerini inceleyerek dijital mağazanız için ilk adımı atın.</p>
       <button type="button" class="platform-services-cta" onclick="openFranchisePage()">Dijital mağaza paketlerini inceleyin</button>
     </section>`;
   if (b) {
