@@ -72,6 +72,7 @@ function render(template, businesses, b) {
   const content = b ? `<details><summary>İşletme hakkında</summary><p>${escape(m.description)}</p></details>` : `<details><summary>İşletmeler</summary><nav aria-label="İşletmeler">${businesses.filter(indexable).map(item => `<a href="/${item.slug}/">${escape(item.shop_name)}</a>`).join(' · ')}</nav></details>`;
   const services = b ? '' : `
     <section class="platform-services" aria-labelledby="platformServicesTitle">
+      <span class="platform-services-label">İŞLETMENİZ İÇİN DİJİTAL ÇÖZÜMLER</span>
       <h2 id="platformServicesTitle">İşletmenize özel dijital mağaza</h2>
       <p>İşletmenizi yalnızca bir mağaza bağlantısıyla sınırlamayın: Shopping ABC Sepeti ile markanıza özel web sayfası, masaüstü uygulaması ve mobil uygulamayla müşterilerinizin kullandığı cihazlarda yerinizi alın. Küçük işletmelerden büyük işletmelere kadar, ürünlerini internette sergilemek ve siparişlerini takip etmek isteyen işletmelere aylık dijital mağaza kiralama hizmeti sunuyoruz. Yüksek komisyonlu pazaryerlerine alternatif arayan işletmeler, aylık abonelik modeliyle kendi dijital dükkanına sahip olabilir.</p>
       <div class="platform-services-grid">
@@ -100,16 +101,27 @@ function render(template, businesses, b) {
     #rootLanding.root-landing-with-services{height:auto;min-height:100dvh}
     #rootLanding.root-landing-with-services .root-landing-card{height:auto}
     #rootLanding.root-landing-with-services #rootBusinessList{flex:0 0 auto;height:70dvh;min-height:320px}
-    .platform-services{box-sizing:border-box;width:100%;max-width:1120px;margin:24px auto 0;padding:24px;border:1px solid #e5e7eb;border-radius:18px;background:#fff;color:#374151;font-size:14px;line-height:1.6}
-    .platform-services h2{font-size:24px;line-height:1.3;color:#222;margin:0 0 12px}
-    .platform-services h3{font-size:17px;line-height:1.4;color:#222;margin:0 0 8px}
-    .platform-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px;margin:24px 0}
-    .platform-services-cta{border:0;border-radius:10px;padding:12px 18px;margin-top:16px;background:#167a4a;color:white;font:inherit;cursor:pointer}
+    .platform-services{box-sizing:border-box;width:100%;max-width:1120px;margin:24px auto 0;padding:32px;border:1px solid #dce9e3;border-radius:24px;background:linear-gradient(135deg,#f0f9f5 0%,#fff 45%,#f1f5fc 100%);box-shadow:0 12px 36px rgba(24,62,46,.08);color:#475569;font-size:14px;line-height:1.75;isolation:isolate;overflow-wrap:anywhere}
+    .platform-services-label{display:inline-block;margin-bottom:12px;padding:6px 12px;border:1px solid #cce7da;border-radius:999px;background:#e6f4ec;color:#166344;font-size:11px;font-weight:700;letter-spacing:1px;line-height:1.5}
+    .platform-services h2{font-size:clamp(23px,2.4vw,32px);line-height:1.25;color:#163e30;letter-spacing:-.6px;margin:0 0 16px}
+    .platform-services>p{margin:0;max-width:100ch}
+    .platform-services h3{font-size:17px;line-height:1.4;color:var(--feature-ink,#155e45);margin:0 0 12px}
+    .platform-services-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:28px 0;counter-reset:feature}
+    .platform-services-grid article{--feature-ink:#155e45;--feature-tint:#e7f5ed;--feature-border:#d2eadd;position:relative;min-width:0;padding:22px 20px;border:1px solid var(--feature-border);border-top:3px solid var(--feature-ink);border-radius:16px;background:linear-gradient(160deg,var(--feature-tint),#fff 68%);box-shadow:0 5px 18px rgba(15,23,42,.06);counter-increment:feature;transition:transform .2s ease,box-shadow .2s ease}
+    .platform-services-grid article:nth-child(2){--feature-ink:#2855a0;--feature-tint:#eaf1ff;--feature-border:#d7e3fa}
+    .platform-services-grid article:nth-child(3){--feature-ink:#67409b;--feature-tint:#f2ebfb;--feature-border:#e4d9f4}
+    .platform-services-grid article:nth-child(4){--feature-ink:#94510f;--feature-tint:#fff3e2;--feature-border:#f4e1c5}
+    .platform-services-grid article::before{content:counter(feature,decimal-leading-zero);display:grid;place-items:center;width:40px;height:40px;margin-bottom:18px;border-radius:12px;background:var(--feature-tint);color:var(--feature-ink);font-size:15px;font-weight:700;border:1px solid var(--feature-border)}
+    .platform-services-grid article p{margin:0;color:#475569;font-size:14px;line-height:1.75}
+    @media(hover:hover){.platform-services-grid article:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(15,23,42,.1)}.platform-services-cta:hover{background:#125e3b;box-shadow:0 6px 16px rgba(22,122,74,.2)}}
+    .platform-services-cta{width:auto;border:0;border-radius:12px;padding:14px 22px;margin-top:20px;background:#167a4a;color:#fff;font:inherit;font-weight:700;box-shadow:0 4px 12px rgba(22,122,74,.16);cursor:pointer;transition:background .2s ease,box-shadow .2s ease;white-space:normal}
     .platform-services-cta:focus-visible{outline:3px solid #222;outline-offset:3px}
-    .platform-services .platform-products-notice{margin:20px 0 0;padding:16px 18px;border-left:5px solid #167a4a;border-radius:10px;background:#edf8f1;color:#14532d;font-size:18px;line-height:1.6}
+    .platform-services .platform-products-notice{max-width:none;margin:24px 0 0;padding:18px 20px;border:1px solid #cce6d7;border-left:5px solid #167a4a;border-radius:12px;background:#eaf6ee;color:#14532d;font-size:17px;line-height:1.6}
     .platform-products-notice a{color:inherit;text-decoration:underline;text-underline-offset:3px}
     #rootProductsHeading{scroll-margin-top:20px}
-    @media(max-width:600px){.platform-services{padding:18px}.platform-services h2{font-size:20px}}
+    @media(max-width:1000px){.platform-services-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.platform-services{padding:20px 16px;border-radius:18px}.platform-services-grid{grid-template-columns:minmax(0,1fr);gap:14px;margin:22px 0}.platform-services-grid article{padding:20px}.platform-services .platform-products-notice{padding:14px;font-size:16px}.platform-services-cta{width:100%}.platform-services-label{font-size:10px;letter-spacing:.6px}}
+    @media(prefers-reduced-motion:reduce){.platform-services-grid article,.platform-services-cta{transition:none}.platform-services-grid article:hover{transform:none}}
   </style></head>`);
   html = html.replace('</body>', `<footer class="business-info-footer" id="businessSeoContent">${content}</footer>\n</body>`);
   return html;
