@@ -3483,16 +3483,6 @@ body{
         width: 100%;
         margin-top: auto !important;
     }
-    #rootBusinessList .product-detail-short {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2 !important;
-        line-clamp: 2;
-        max-height: 2.8em;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        overflow-wrap: anywhere;
-    }
     #rootBusinessList .product-main-image,
     #rootBusinessList .product-no-image {
         width: 100%;
@@ -10268,21 +10258,6 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
                 addrEl.style.lineHeight = "1.35";
                 addrEl.textContent = `📍 ${product.address}`;
                 info.appendChild(addrEl);
-            }
-
-            if (product.detail) {
-                const detail = document.createElement("div");
-                detail.className = "product-detail-short";
-                detail.style.marginTop = "8px";
-                detail.style.fontSize = "13px";
-                detail.style.color = "#555";
-                detail.style.lineHeight = "1.4";
-                detail.style.display = "-webkit-box";
-                detail.style.webkitLineClamp = "3";
-                detail.style.webkitBoxOrient = "vertical";
-                detail.style.overflow = "hidden";
-                detail.textContent = product.detail;
-                info.appendChild(detail);
             }
 
             left.appendChild(info);
