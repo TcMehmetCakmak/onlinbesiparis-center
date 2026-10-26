@@ -19,7 +19,7 @@ async function verify(){
         title:html.match(/<title>(.*?)<\/title>/)?.[1],
         description:html.match(/id="appDescription" name="description" content="([^"]*)"/)?.[1],
         canonical:html.match(/rel="canonical" href="([^"]*)"/)?.[1],
-        businessH1:route==='/'?'ABC Sepeti Shopping - Online Alışveriş':html.match(/<span id="shopName">(.*?)<\/span>/)?.[1],
+        businessH1:route==='/'?'Shopping ABC Sepeti - Online Alışveriş':html.match(/<span id="shopName">(.*?)<\/span>/)?.[1],
         robots:html.match(/name="robots" content="([^"]*)"/)?.[1],
         sitemap:xml.includes(`https://shopping.abcsepeti.com${route}</loc>`)};
       if(!result.title||!result.description||!result.canonical||response.status!==200)throw new Error(`Verification failed: ${route}`);

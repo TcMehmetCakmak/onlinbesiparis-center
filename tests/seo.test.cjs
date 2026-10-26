@@ -50,7 +50,7 @@ test('HTTP routes render source HTML, canonical, links, sitemap, aliases and err
     assert(html.includes(`<title>${m.title}</title>`));
     assert(html.includes(`content="${m.description.replace(/'/g,'&#39;')}"`) || html.includes(`content="${m.description}"`));
     assert(html.includes(`rel="canonical" href="${m.url}"`));
-    assert(html.includes(b?`<span id="shopName">${b.shop_name}</span>`:'ABC Sepeti Shopping - Online Alışveriş</h1>'));
+    assert(html.includes(b?`<span id="shopName">${b.shop_name}</span>`:'Shopping ABC Sepeti - Online Alışveriş</h1>'));
     if(b) assert(!html.includes('document.write(html)'));
     else assert(html.includes('<a href="/orgu-sepeti/">Örgü Sepeti</a>'));
     const schema=JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
