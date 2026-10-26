@@ -49,7 +49,7 @@ async function load() {
   return {template, businesses:businesses.filter(b => validSlug(b.slug)).map(b => ({...byId.get(b.business_id),...b}))};
 }
 function metadata(b) {
-  if (!b) return {title:'ABC Sepeti Shopping | Online Alışveriş ve Mağazalar', description:"ABC Sepeti Shopping'de el emeği ürünlerden giyim ve aksesuara, farklı mağazaların ürünlerini keşfedin. Mağazaları inceleyin, siparişinizi kolayca oluşturun.", url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
+  if (!b) return {title:'Shopping ABC Sepeti | Online Alışveriş ve Mağazalar', description:"Shopping ABC Sepeti ile el emeği ürünlerden giyim ve aksesuara, farklı mağazaların ürünlerini keşfedin. Mağazaları inceleyin, siparişinizi kolayca oluşturun.", url:origin+'/', index:true, schema:{'@context':'https://schema.org','@type':'WebSite',name:'ABC Sepeti Shopping',alternateName:'ABC Sepeti',url:origin+'/'}};
   const url = `${origin}/${b.slug}/`;
   const description = pharmacy(b) ? `${b.shop_name} işletme kaydı.` : String(b.description || `${b.shop_name} işletmesinin ABC Sepeti üzerindeki bilgilerini inceleyin.`).trim().slice(0,320);
   // A physical location is not verified by the current data model: Organization is deliberate.
