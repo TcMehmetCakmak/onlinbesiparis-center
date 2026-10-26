@@ -24,7 +24,7 @@
     <meta
         id="appDescription"
         name="description"
-        content="ABC Sepeti Shopping ile online alışveriş yapın. Elektronik, oyuncak, giyim ve daha birçok kategoride ürünleri keşfedin."
+        content="ABC Sepeti Shopping'de el emeği ürünlerden giyim ve aksesuara, farklı mağazaların ürünlerini keşfedin. Mağazaları inceleyin, siparişinizi kolayca oluşturun."
     >
 
     <link rel="canonical" href="https://shopping.abcsepeti.com/">
@@ -74,7 +74,7 @@
     })();
     </script>
 
-    <title>Shopping - Online Alışveriş | ABC Sepeti</title>
+    <title>ABC Sepeti Shopping | Online Alışveriş ve Mağazalar</title>
 
     <style>
 
@@ -3612,13 +3612,13 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
             <h1 style="margin:0;">ABC Sepeti Shopping - Online Alışveriş</h1>
         </div>
         <div class="root-landing-muted" style="margin-top: 8px;">
-            Sipariş vermek istediğiniz işletmeyi seçin.
+            El emeği ürünlerden giyim ve aksesuara, farklı mağazaların ürünlerini keşfedin.
         </div>
 
         <div class="order-heading-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px">
             <h2 style="margin:0">Ürünler</h2>
 
-            <div class="product-search-tools">
+            <div class="product-search-tools" data-nosnippet>
                 <div id="rootProductSearch" class="root-product-search">
                 <button id="rootSearchToggle" type="button" class="root-search-toggle" onclick="toggleRootProductSearch()" aria-label="Aramayı aç" aria-controls="rootProductSearchInput" aria-expanded="false" title="Ara">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
@@ -4994,7 +4994,7 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
     let advertisements = [];
 
     if (!TENANT_SLUG) {
-        document.title = "Shopping - Online Alışveriş | ABC Sepeti";
+        document.title = "ABC Sepeti Shopping | Online Alışveriş ve Mağazalar";
     }
 
     const TENANT_STORAGE_NAMESPACE =
