@@ -3471,6 +3471,27 @@ body{
     }
     #rootBusinessList .product-main {
         display: block;
+        flex: 1 0 auto;
+    }
+    #rootBusinessList .product {
+        height: auto;
+        max-height: none;
+        gap: 10px;
+    }
+    #rootBusinessList .product > .product-add-button {
+        flex: 0 0 auto;
+        width: 100%;
+        margin-top: auto !important;
+    }
+    #rootBusinessList .product-detail-short {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2 !important;
+        line-clamp: 2;
+        max-height: 2.8em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
     #rootBusinessList .product-main-image,
     #rootBusinessList .product-no-image {
