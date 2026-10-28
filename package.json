@@ -2,7 +2,7 @@
   "scripts": {
     "start": "node seo/server.cjs",
     "build:seo": "node seo/build.cjs",
-    "test:seo": "node --test tests/seo.test.cjs"
+    "test:seo": "node --test tests/seo.test.cjs tests/product-pagination.test.cjs"
   },
   "devDependencies": {
     "supabase": "^2.118.0"

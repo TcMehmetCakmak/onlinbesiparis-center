@@ -3558,6 +3558,8 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
 #rootLanding .root-landing-actions{min-width:0;max-width:100%;flex-wrap:wrap}
 #rootBusinessList{width:100%;box-sizing:border-box;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr))}
 #rootBusinessList .product-info{min-width:0;max-width:100%}
+.product-pagination-more{grid-column:1 / -1;justify-self:center;margin:12px;padding:12px 22px;border:1px solid #d2ebdd;border-radius:12px;background:#eef7f2;color:#185f3d;font:inherit;font-weight:700;cursor:pointer}
+.product-pagination-more:focus-visible{outline:3px solid #185f3d;outline-offset:3px}
 #rootLanding .product-search-tools{flex:0 1 auto;flex-wrap:wrap}
 #rootLanding .product-search-tools > *{min-width:0;max-width:100%}
 #rootLanding .product-filter-wrap{max-width:100%}
@@ -4862,6 +4864,7 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
 </script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script src="supabase-config.js"></script>
+<script src="product-list-pagination.js?v=1"></script>
 <script src="platform-config.js"></script>
 <script>
     const supabaseClient = window.supabase.createClient(
@@ -10127,9 +10130,13 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
         return categoryIcons[product?.product_category] || "🏪";
     }
 
+    let rootProductPager = null;
     function renderRootLandingProducts() {
         const list = document.getElementById("rootBusinessList");
         if (!list) return;
+        rootProductPager?.destroy();
+        rootProductPager = null;
+        list.scrollTop = 0;
         const category = document.getElementById("rootProductCategoryFilter")?.value || "all";
 
         const searchInput = document.getElementById("rootProductSearchInput");
@@ -10156,7 +10163,7 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             return;
         }
 
-        visibleProducts.forEach(product => {
+        rootProductPager = window.createProductListPager({list, items: visibleProducts, renderItem: product => {
             const row = document.createElement("div");
             row.className = "product";
             row.onclick = () => openRootProductDetail(product.id);
@@ -10273,8 +10280,8 @@ Bu güvenlik kodu siparişinizin işletme tarafından doğrulanması için kulla
             };
             row.appendChild(viewBtn);
 
-            list.appendChild(row);
-        });
+            return row;
+        }});
     }
 
     async function loadRootBusinessLanding() {
