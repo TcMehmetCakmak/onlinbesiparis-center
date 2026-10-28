@@ -6044,6 +6044,8 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
         }
     });
 
+    let tenantProductPager = null;
+    let tenantProductPagerKey = "";
     function renderProducts() {
         const list = document.getElementById("productList");
         const searchInput = document.getElementById("productSearchInput");
@@ -6051,6 +6053,13 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
             .trim()
             .toLocaleLowerCase("tr-TR");
 
+        const pagerKey = JSON.stringify([currentBusinessId, searchText, productSortMode]);
+        const sameView = tenantProductPagerKey === pagerKey;
+        const initialSize = sameView ? Math.max(12, tenantProductPager?.renderedCount || 12) : 12;
+        const previousScrollTop = sameView ? list.scrollTop : 0;
+        tenantProductPager?.destroy();
+        tenantProductPager = null;
+        tenantProductPagerKey = pagerKey;
         list.innerHTML = "";
 
         let visibleProducts = products
@@ -6071,8 +6080,7 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
                 : '<div class="small" style="grid-column:1/-1;padding:24px 10px">Henüz ürün bulunmuyor.</div>';
         }
 
-        visibleProducts
-            .forEach(product => {
+        if (visibleProducts.length) tenantProductPager = window.createProductListPager({list, items: visibleProducts, initialSize, renderItem: product => {
                 const row = document.createElement("div");
                 row.className = "product";
                 row.onclick = (e) => { if(!e.target.closest("button")) openProductDetail(product.id); };
@@ -6202,8 +6210,9 @@ html:has(#rootLanding:not(.hidden)),body:has(#rootLanding:not(.hidden)){max-widt
                     row.appendChild(addButton);
                 }
 
-                list.appendChild(row);
-            });
+                return row;
+            }});
+        list.scrollTop = previousScrollTop;
 
         // Silinmiş / pasif ürünler sepetten temizlenir.
         order.items = order.items.filter(item =>
